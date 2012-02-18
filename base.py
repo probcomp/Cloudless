@@ -1,6 +1,7 @@
 from IPython.parallel import *
 
 remote_client = None
+global remote_client
 
 def get_view():
     global remote_client
