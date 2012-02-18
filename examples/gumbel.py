@@ -1,3 +1,5 @@
+# <nbformat>2</nbformat>
+
 # simulate a discrete choice by noising up a gumbel
 #
 # approach:
@@ -6,6 +8,8 @@
 #   the resulting average KL
 # - plot the result
 
+# <codecell>
+
 import numpy.random
 import itertools
 import Cloudless
@@ -13,6 +17,8 @@ import Cloudless.memo
 from IPython.parallel import *
 import pylab
 
+# </codecell>
+# <codecell>
 def entropy(p_vec):
     out = 0.0
     for p in p_vec:
@@ -21,7 +27,8 @@ def entropy(p_vec):
         else:
             out += p * numpy.log(p)
     return out
-
+# </codecell>
+# <codecell>
 def D_KL(p_vec, q_vec):
     out = 0.0
     for (p, q) in zip(p_vec, q_vec):
@@ -34,20 +41,34 @@ def D_KL(p_vec, q_vec):
             out += p * (numpy.log(p) - numpy.log(q))
 
     return out
+# </codecell>
+# <codecell>
 
 # parameters for the test dice (note: test dice generated locally)
 DIE_K       = 3
 DIE_ALPHAS  = [10**(float(x) / float(DIE_K)) for x in [-1, 0, 1]]
 DIE_REPEATS = 10
 
+# </codecell>
+# <codecell>
+
 print "Generating alphas..."
 nested_alphas = [[alpha for x in range(DIE_K)] for alpha in DIE_ALPHAS]
+
+# </codecell>
+# <codecell>
 
 print "Generating dice..."
 nested_dice   = [numpy.random.mtrand.dirichlet(alpha_vec, DIE_REPEATS) for alpha_vec in nested_alphas]
 
+# </codecell>
+# <codecell>
+
 print "Flattening dice..."
 all_dice      = list(itertools.chain.from_iterable(nested_dice))
+
+# </codecell>
+# <codecell>
 
 # now we have dice, locally. 
 
@@ -56,7 +77,13 @@ mem_entropy = Cloudless.memo.Memoize(entropy)
 for die in all_dice:
     mem_entropy(die)
 
+# </codecell>
+# <codecell>
+
 # FIXME: packaging issues with ipython.parallel
+
+# </codecell>
+# <codecell>
 
 # FIXME: stop ignoring the noise level
 @require('numpy', 'numpy.random')
@@ -83,6 +110,9 @@ def gumbel_sample(p_vec, noise_level = 0.0):
 
     return g_vec.index(max(g_vec))
 
+# </codecell>
+# <codecell>
+
 def die_kl(p_vec, num_samples = 1000, noise_level = 0.0, sanity=False):
     counts = [0 for i in range(len(p_vec))]
     samples = [gumbel_sample(p_vec, noise_level) for i in range(num_samples)]
@@ -105,8 +135,13 @@ def die_kl(p_vec, num_samples = 1000, noise_level = 0.0, sanity=False):
 
     return D_KL(empirical_vec, p_vec)
 
+# </codecell>
+# <codecell>
+
 NOISE_LEVELS = [0,1]
 NOISE_REPEATS = 1
+# </codecell>
+# <codecell>
 
 # for a given die, compute the avg KL for a range of noise levels
 def raw_avg_kl_of_die_with_noise(p_vec, noise_level, sanity=False):
@@ -117,14 +152,20 @@ def raw_avg_kl_of_die_with_noise(p_vec, noise_level, sanity=False):
 
     avg_kl = float(avg_kl) / float(NOISE_REPEATS)
     return avg_kl
+# </codecell>
+# <codecell>
 
 avg_kl_of_die_with_noise = Cloudless.memo.Memoize(raw_avg_kl_of_die_with_noise)
+# </codecell>
+# <codecell>
 
 print "Getting average KL..."
 # for each die/noise level pair, get the average kl
 for die in all_dice:
     for noise in NOISE_LEVELS:
         avg_kl_of_die_with_noise(die, noise)
+# </codecell>
+# <codecell>
 
 #print "Sanity check on first die"
 #raw_avg_kl_of_die_with_noise(all_dice[0], NOISE_LEVELS[0], sanity=True)
@@ -149,8 +190,12 @@ def plot_robustness(name):
     pylab.xlabel('Noise level')
     pylab.ylabel('Entropy')
     cb.set_label('KL divergence')
-    pylab.savefig(name)
+    pylab.show()
+    #pylab.savefig(name)
+# </codecell>
+# <codecell>
     
 print "plotting!"
 plot_robustness('robustness.png')
 
+# </codecell>
