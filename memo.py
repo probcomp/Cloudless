@@ -75,12 +75,3 @@ class AsyncMemoize:
 
         for (k, v) in self.memo.items():
             yield (self.args[k], self.memo[k])
-        
-@require('numpy.random', 'time')
-def testjob(x):
-    # FIXME: imports shouldn't be needed
-    import numpy.random
-    import time
-    time.sleep(numpy.random.uniform(1))
-    return x + numpy.random.normal(0, 1.0)
-
