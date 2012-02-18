@@ -1,1 +1,1 @@
-__all__ = ['memo.py']
+__all__ = ['memo.py', 'examples/gumbel.py']
