@@ -1,5 +1,7 @@
 import Cloudless.base
+reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
+reload(Cloudless.memo) # to make it easy to develop locally
 import pylab
 from IPython.parallel import *
 
