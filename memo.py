@@ -86,9 +86,9 @@ class AsyncMemoize:
                         print str(async_result.metadata['pyerr'])
             else:
                 waiting += 1
-        out = {'success' : success, 'failed' : failed, 'waiting' : waiting, 'failures' : failures}
+        out = {'unclaimed_success' : success, 'failed' : failed, 'waiting' : waiting, 'failures' : failures}
         if not silent:
-            print "STATS: " + str(success) + " successful, " + str(failed) + " failed, " + str(waiting) + " waiting."
+            print "STATS: " + str(success) + " unclaimed successful, " + str(failed) + " failed, " + str(waiting) + " waiting."
         return out
 
     def jobs_iter(self):
