@@ -69,6 +69,28 @@ class AsyncMemoize:
                 new_jobs[k] = v
         self.jobs = new_jobs
 
+    def report_status(self, verbose=False, silent=False):
+        success = 0
+        failed = 0
+        waiting = 0
+        failures = []
+        for (args, async_result) in self.jobs_iter():
+            if async_result.ready():
+                if async_result.successful():
+                    success += 1
+                else:
+                    failed += 1
+                    failures.append((args, async_result.metadata))
+                    if verbose:
+                        print "FAILED ON ARGS: " + str(args)
+                        print str(async_result.metadata['pyerr'])
+            else:
+                waiting += 1
+        out = {'success' : success, 'failed' : failed, 'waiting' : waiting, 'failures' : failures}
+        if not silent:
+            print "STATS: " + str(success) + " successful, " + str(failed) + " failed, " + str(waiting) + " waiting."
+        return out
+
     def jobs_iter(self):
         for (k, j) in self.jobs.items():
             yield (self.args[k], self.jobs[k])

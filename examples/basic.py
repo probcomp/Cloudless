@@ -36,6 +36,7 @@ for x in range(XRANGE):
     testjob(x)
 
 # get plot data locally (re-eval to get more data)
+status = testjob.report_status()
 xs = []
 ys = []
 for (k, v) in testjob.iter():
@@ -50,13 +51,5 @@ pylab.ylabel('Y')
 pylab.show()
 
 # examine the exceptions for the jobs that failed
-print "Remaining jobs: " + str(len(list(testjob.jobs_iter())))
-for (args, async_result) in testjob.jobs_iter():
-    if async_result.ready():
-        if async_result.successful():
-            print "Success: " + str(args)
-        else:
-            print "Failed: " + str(args)
-            print str(async_result.metadata['pyerr'])
-    else:
-        print "Waiting: " + str(args)
+testjob.report_status(verbose=True)
+
