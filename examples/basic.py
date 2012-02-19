@@ -1,3 +1,4 @@
+# remote definitions, written for re-evaluation
 import Cloudless.base
 reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
@@ -5,35 +6,50 @@ reload(Cloudless.memo) # to make it easy to develop locally
 import pylab
 from IPython.parallel import *
 
-# paste in job definition
-@require('numpy.random', 'time')
-def raw_testjob(x):
-    # FIXME: imports shouldn't be needed
-    import numpy.random
-    import time
-    time.sleep(numpy.random.uniform(1))
-    return x + numpy.random.normal(0, 1.0)
+# configure remote nodes
+# TODO: Clean up naming of load balanced vs direct views
+Cloudless.base.remote_exec('import numpy.random')
+Cloudless.base.remote_exec('import time')
 
-# make memoized job (and/or reset memoizer)
+# definition of the job (re-eval to change code)
+def helper(x):
+    if numpy.random.uniform() < 0.3:
+        raise Exception('we should detect this exception')
+    else:
+        return x + numpy.random.normal(0, 1.0)
+
+#TODO: make this a decorator; think carefully about dependencies
+Cloudless.base.remote_procedure('helper', helper)
+
+def raw_testjob(x):
+    time.sleep(numpy.random.uniform(1))
+    return helper(x)
+
+# make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize(raw_testjob, Cloudless.base.get_view())
 
-# set constants
-XRANGE = 50
+# set constants (re-eval to change the scope of the plot)
+XRANGE = 100
 
-# request the computation
+# request the computation (re-eval if e.g. the range changes)
 for x in range(XRANGE):
     testjob(x)
 
-# get plot data locally
+# get plot data locally (re-eval to get more data)
 xs = []
 ys = []
 for (k, v) in testjob.iter():
     xs.append(k[0])
     ys.append(v)
 
-# make a plot
+# make a plot (iterate on this block to fix layout/display issues)
 pylab.figure()
 pylab.scatter(xs, ys)
 pylab.xlabel('X')
 pylab.ylabel('Y')
 pylab.show()
+
+# examine the exceptions for the jobs that failed
+for (args, async_result) in testjob.jobs_iter():
+    if async_result.metadata['status'] is 'error':
+        print "error: " + str(async_result.pyerr)

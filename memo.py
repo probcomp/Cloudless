@@ -69,6 +69,10 @@ class AsyncMemoize:
                 new_jobs[k] = v
         self.jobs = new_jobs
 
+    def jobs_iter(self):
+        for (k, j) in self.jobs.items():
+            yield (self.args[k], self.jobs[k])
+
     def iter(self, local_only=False):
         if not local_only:
             self.advance()
