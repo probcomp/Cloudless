@@ -8,7 +8,7 @@ Installation
         [plugin Cloudless]
         SETUP_CLASS = Cloudless.starcluster_plugin.CloudlessSetup
 
-  Add Cloudless to your cluster config, for example:
+1. Add Cloudless to your cluster config, for example:
 
         plugins = ipcluster, cloudless
 
