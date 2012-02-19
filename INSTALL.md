@@ -1,8 +1,8 @@
 Installation
 ============
 
-1. Be sure StarCluster is installed (e.g. `easy_install starcluster`).
-1. Be sure the directory containing Cloudless is on your `PYTHONPATH`.
+1. Be sure [StarCluster](http://web.mit.edu/star/cluster/) is installed (e.g. `easy_install starcluster`).
+1. Be sure the directory containing [Cloudless](https://github.com/mit-probabilistic-computing-project/Cloudless) is on your `PYTHONPATH`.
 1. Add to StarCluster config file (typically `~/.starcluster/config`):
 
         [plugin Cloudless]
