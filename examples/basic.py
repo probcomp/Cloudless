@@ -18,7 +18,7 @@ def helper(x):
     else:
         return x + numpy.random.normal(0, 1.0)
 
-#TODO: make this a decorator; think carefully about dependencies
+#TODO: make this a decorator; think carefully about dependencies, reloading
 Cloudless.base.remote_procedure('helper', helper)
 
 def raw_testjob(x):
@@ -50,6 +50,13 @@ pylab.ylabel('Y')
 pylab.show()
 
 # examine the exceptions for the jobs that failed
+print "Remaining jobs: " + str(len(list(testjob.jobs_iter())))
 for (args, async_result) in testjob.jobs_iter():
-    if async_result.metadata['status'] is 'error':
-        print "error: " + str(async_result.pyerr)
+    if async_result.ready():
+        if async_result.successful():
+            print "Success: " + str(args)
+        else:
+            print "Failed: " + str(args)
+            print str(async_result.metadata['pyerr'])
+    else:
+        print "Waiting: " + str(args)
