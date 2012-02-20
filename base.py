@@ -10,10 +10,13 @@ global memoizers
 memoizers = {}
 
 def remote_mode():
+    global remote
     remote = True
     initialize_client()
 
 def local_mode():
+    global remote
+    global remote_client
     remote = False
     remote_client = False
 
