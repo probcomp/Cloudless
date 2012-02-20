@@ -74,6 +74,7 @@ class AsyncMemoize:
                     #        with ipython? so the whole thing stops?
                     #        or do we want to discourage this style?
                     self.jobs[key] = {'remote':False, 'exception':e}
+                    return None
 
         # we already knew the value
         return self.memo[key]
