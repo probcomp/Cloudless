@@ -105,7 +105,7 @@ class AsyncMemoize:
                 failures.append((args, job['exception']))
                 if verbose:
                     print "FAILED ON ARGS: " + str(args)
-                    print str(async_result.metadata['pyerr'])
+                    print str(job['exception'])
             else:
                 async_result = job['async_res']
 
