@@ -1,3 +1,4 @@
+# block 1
 # remote definitions, written for re-evaluation
 import Cloudless.base
 reload(Cloudless.base) # to make it easy to develop locally
@@ -6,6 +7,7 @@ reload(Cloudless.memo) # to make it easy to develop locally
 import pylab
 from IPython.parallel import *
 
+# block 2
 # configure remote nodes
 # TODO: Clean up naming of load balanced vs direct views
 Cloudless.base.remote_mode()
@@ -14,6 +16,7 @@ Cloudless.base.remote_exec('import time')
 import numpy.random
 import time
 
+# block 3
 # definition of the job (re-eval to change code)
 def helper(x):
     if numpy.random.uniform() < 0.3:
@@ -24,6 +27,7 @@ def helper(x):
 #TODO: make this a decorator; think carefully about dependencies, reloading
 Cloudless.base.remote_procedure('helper', helper)
 
+# block 4
 def raw_testjob(x):
     time.sleep(numpy.random.uniform(1))
     return helper(x)
@@ -31,6 +35,7 @@ def raw_testjob(x):
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["x"], raw_testjob, override=True)
 
+# block 5
 # set constants (re-eval to change the scope of the plot)
 XRANGE = 100
 
@@ -38,6 +43,7 @@ XRANGE = 100
 for x in range(XRANGE):
     testjob(x)
 
+# block 6
 # get plot data locally (re-eval to get more data)
 status = testjob.report_status()
 xs = []
@@ -46,6 +52,7 @@ for (k, v) in testjob.iter():
     xs.append(k[0])
     ys.append(v)
 
+# block 7
 # make a plot (iterate on this block to fix layout/display issues)
 pylab.figure()
 pylab.scatter(xs, ys)
@@ -53,6 +60,7 @@ pylab.xlabel('X')
 pylab.ylabel('Y')
 pylab.show()
 
+# block 8
 # examine the exceptions for the jobs that failed
 testjob.report_status(verbose=True)
 
