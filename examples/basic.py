@@ -8,8 +8,11 @@ from IPython.parallel import *
 
 # configure remote nodes
 # TODO: Clean up naming of load balanced vs direct views
+Cloudless.base.remote_mode()
 Cloudless.base.remote_exec('import numpy.random')
 Cloudless.base.remote_exec('import time')
+import numpy.random
+import time
 
 # definition of the job (re-eval to change code)
 def helper(x):
@@ -26,7 +29,7 @@ def raw_testjob(x):
     return helper(x)
 
 # make memoized job (re-eval if the job code changes, or to reset cache)
-testjob = Cloudless.memo.AsyncMemoize("testjob", ["x"], raw_testjob)
+testjob = Cloudless.memo.AsyncMemoize("testjob", ["x"], raw_testjob, override=True)
 
 # set constants (re-eval to change the scope of the plot)
 XRANGE = 100

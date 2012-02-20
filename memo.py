@@ -5,7 +5,7 @@ import Cloudless.base
 # and handle code with default arguments specified nicely
 
 class AsyncMemoize:
-    def __init__(self, name, argnames, f):
+    def __init__(self, name, argnames, f, override = False):
         self.f = f
         self.memo = {}
         self.args = {}
@@ -17,7 +17,7 @@ class AsyncMemoize:
         self.recording_only = False
         self.to_call = []
 
-        if name in Cloudless.base.memoizers:
+        if not override and name in Cloudless.base.memoizers:
             raise Exception("Already have a procedure under " + name)
         else:
             Cloudless.base.memoizers[name] = self
