@@ -26,7 +26,7 @@ def raw_testjob(x):
     return helper(x)
 
 # make memoized job (re-eval if the job code changes, or to reset cache)
-testjob = Cloudless.memo.AsyncMemoize(raw_testjob, Cloudless.base.get_view())
+testjob = Cloudless.memo.AsyncMemoize("testjob", ["x"], raw_testjob)
 
 # set constants (re-eval to change the scope of the plot)
 XRANGE = 100
