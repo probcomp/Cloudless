@@ -1,15 +1,53 @@
 MIT Probabilistic Computing Project
 Cloudless --- Distributed computational science made easy, in Python
 
-Cloudless provides:
+Cloudless makes it easy to interactively develop and monitor
+computationally intensive pipelines using EC2, and maintain a
+persistent record of computational science work using S3. It builds on
+IPython.parallel for remote execution and data transfer, and
+StarCluster for cluster provisioning and management.
 
-- Transparent remote execution of Python procedures
+To use Cloudless:
 
-- Data processing and experimentation pipelines, procedurally,
-  but with smart caching and easy interactive plotting
+- Set up an AWS account: http://aws.amazon.com/
 
-- [[FIXME]] Persistent distributed dictionaries
+- Install StarCluster and configure it to use your AWS credentials:
+http://web.mit.edu/star/cluster/docs/latest/quickstart.html
 
-- [[FIXME]] Logged long-running jobs, via statsd
+- Install Cloudless such that local python processes can find it (so that the starcluster plugin can run correctly):
 
-Cloudless depends primarily on STARCluster.
+cd ~
+git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git
+export PYTHONPATH=~/Cloudless
+
+
+- Configure your cluster to use the ipcluster and Cloudless plugins:
+
+Put the following lines in the "Configuring StarCluster Plugins"
+section of your starcluster config (by default,
+~/.starcluster/config):
+
+[plugin Cloudless]
+SETUP_CLASS = Cloudless.starcluster_plugin.CloudlessSetup
+
+[plugin ipcluster]
+setup_class = starcluster.plugins.ipcluster.IPCluster
+enable_notebook = True
+notebook_passwd = metropolis1953
+
+- Configure your cluster type to use these plugins by making sure your
+  cluster (by default, smallcluster) has the following line:
+
+plugins = ipcluster, Cloudless
+
+- Start a cluster:
+
+starcluster start mycluster
+
+- Follow the IPython plugin directions to get to a web notebook:
+
+http://web.mit.edu/star/cluster/docs/latest/plugins/ipython.html
+
+- Paste the example from Cloudless/examples/basic.py block-by-block
+  into the notebook to watch Cloudless set up and execute remote jobs
+  and capture remote exceptions.
