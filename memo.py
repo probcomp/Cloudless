@@ -102,7 +102,7 @@ class AsyncMemoize:
             if not job['remote']:
                 failed += 1
 
-                failures.append((args, async_result.metadata))
+                failures.append((args, job['exception']))
                 if verbose:
                     print "FAILED ON ARGS: " + str(args)
                     print str(async_result.metadata['pyerr'])
