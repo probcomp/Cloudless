@@ -37,12 +37,14 @@ from IPython.parallel import *
 import matplotlib
 matplotlib.use('Agg')
 import pylab
+###########################################
 
 # block 2: configure remote nodes
 Cloudless.base.remote_mode()
 Cloudless.base.remote_exec('import numpy')
 Cloudless.base.remote_exec('import numpy.random')
 Cloudless.base.remote_exec('import itertools')
+###########################################
 
 # block 3: helper functions
 def entropy(p_vec):
@@ -68,7 +70,9 @@ def D_KL(p_vec, q_vec):
 
     return out
 Cloudless.base.remote_procedure('D_KL', D_KL)
+###########################################
 
+# block 4: generate dice locally
 # parameters for the test dice (note: test dice generated locally)
 DIE_K       = 10
 DIE_ALPHAS  = [10**(float(x) / float(DIE_K)) for x in [-4, -1, 0, 1, 4]]
@@ -84,13 +88,16 @@ print "Flattening dice..."
 all_dice      = list(itertools.chain.from_iterable(nested_dice))
 
 # now we have dice, locally. 
+###########################################
 
+# block 5: calculate entropies remotely
 # calculate entropies remotely
 mem_entropy = Cloudless.memo.AsyncMemoize('entropy', ['die'], entropy, override = True)
 for die in all_dice:
     mem_entropy(die)
+###########################################
 
-
+# block 6: helper functions
 # FIXME: stop ignoring the noise level
 def gumbel_sample(p_vec, noise_level = 0.0):
     import numpy
@@ -111,7 +118,7 @@ def gumbel_sample(p_vec, noise_level = 0.0):
     # choose the earliest spike:
     # argmin(exp(a), exp(b)) is 0 with probability a/a+b by poisson process
     # argmax(gumbel(log(a)), gumbel(log(b))) is 0 with probability a/a+b
-
+Cloudless.base.remote_procedure('gumbel_sample', gumbel_sample)
 
 def die_kl(p_vec, num_samples = 1000, noise_level = 0.0, sanity=False):
     counts = [0 for i in range(len(p_vec))]
@@ -137,10 +144,10 @@ def die_kl(p_vec, num_samples = 1000, noise_level = 0.0, sanity=False):
         pylab.savefig('sanity.png')
 
     return D_KL(empirical_vec, p_vec)
+Cloudless.base.remote_procedure('die_kl', die_kl)
+###########################################
 
-NOISE_LEVELS = [0, 0.2, 0.5, 1, 2, 5, 10]
-NOISE_REPEATS = 1
-
+# block: define core experimental procedure
 # for a given die, compute the avg KL for a range of noise levels
 def raw_avg_kl_of_die_with_noise(p_vec, noise_level, sanity=False):
     avg_kl = 0
@@ -151,17 +158,23 @@ def raw_avg_kl_of_die_with_noise(p_vec, noise_level, sanity=False):
     avg_kl = float(avg_kl) / float(NOISE_REPEATS)
     return avg_kl
 
-avg_kl_of_die_with_noise = Cloudless.memo.AsyncMemoize(raw_avg_kl_of_die_with_noise)
+avg_kl_of_die_with_noise = Cloudless.memo.AsyncMemoize('avg_kl', ['p_vec', 'noise_level'], raw_avg_kl_of_die_with_noise, override = True)
+###########################################
+
+# block: trigger experiments
+NOISE_LEVELS = [0, 0.2, 0.5, 1, 2, 5, 10]
+NOISE_REPEATS = 1
 
 print "Getting average KL for " + str(len(all_dice) * len(NOISE_LEVELS) * NOISE_REPEATS) + " trials..."
 # for each die/noise level pair, get the average kl
 for die in all_dice:
     for noise in NOISE_LEVELS:
         avg_kl_of_die_with_noise(die, noise)
+#print "Sanity check on first die"
+#raw_avg_kl_of_die_with_noise(all_dice[0], NOISE_LEVELS[0], sanity=True)
+###########################################
 
-print "Sanity check on first die"
-raw_avg_kl_of_die_with_noise(all_dice[0], NOISE_LEVELS[0], sanity=True)
-
+# block: plot robustness based on available results
 def plot_robustness(name):
     xs = []
     ys = []
@@ -170,20 +183,22 @@ def plot_robustness(name):
     for (k, v) in avg_kl_of_die_with_noise.iter():
         die = k[0]
         noise = k[1]
-        H = entropy(die)
-        akl = v
-        xs.append(noise)
-        ys.append(H)
-        zs.append(akl)
+        H = mem_entropy(die)
+        if H is not None:
+            akl = v
+            xs.append(noise)
+            ys.append(H)
+            zs.append(akl)
 
-    pylab.figure()
-    pylab.hexbin(xs, ys, C=zs)
-    cb = pylab.colorbar()
-    pylab.xlabel('Noise level')
-    pylab.ylabel('Entropy')
-    cb.set_label('KL divergence')
-#   pylab.show()
-    pylab.savefig(name)
+    if len(xs) > 0:
+        pylab.figure()
+        pylab.hexbin(xs, ys, C=zs)
+        cb = pylab.colorbar()
+        pylab.xlabel('Noise level')
+        pylab.ylabel('Entropy')
+        cb.set_label('KL divergence')
+        pylab.show()
+#    pylab.savefig(name)
     
 print "plotting!"
 plot_robustness('robustness.png')
