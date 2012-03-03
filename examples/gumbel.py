@@ -22,13 +22,29 @@
 #   the resulting average KL
 # - plot the result
 
+#block 1: remote definitions, suitable for re-evaluation after git push and plugin
+#         re-install
 import numpy.random
+import numpy
 import itertools
 import Cloudless
+import Cloudless.base
 import Cloudless.memo
+reload(Cloudless)
+reload(Cloudless.base)
+reload(Cloudless.memo)
 from IPython.parallel import *
+import matplotlib
+matplotlib.use('Agg')
 import pylab
 
+# block 2: configure remote nodes
+Cloudless.base.remote_mode()
+Cloudless.base.remote_exec('import numpy')
+Cloudless.base.remote_exec('import numpy.random')
+Cloudless.base.remote_exec('import itertools')
+
+# block 3: helper functions
 def entropy(p_vec):
     out = 0.0
     for p in p_vec:
@@ -37,6 +53,7 @@ def entropy(p_vec):
         else:
             out += p * numpy.log(p)
     return -1 * out
+Cloudless.base.remote_procedure('entropy', entropy)
 
 def D_KL(p_vec, q_vec):
     out = 0.0
@@ -50,6 +67,7 @@ def D_KL(p_vec, q_vec):
             out += p * (numpy.log(p) - numpy.log(q))
 
     return out
+Cloudless.base.remote_procedure('D_KL', D_KL)
 
 # parameters for the test dice (note: test dice generated locally)
 DIE_K       = 10
@@ -67,15 +85,13 @@ all_dice      = list(itertools.chain.from_iterable(nested_dice))
 
 # now we have dice, locally. 
 
-# calculate entropies locally:
-mem_entropy = Cloudless.memo.Memoize(entropy)
+# calculate entropies remotely
+mem_entropy = Cloudless.memo.AsyncMemoize('entropy', ['die'], entropy, override = True)
 for die in all_dice:
     mem_entropy(die)
 
-# FIXME: packaging issues with ipython.parallel
 
 # FIXME: stop ignoring the noise level
-@require('numpy', 'numpy.random')
 def gumbel_sample(p_vec, noise_level = 0.0):
     import numpy
     import numpy.random
@@ -135,7 +151,7 @@ def raw_avg_kl_of_die_with_noise(p_vec, noise_level, sanity=False):
     avg_kl = float(avg_kl) / float(NOISE_REPEATS)
     return avg_kl
 
-avg_kl_of_die_with_noise = Cloudless.memo.Memoize(raw_avg_kl_of_die_with_noise)
+avg_kl_of_die_with_noise = Cloudless.memo.AsyncMemoize(raw_avg_kl_of_die_with_noise)
 
 print "Getting average KL for " + str(len(all_dice) * len(NOISE_LEVELS) * NOISE_REPEATS) + " trials..."
 # for each die/noise level pair, get the average kl
