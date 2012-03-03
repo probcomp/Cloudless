@@ -4,6 +4,8 @@ import Cloudless.base
 reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
 reload(Cloudless.memo) # to make it easy to develop locally
+import matplotlib
+matplotlib.use('Agg') #FIXME Does this break the notebook demo?
 import pylab
 from IPython.parallel import *
 
@@ -59,6 +61,7 @@ pylab.scatter(xs, ys)
 pylab.xlabel('X')
 pylab.ylabel('Y')
 pylab.show()
+pylab.savefig('basic-job-results.png')
 
 # block 8
 # examine the exceptions for the jobs that failed

@@ -9,6 +9,9 @@ remote = False
 global memoizers
 memoizers = {}
 
+# TODO: Add a mode that creates a local collection of engines, but still uses
+#       iPython.parallel
+
 def remote_mode():
     global remote
     remote = True
