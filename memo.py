@@ -20,14 +20,27 @@ class AsyncMemoize:
         if not override and name in Cloudless.base.memoizers:
             raise Exception("Already have a procedure under " + name)
         else:
+            self.terminate_pending()
             Cloudless.base.memoizers[name] = self
 
     def clear(self):
         # FIXME: is this bad-leaky?
+
+        self.terminate_pending()
+
         self.memo = {}
         self.args = {}
         self.jobs = {}
 
+    def terminate_pending(self):
+        if not Cloudless.base.remote:
+            return
+
+        for (args, job) in self.jobs_iter():
+            if job['remote']:
+                async_result = job['async_res']
+                async_result.abort()
+            
     # FIXME: make deleting this object deregister itself from Cloudless
 
     def start_recording(self):
