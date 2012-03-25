@@ -9,6 +9,9 @@ remote = False
 global memoizers
 memoizers = {}
 
+global scratch
+scratch = {}
+
 # TODO: Add a mode that creates a local collection of engines, but still uses
 #       iPython.parallel
 
@@ -26,6 +29,25 @@ def local_mode():
 def clear_all():
     for m in memoizers.values():
         m.clear()
+
+def save(name):
+    if remote:
+        raise Exception("saving and loading not yet implemented for remote workspaces")
+
+    import pickle
+
+    # save the memoizers
+    pickle.dump(memoizers, 
+
+    # save the scratch
+
+    pass
+
+def load(name):
+    if remote:
+        raise Exception("saving and loading not yet implemented for remote workspaces")
+
+    pass
 
 def initialize_client():
     if remote:

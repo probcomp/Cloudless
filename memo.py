@@ -151,3 +151,34 @@ class AsyncMemoize:
 
         for (k, v) in self.memo.items():
             yield (self.args[k], self.memo[k])
+
+# run a Longjob as a remote job, by using a wrapper
+# procedure that:
+#
+# - initializes the longjob with the given arguments (typically
+#   including the number of iterations, and a random seed)
+#
+# - stops when None is not returned by iterate(), and uses the resulting
+#   value as the value of the procedure, for future plotting etc
+#
+# - checkpoints (to a local dictionary) every checkpointing_step iterations
+#
+# - reports statistics (to a local dictionary) every reporting_step iterations
+# 
+# FIXME: Make sure that the local dictionaries get stored in either the
+#        local filesystem (for Cloudless in local mode) or in an EBS
+#
+# FIXME: automate the plotting of all numerically valued statistics, versus
+#        time, either for all arguments or a single given set of arguments,
+#        as an analogue to the simple status reporting from AsyncMemoize
+
+class AsyncMemoizeLongjob(AsyncMemoize):
+    pass
+
+# FIXME: In the future, add support for distributed longjobs, where
+#        the same longjob is run on each node from a set of cluster
+#        nodes, but the advancement is done on a local thread rather
+#        than on a worker. all the rest of the state management
+#        and exception handling needs to be done the same way.
+#        reporting, etc, is all aggregated across the cluster, with a
+#        reduce function provided for easy plotting.

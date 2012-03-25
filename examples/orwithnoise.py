@@ -1,6 +1,7 @@
 import numpy.random
 import numpy
-from stochastic import *
+import Cloudless
+from Cloudless.stochastic import *
 
 class OrWithNoise(StochasticInferenceProgram):
     def __init__(self, N, p=0.5, eps=None, epsvals = None):
@@ -64,16 +65,21 @@ class OrWithNoise(StochasticInferenceProgram):
 class OrWithNoise_ChurchGibbsNoise(MarkovChain):
     def __init__(self, orwithnoise, is_testing = True, observables = None):
         MarkovChain.__init__(self, orwithnoise, is_testing, observables)
+        self.N = orwithnoise.N
+        self.p = orwithnoise.p
+        self.eps = orwithnoise.eps
+        self.epsvals = orwithnoise.epsvals
 
     def transition_latent(self, state):
         # pick a variable at random from the state
-        chosen_var is None:
-        while chosen_var is not None and chosen_var is not "y":
-            chosen_var = list(state.keys())[numpy.random.randint(0, len(state.keys()))]
+        
+        choices = list(state.keys())
+        del choices[choices.index("y")]
+        chosen_var = choices[numpy.random.randint(len(choices))]
         
         # if the name is eps, do Gibbs
         if chosen_var is "eps":
-
+            print "chose eps"
             assert self.eps is None #if not true, we shouldn't have chosen this var
 
             # enumerate eps values and score each under the joint
@@ -89,7 +95,6 @@ class OrWithNoise_ChurchGibbsNoise(MarkovChain):
 
         else:
             # otherwise, do MH from the prior, following Church:
-
             log_p_old = self.evaluate_log_joint_probability(state)
 
             # pick a flip at random
@@ -104,18 +109,26 @@ class OrWithNoise_ChurchGibbsNoise(MarkovChain):
             log_q_reverse = numpy.log(self.p) if old_val else numpy.log(1.0 - self.p)
             state[var_name] = new_val
 
-            log_p_new = self.evaluate_joint_log_probability(state)
+            log_p_new = self.evaluate_log_joint_probability(state)
 
             # accept/reject via MH
-            accept_val = min(1.0, log_p_old + log_q_reverse - log_p_new - log_q_forward)
+            accept_val = min(1.0, numpy.exp(log_p_old + log_q_reverse - log_p_new - log_q_forward))
 
-            if accept_val 1.0 or numpy.random.random() < accept_val:
+            if accept_val >= 1.0 or numpy.random.random() < accept_val:
+                # print "accepted"
                 # keep the move
                 pass
             else:
+                # print "rejected"
                 # undo the move
                 state[var_name] = old_val
 
-class OrWithNoise_Longjob(MarkovChainLongjob):
-    pass
-        
+def make_orwithnoise_job(N, p=0.5, eps=None, iters=100):
+    own = OrWithNoise(N, p, eps)
+    own_mc = OrWithNoise_ChurchGibbsNoise(own, is_testing = False, observables = {"y": True})
+    mclongjob = MarkovChainLongjob(own_mc, iters)
+    return mclongjob
+
+mclongjob = make_orwithnoise_job(5, p=0.1, eps=None, iters=100)
+while mclongjob.iterate() is None:
+    print mclongjob.get_summary()
