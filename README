@@ -57,7 +57,7 @@ To use Cloudless:
 
      $ cd ~
      $ git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git
-     $ export PYTHONPATH=~/Cloudless
+     $ export PYTHONPATH=~
 
    Here it is proposed to install Cloudless to your user directory.
    Of course, you can download it wherever you want, but do not forget

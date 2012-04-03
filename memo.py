@@ -161,9 +161,9 @@ class AsyncMemoize:
 # - stops when None is not returned by iterate(), and uses the resulting
 #   value as the value of the procedure, for future plotting etc
 #
-# - checkpoints (to a local dictionary) every checkpointing_step iterations
-#
 # - reports statistics (to a local dictionary) every reporting_step iterations
+#
+# FIXME: add checkpointing, and test that checkpointing works
 # 
 # FIXME: Make sure that the local dictionaries get stored in either the
 #        local filesystem (for Cloudless in local mode) or in an EBS
