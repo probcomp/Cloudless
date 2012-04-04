@@ -33,21 +33,18 @@ def clear_all():
 def save(name):
     if remote:
         raise Exception("saving and loading not yet implemented for remote workspaces")
+    else:
+        raise Exception("saving and loading not yet implemented for local")
 
-    import pickle
-
+    #import pickle
     # save the memoizers
-    pickle.dump(memoizers, 
-
     # save the scratch
-
-    pass
 
 def load(name):
     if remote:
         raise Exception("saving and loading not yet implemented for remote workspaces")
-
-    pass
+    else:
+        raise Exception("Saving and loading not yet implemented for local")
 
 def initialize_client():
     if remote:
