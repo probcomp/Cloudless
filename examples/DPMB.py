@@ -190,26 +190,8 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
 def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
     ##this is a bit clumsy, perhaps modify DPMB_State to accept dataset as an itialization argument
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
-    state = ds.DPMB_State(model)
-    model.state = state
-    state.numColumns = len(dataset["xs"][0])
-    state.numVectors = len(dataset["xs"])
-    if prior_or_gibbs_init is None:
-        model.sample_alpha()
-        model.sample_betas()
-    else:
-        state.alpha = prior_or_gibbs_init["alpha"]
-        state.betas = prior_or_gibbs_init["betas"]
-    ##need to initialize clusters first to ensure correct labeling of xs
-    ##else, need to modify cluster creation to create null clusters if you get
-    ##an index skip
-    numClusters = len(np.unique(dataset["zs"]))
-    for clusterIdx in range(numClusters):
-        ds.Cluster(state) ## links self to state
-    for clusterIdx,vector_data in zip(dataset["zs"],dataset["xs"]):
-        cluster = state.cluster_list[clusterIdx]
-        state.zs.append(cluster)
-        cluster.create_vector(vector_data)
+    state = ds.DPMB_State(model,dataset=dataset)
+
     ##test refresh_counts here to verify this initialization works
     state_summary_list = []
     for iter_num in range(num_iters):

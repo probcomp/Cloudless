@@ -1,10 +1,12 @@
 #!python
 import numpy as np, numpy.random as nr, matplotlib.mlab as mlab
-import pdb
+
 
 class DPMB_State():
-    def __init__(self,parent,paramDict=None):
+    def __init__(self,parent,paramDict=None,dataset=None,prior_or_gibbs_init=None):
         self.parent = parent
+        if self.parent is not None:
+            parent.state = self
         self.reset_data()
         self.timing = {}
         ##default values
@@ -13,12 +15,42 @@ class DPMB_State():
         self.inferBetas = True
         self.clipBeta = [1E-2,1E10]
         self.gamma_k = 1
-        self.gamma_theta = 1        
+        self.gamma_theta = 1
         ##
-        if paramDict is None: return
-        if "__builtins__" in paramDict: paramDict.pop("__builtins__")
-        self.__dict__.update(paramDict)
+        if dataset is not None:
+            self.init_from_dataset(dataset,prior_or_gibbs_init)
+        ##
+        if paramDict is not None:
+            if "__builtins__" in paramDict: paramDict.pop("__builtins__")
+            self.__dict__.update(paramDict)
 
+    def init_from_dataset(self,dataset,prior_or_gibbs_init):
+        self.reset_data()
+        self.numColumns = len(dataset["xs"][0])
+        self.numVectors = len(dataset["xs"])
+        ##alpha,beta must be set before loading data to keep track of score
+        if prior_or_gibbs_init is not None:
+            self.alpha = prior_or_gibbs_init["alpha"]
+            self.betas = prior_or_gibbs_init["betas"]
+        else:
+            self.parent.sample_alpha()
+            self.parent.sample_betas()
+        ##need to initialize clusters first to ensure correct labeling of xs
+        ##else, need to modify cluster creation to create null clusters if you get
+        ##an index skip
+        numClusters = len(np.unique(dataset["zs"]))
+        for clusterIdx in range(numClusters):
+            Cluster(self) ## links self to state
+        for clusterIdx,vector_data in zip(dataset["zs"],dataset["xs"]):
+            cluster = self.cluster_list[clusterIdx]
+            self.zs.append(cluster)
+            cluster.create_vector(vector_data)
+        ##do inference once if hypers were sampled from prior
+        if prior_or_gibbs_init is None:
+            self.parent.transition_alpha()
+            self.parent.transition_betas()
+
+    
     def reset_data(self):
         self.zs = []
         self.xs = []
