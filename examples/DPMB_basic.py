@@ -55,9 +55,9 @@ status = testjob.report_status()
 xs = []
 ys = []
 for (k, v) in testjob.iter():
-    xs.append(k[0])
+    xs.append(k[3]/3.0)
     deltaT = sum([x["timing"]["zs"]["stop"]-x["timing"]["zs"]["start"] for x in v["stats"]])
-    ys.append(deltaT)
+    ys.append(deltaT.total_seconds())
 
 # block 8
 # make a plot (iterate on this block to fix layout/display issues)
