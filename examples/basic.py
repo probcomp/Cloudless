@@ -1,15 +1,18 @@
 # block 1
+# must be run before matplotlib,pylab imports
+matplotlib.use('Agg')
+
+# block 2
 # remote definitions, written for re-evaluation
 import Cloudless.base
 reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
 reload(Cloudless.memo) # to make it easy to develop locally
 import matplotlib
-matplotlib.use('Agg') #FIXME Does this break the notebook demo?
 import pylab
 from IPython.parallel import *
 
-# block 2
+# block 3
 # configure remote nodes
 # TODO: Clean up naming of load balanced vs direct views
 Cloudless.base.remote_mode()
@@ -18,7 +21,7 @@ Cloudless.base.remote_exec('import time')
 import numpy.random
 import time
 
-# block 3
+# block 4
 # definition of the job (re-eval to change code)
 def helper(x):
     if numpy.random.uniform() < 0.3:
@@ -29,7 +32,7 @@ def helper(x):
 #TODO: make this a decorator; think carefully about dependencies, reloading
 Cloudless.base.remote_procedure('helper', helper)
 
-# block 4
+# block 5
 def raw_testjob(x):
     time.sleep(numpy.random.uniform(1))
     return helper(x)
@@ -37,7 +40,7 @@ def raw_testjob(x):
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["x"], raw_testjob, override=True)
 
-# block 5
+# block 6
 # set constants (re-eval to change the scope of the plot)
 XRANGE = 100
 
@@ -45,7 +48,7 @@ XRANGE = 100
 for x in range(XRANGE):
     testjob(x)
 
-# block 6
+# block 7
 # get plot data locally (re-eval to get more data)
 status = testjob.report_status()
 xs = []
@@ -54,7 +57,7 @@ for (k, v) in testjob.iter():
     xs.append(k[0])
     ys.append(v)
 
-# block 7
+# block 8
 # make a plot (iterate on this block to fix layout/display issues)
 pylab.figure()
 pylab.scatter(xs, ys)
@@ -63,7 +66,7 @@ pylab.ylabel('Y')
 pylab.show()
 pylab.savefig('basic-job-results.png')
 
-# block 8
+# block 9
 # examine the exceptions for the jobs that failed
 testjob.report_status(verbose=True)
 
