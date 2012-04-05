@@ -9,35 +9,33 @@ import pdb
 
 
 class DPMB():
-    def __init__(self,paramDict,state=None):
+    def __init__(self,paramDict=None,state=None):
+        self.state = ds.DPMB_State(self,paramDict) if state is None else state
+        if paramDict is None:
+            return
         if "__builtins__" in paramDict: paramDict.pop("__builtins__")
         self.__dict__.update(paramDict)
-        self.state = ds.DPMB_State(self,paramDict) if state is None else state
 
     def sample_alpha(self):
         self.state.alpha = np.random.gamma(self.state.gamma_k,self.state.gamma_theta)
 
     def sample_betas(self):
-        self.state.betas = np.random.gamma(self.state.gamma_k,self.state.gamma_theta,(self.numColumns,))
+        self.state.betas = np.random.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
         self.state.betas = np.clip(self.state.betas,self.state.clipBeta[0],self.state.clipBeta[1])
 
-    def sample_thetas(self):
-        self.state.thetas = np.array([np.random.beta(beta,beta,self.state.numClusters) for beta in self.state.betas]).T
+    # def sample_thetas(self):
+    #     self.state.thetas = np.array([np.random.beta(beta,beta,self.state.numClusters) for beta in self.state.betas]).T
 
     def sample_zs(self):
-        self.state.zs = []
-        tempCrp = ds.CRP(self.state.alpha,self.state.numVectors)
-        for clusterIdx in tempCrp.zs:
-            cluster = self.state.cluster_list[clusterIdx] if clusterIdx<self.state.numClustersDyn() else ds.Cluster(self.state)
-            self.state.zs.append(cluster)
+        self.state.sample_zs()
         
     def sample_xs(self):
-        self.state.xs = []
-        for cluster in self.state.zs:
-            cluster.create_vector()
+        self.state.sample_xs()
 
     def reconstitute_thetas(self):
-        self.state.thetas = [self.state.cluster_column_count[clusterIdx]/self.state.cluster_count[clusterIdx] for clusterIdx in range(self.state.numClusters)]
+        ##self.state.thetas = [self.state.cluster_column_count[clusterIdx]/self.state.cluster_count[clusterIdx] for clusterIdx in range(self.state.numClustersDyn())]
+        self.state.thetas = [cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list]
+        return self.state.thetas
             
     def remove_cluster_assignment(self,vectorIdx):
         vector = self.state.xs[vectorIdx]
@@ -62,6 +60,7 @@ class DPMB():
             cluster.remove_vector(vector)
         
     def transition_alpha(self):
+        self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
         initVal = self.state.alpha
         nSamples = 1000
         lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
@@ -76,9 +75,11 @@ class DPMB():
             self.state.infer_alpha_count += 1
         else:
             print "NOT using newAlpha: " + str(newAlpha)
+        self.state.timing.setdefault("alpha",{})["stop"] = datetime.datetime.now()
         return samples
         
     def transition_betas(self):
+        self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
         nSamples = 100
         sampler = lambda x: np.clip(x + np.random.normal(0.0,.1),1E-10,np.inf)
         for colIdx in range(self.state.numColumns):
@@ -97,16 +98,19 @@ class DPMB():
             else:
                 print "NOT using beta_d " + str((colIdx,newBetaD)) 
         self.state.infer_betas_count += 1
+        self.state.timing.setdefault("beta",{})["stop"] = datetime.datetime.now()
         return self.state.betas
 
     def transition_z(self):
-        for vectorIdx in range(self.numVectors):
+        self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
+        for vectorIdx in range(self.state.numVectors):
             self.remove_cluster_assignment(vectorIdx)
             self.calculate_cluster_conditional(vectorIdx)
             scoreRelative = np.exp(self.state.conditionals - self.state.score)
             clusterIdx = plt.find(np.random.multinomial(1,scoreRelative/sum(scoreRelative)))[0]
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
+        self.state.timing.setdefault("zs",{})["stop"] = datetime.datetime.now()
 
     def transition(self,numSteps=1):
         for counter in range(numSteps):
@@ -146,6 +150,14 @@ class DPMB():
             print countDict[actualValue]
             print
 
+    def extract_state_summary(self):
+        return {
+            "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
+            ,"score":self.state.score
+            ,"numClusters":self.state.numClustersDyn()
+            ,"timing":self.state.timing
+            }
+    
 def mhSample(initVal,nSamples,lnPdf,sampler):
     samples = [initVal]
     priorSample = initVal
@@ -167,4 +179,42 @@ def printTS(printStr):
 
 def listCount(listIn):
     return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
+
+
+##per vikash's outline: https://docs.google.com/document/d/16iLc2jjtw7Elxy22wyM_TsSPYwW0KOErWKIpFX5k8Y8/edit
+def gen_dataset(gen_seed, rows, cols, alpha, beta):
+    state = ds.DPMB_State(None,{"numVectors":rows,"numColumns":cols,"alpha":alpha,"betas":np.repeat(beta,cols)})
+    state.create_data(gen_seed)
+    ##
+    return {"zs":state.getZIndices(),"xs":state.getXValues(),"thetas":state.getThetas()}
         
+def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
+    ##stil need to use inf_seed!!!!
+    
+    ##initialize state from dataset : new functionality
+    import pdb
+    pdb.set_trace()
+    model = DPMB(None,None)
+    state = ds.DPMB_State(model)
+    state.numColumns = len(dataset["xs"][0])
+    state.numVectors = len(dataset["xs"])
+    state.alpha = 1
+    state.betas = np.repeat(1,state.numColumns)
+    model.state = state
+    ##need to initialize clusters first to ensure correct labeling of xs
+    ##else, need to modify cluster creation to create null clusters if you get
+    ##an index skip
+    numClusters = len(np.unique(dataset["zs"]))
+    for clusterIdx in range(numClusters):
+        ds.Cluster(state) ## links self to state
+    for clusterIdx,vector_data in zip(dataset["zs"],dataset["xs"]):
+        cluster = state.cluster_list[clusterIdx]
+        state.zs.append(cluster)
+        cluster.create_vector(vector_data)
+    ##test refresh_counts here to verify this initialization works
+    state_summary_list = []
+    for iter_num in range(num_iters):
+        model.transition()
+        state_summary_list.append(model.extract_state_summary())
+    latent_vars = model.reconstitute_thetas()
+    return {"state":latent_vars,"stats":state_summary_list}

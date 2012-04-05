@@ -6,6 +6,11 @@ class DPMB_State():
     def __init__(self,parent,paramDict=None):
         self.parent = parent
         self.reset_data()
+        self.timing = {}
+        self.verbose = False
+        self.inferAlpha = True
+        self.inferBetas = True
+        self.clipBeta = [1E-2,1E10]
         ##
         if paramDict is None: return
         if "__builtins__" in paramDict: paramDict.pop("__builtins__")
@@ -21,12 +26,27 @@ class DPMB_State():
         self.infer_alpha_count = 0
         self.infer_betas_count = 0
         self.infer_z_count = 0
-        
-    def create_data(self):
+
+    def create_data(self,seed=None):
+        if seed is None:
+            seed = nr.randint(sys.maxint)
+        nr.seed(int(np.clip(seed,0,np.inf)))
         self.reset_data()
-        self.parent.sample_zs()
-        self.parent.sample_xs()
-        
+        self.sample_zs()
+        self.sample_xs()
+
+    def sample_zs(self):
+        self.zs = []
+        tempCrp = CRP(self.alpha,self.numVectors)
+        for clusterIdx in tempCrp.zs:
+            cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
+            self.zs.append(cluster)
+    
+    def sample_xs(self):
+        self.xs = []
+        for cluster in self.zs:
+            cluster.create_vector()
+    
     def refresh_counts(self,new_zs=None):
         tempZs = [vector.cluster.clusterIdx for vector in self.xs] if new_zs is None else new_zs
         tempXs = self.xs
@@ -59,6 +79,9 @@ class DPMB_State():
     def getZIndices(self):
         return [vector.cluster.clusterIdx if vector.cluster is not None else None for vector in self.xs]
 
+    def getXValues(self):
+        return [vector.data for vector in self.xs]
+    
     def getThetas(self):
         return [cluster.thetas.copy() for cluster in self.zs]
 
@@ -115,9 +138,9 @@ class CRP():
 
 
 class Vector():
-    def __init__(self,cluster):
+    def __init__(self,cluster,data=None):
         self.cluster = cluster
-        self.data = [np.random.binomial(1,theta) for theta in self.cluster.thetas]
+        self.data = [np.random.binomial(1,theta) for theta in self.cluster.thetas] if data is None else data
         self.vectorIdx = len(self.cluster.parent.xs)
         self.cluster.parent.xs.append(self)
 
@@ -125,8 +148,11 @@ class Vector():
 class Cluster():
     def __init__(self,parent):
         self.parent = parent
-        self.genThetas()
-        self.column_sums = np.zeros(np.shape(self.parent.betas))
+        if hasattr(parent,"betas"):
+            self.genThetas()
+        else:
+            self.thetas = np.repeat(np.nan,self.parent.numColumns)
+        self.column_sums = np.zeros(self.parent.numColumns)
         self.vectorIdxList = []
         ##
         self.clusterIdx = len(self.parent.cluster_list)
@@ -140,14 +166,13 @@ class Cluster():
     def count(self):
         return len(self.vectorIdxList)
         
-    def create_vector(self):
-        vector = Vector(self)
+    def create_vector(self,data=None):
+        vector = Vector(self,data)
         self.add_vector(vector)
 
     def add_vector(self,vector):
         scoreDelta = cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(scoreDelta)
-        ##self.parent.score += scoreDelta
         ##
         vector.cluster = self
         vectorIdx = vector.vectorIdx
@@ -168,14 +193,11 @@ class Cluster():
         ##
         scoreDelta = cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(-scoreDelta)
-        ##self.parent.score -= scoreDelta
-        ##must remove (self) cluster if necessary
-        if self.count() == 0:
+        if self.count() == 0:  ##must remove (self) cluster if necessary
             replacementCluster = self.parent.cluster_list.pop()
             if self.clusterIdx != len(self.parent.cluster_list):
                 replacementCluster.clusterIdx = self.clusterIdx
                 self.parent.cluster_list[self.clusterIdx] = replacementCluster
-        ##[cluster.clusterIdx for cluster in self.cluster_list] == range(self.numClustersDyn()
 
 
 ##if the cluster would be empty without the vector, then its a special case
