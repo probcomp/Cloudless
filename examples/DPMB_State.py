@@ -7,10 +7,13 @@ class DPMB_State():
         self.parent = parent
         self.reset_data()
         self.timing = {}
+        ##default values
         self.verbose = False
         self.inferAlpha = True
         self.inferBetas = True
         self.clipBeta = [1E-2,1E10]
+        self.gamma_k = 1
+        self.gamma_theta = 1        
         ##
         if paramDict is None: return
         if "__builtins__" in paramDict: paramDict.pop("__builtins__")

@@ -1,15 +1,15 @@
 #!python
-import datetime,sys,numpy as np,matplotlib.pylab as plt, scipy.special as ss
+import datetime,matplotlib.pylab as plt,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
 reload(ds)
-plt.show()
-plt.ion()
-##
-import pdb
 
 
 class DPMB():
-    def __init__(self,paramDict=None,state=None):
+    def __init__(self,paramDict=None,state=None,seed=None):
+        if seed is None:
+            seed = nr.randint(sys.maxint)
+        nr.seed(int(np.clip(seed,0,np.inf)))
+        ##
         self.state = ds.DPMB_State(self,paramDict) if state is None else state
         if paramDict is None:
             return
@@ -17,14 +17,14 @@ class DPMB():
         self.__dict__.update(paramDict)
 
     def sample_alpha(self):
-        self.state.alpha = np.random.gamma(self.state.gamma_k,self.state.gamma_theta)
+        self.state.alpha = nr.gamma(self.state.gamma_k,self.state.gamma_theta)
 
     def sample_betas(self):
-        self.state.betas = np.random.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
+        self.state.betas = nr.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
         self.state.betas = np.clip(self.state.betas,self.state.clipBeta[0],self.state.clipBeta[1])
 
     # def sample_thetas(self):
-    #     self.state.thetas = np.array([np.random.beta(beta,beta,self.state.numClusters) for beta in self.state.betas]).T
+    #     self.state.thetas = np.array([nr.beta(beta,beta,self.state.numClusters) for beta in self.state.betas]).T
 
     def sample_zs(self):
         self.state.sample_zs()
@@ -66,7 +66,7 @@ class DPMB():
         lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
         lnPdf = lambda alpha: (ss.gammaln(alpha) + self.state.numClustersDyn()*np.log(alpha)
                                - ss.gammaln(alpha+self.state.numVectorsDyn()) + lnProdGammas)
-        sampler = lambda x: np.clip(x + np.random.normal(0.0,.1),1E-10,np.inf)
+        sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
         samples = mhSample(initVal,nSamples,lnPdf,sampler)
         newAlpha = samples[-1]
         if np.isfinite(lnPdf(newAlpha)):
@@ -81,7 +81,7 @@ class DPMB():
     def transition_betas(self):
         self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
         nSamples = 100
-        sampler = lambda x: np.clip(x + np.random.normal(0.0,.1),1E-10,np.inf)
+        sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
         for colIdx in range(self.state.numColumns):
             initVal = self.state.betas[colIdx]
             S_list = [cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
@@ -107,14 +107,14 @@ class DPMB():
             self.remove_cluster_assignment(vectorIdx)
             self.calculate_cluster_conditional(vectorIdx)
             scoreRelative = np.exp(self.state.conditionals - self.state.score)
-            clusterIdx = plt.find(np.random.multinomial(1,scoreRelative/sum(scoreRelative)))[0]
+            clusterIdx = plt.find(nr.multinomial(1,scoreRelative/sum(scoreRelative)))[0]
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
         self.state.timing.setdefault("zs",{})["stop"] = datetime.datetime.now()
 
     def transition(self,numSteps=1):
         for counter in range(numSteps):
-            printTS("Starting iteration: " + str(counter))
+            printTS("Starting iteration: " + str(self.state.infer_z_count))
             if self.state.verbose:
                 if False:
                     print "alpha: " + str(self.state.alpha)
@@ -162,7 +162,7 @@ def mhSample(initVal,nSamples,lnPdf,sampler):
     samples = [initVal]
     priorSample = initVal
     for counter in range(nSamples):
-        unif = np.random.rand()
+        unif = nr.rand()
         proposal = sampler(priorSample)
         thresh = np.exp(lnPdf(proposal) - lnPdf(priorSample)) ## presume symmetric
         if np.isfinite(thresh) and unif < min(1,thresh):
@@ -189,18 +189,18 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
     return {"zs":state.getZIndices(),"xs":state.getXValues(),"thetas":state.getThetas()}
         
 def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
-    ##stil need to use inf_seed!!!!
-    
-    ##initialize state from dataset : new functionality
-    import pdb
-    pdb.set_trace()
-    model = DPMB(None,None)
+    ##this is a bit clumsy, perhaps modify DPMB_State to accept dataset as an itialization argument
+    model = DPMB(paramDict=None,state=None,seed=inf_seed)
     state = ds.DPMB_State(model)
+    model.state = state
     state.numColumns = len(dataset["xs"][0])
     state.numVectors = len(dataset["xs"])
-    state.alpha = 1
-    state.betas = np.repeat(1,state.numColumns)
-    model.state = state
+    if prior_or_gibbs_init is None:
+        model.sample_alpha()
+        model.sample_betas()
+    else:
+        state.alpha = prior_or_gibbs_init["alpha"]
+        state.betas = prior_or_gibbs_init["betas"]
     ##need to initialize clusters first to ensure correct labeling of xs
     ##else, need to modify cluster creation to create null clusters if you get
     ##an index skip
