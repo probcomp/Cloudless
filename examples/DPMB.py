@@ -191,7 +191,6 @@ def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
     ##this is a bit clumsy, perhaps modify DPMB_State to accept dataset as an itialization argument
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
     state = ds.DPMB_State(model,dataset=dataset)
-
     ##test refresh_counts here to verify this initialization works
     state_summary_list = []
     for iter_num in range(num_iters):
@@ -199,3 +198,7 @@ def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
         state_summary_list.append(model.extract_state_summary())
     latent_vars = model.reconstitute_thetas()
     return {"state":latent_vars,"stats":state_summary_list}
+
+def test_model(gen_state_with_data, sampled_state, num_train):
+    # computes the average predictive probability of the the last N-num_train datapoints under the true model and under the sampled model and returns it
+    pass
