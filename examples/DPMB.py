@@ -33,7 +33,6 @@ class DPMB():
         self.state.sample_xs()
 
     def reconstitute_thetas(self):
-        ##self.state.thetas = [self.state.cluster_column_count[clusterIdx]/self.state.cluster_count[clusterIdx] for clusterIdx in range(self.state.numClustersDyn())]
         self.state.thetas = [cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list]
         return self.state.thetas
             
