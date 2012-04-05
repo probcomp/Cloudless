@@ -1,6 +1,6 @@
 ##data dimensions
 numColumns = 50
-numVectors = 20000
+numVectors = 200
 
 ##priors
 gamma_k = 1 

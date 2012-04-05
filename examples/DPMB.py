@@ -188,7 +188,6 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
     return {"zs":state.getZIndices(),"xs":state.getXValues(),"thetas":state.getThetas()}
         
 def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
-    ##this is a bit clumsy, perhaps modify DPMB_State to accept dataset as an itialization argument
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
     state = ds.DPMB_State(model,dataset=dataset)
     ##test refresh_counts here to verify this initialization works

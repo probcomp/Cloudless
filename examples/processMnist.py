@@ -3,14 +3,16 @@ import gzip,cPickle,os,platform
 import numpy as np
 import DPMB as dm
 reload(dm)
+import DPMB_State as ds
+reload(ds)
 
 
 ##some general parameters
+settingsFile = "DPMB_settings.py"
 settingsDict = dict()
 exec open(settingsFile) in settingsDict
 baseDir = settingsDict["linuxBaseDir"] if (platform.system().lower()=='freebsd' or platform.system().lower()=='linux') else settingsDict["windowsBaseDir"]
-fileStr = os.path.join(baseDir,dataDirSuffix,"mnist.pkl.gz")
-settingsFile = "DPMB_settings.py"
+fileStr = os.path.join(baseDir,settingsDict["dataDirSuffix"],"mnist.pkl.gz")
 pixelThresh = .5
 
 
@@ -28,21 +30,14 @@ def load_data(dataset):
     train_set, valid_set, test_set = cPickle.load(f)
     f.close()
     return (train_set, valid_set, test_set)
-##
-##if I want to read in the raw data, need to start with this
-##http://stackoverflow.com/questions/1035340/reading-binary-file-in-python
-##fileStr = "c:/dpmb.data/train-labels-idx1-ubyte"
-##with open(fileStr,"rb") as f:
-
-
 ##read in the data
 if "train_set" not in locals():
     (train_set, valid_set, test_set) = load_data(fileStr)
+    ##trainset[0] is the data
+    ##trainset[1] is the labels
+    ##trainset[0][i] is a vector of length 784 (28x28)
 else:
     print "train_set already loaded"
-##trainset[0] is the data
-##trainset[1] is the labels
-##trainset[0][i] is a vector of length 784 (28x28)
 
 
 ##alter settings as necessary
@@ -52,13 +47,21 @@ originalZs = train_set[1][:settingsDict["numVectors"]]
 
 
 ##initialize model
-model = dm.DPMB(settingsDict)
-model.sample_alpha()
-model.sample_betas()
-model.sample_zs()
-model.sample_xs()
-for vector in model.state.xs:
-    vector.data = np.array(train_set[0][vector.vectorIdx]>pixelThresh,dtype=type(1))
+dm.printTS("creating model")
+model = dm.DPMB(paramDict=settingsDict,state=None)
+dm.printTS("creating dataset")
+dataset = {"zs":originalZs,"xs":train_set[0][:settingsDict["numVectors"],]}
+dm.printTS("creating state")
+state = ds.DPMB_State(model,paramDict=settingsDict,dataset=dataset)
+dm.printTS("done creating model,dataset,state")
+
+import pdb
+pdb.set_trace()
+##zs are not randomized
+##still need to randomize
+
+##verify counts are correct
+
 ##zs are effectively randomized    
 ##still need to refresh the counts
 model.state.refresh_counts()
