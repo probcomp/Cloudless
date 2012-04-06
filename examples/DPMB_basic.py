@@ -35,7 +35,7 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 XRANGE = 4
 # request the computation (re-eval if e.g. the range changes)
 for x in range(XRANGE):
-    testjob(0,0,10,10*(x+1),1,1,3)
+    testjob(x,x,1000,20,1,1,3)
 
 
 # block 5
@@ -44,17 +44,15 @@ status = testjob.report_status()
 xs = []
 ys = []
 for (k, v) in testjob.iter():
-    xs.append(k[3]/3.0)
-    deltaT = sum([x["timing"]["zs"]["stop"]-x["timing"]["zs"]["start"] for x in v["stats"]])
-    ys.append(deltaT.total_seconds())
-
+    xs.append(np.array([x["timing"]["zs"]["delta"] for x in v["stats"]]).cumsum())
+    ys.append(np.array([x["score"] for x in v["stats"]]))
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
 pylab.figure()
-pylab.scatter(xs, ys)
-pylab.xlabel('X')
-pylab.ylabel('Y')
+pylab.plot(np.array(xs).T, np.array(ys).T)
+pylab.xlabel('Time Elapsed')
+pylab.ylabel('log score')
 pylab.show()
 pylab.savefig('basic-job-results.png')
 

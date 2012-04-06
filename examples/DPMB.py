@@ -194,7 +194,7 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
 def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
     state = ds.DPMB_State(model,dataset=dataset)
-    ##test refresh_counts here to verify this initialization works
+    ##should I be randomizing the dataset's zs?
     state_summary_list = []
     for iter_num in range(num_iters):
         model.transition()

@@ -117,7 +117,7 @@ class DPMB_State():
         return [vector.data for vector in self.xs]
     
     def getThetas(self):
-        return [cluster.thetas.copy() for cluster in self.zs]
+        return [cluster.thetas.copy() for cluster in self.cluster_list]
 
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
