@@ -36,13 +36,18 @@ class DPMB_State():
         else:
             self.parent.sample_alpha()
             self.parent.sample_betas()
-        ##need to initialize clusters first to ensure correct labeling of xs
-        ##else, need to modify cluster creation to create null clusters if you get
-        ##an index skip
-        numClusters = len(np.unique(dataset["zs"]))
+        if "zs" in dataset:
+            tempZs = dataset["zs"] ##this should not often be the case
+        else:
+            tempZs = ds.CRP(self.alpha,self.numVectors).zs
+        ##
+        numClusters = len(np.unique(tempZs))
         for clusterIdx in range(numClusters):
+            ##need to initialize clusters first to ensure correct labeling of xs
+            ##else, need to modify cluster creation to create null clusters
+            ##in the event of an index skip
             Cluster(self) ## links self to state
-        for clusterIdx,vector_data in zip(dataset["zs"],dataset["xs"]):
+        for clusterIdx,vector_data in zip(tempZs,dataset["xs"]):
             cluster = self.cluster_list[clusterIdx]
             self.zs.append(cluster)
             cluster.create_vector(vector_data)

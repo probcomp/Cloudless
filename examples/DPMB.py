@@ -191,9 +191,9 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
     ##
     return {"zs":state.getZIndices(),"xs":state.getXValues(),"thetas":state.getThetas()}
         
-def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
+def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method):
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
-    state = ds.DPMB_State(model,dataset=dataset)
+    state = ds.DPMB_State(model,dataset=observables)
     ##should I be randomizing the dataset's zs?
     state_summary_list = []
     for iter_num in range(num_iters):
@@ -203,5 +203,7 @@ def gen_sample(inf_seed, dataset, num_iters, prior_or_gibbs_init, hyper_method):
     return {"state":latent_vars,"stats":state_summary_list}
 
 def test_model(gen_state_with_data, sampled_state, num_train):
+    gen_state = gen_state_with_data["gen_state"]
+    dataset = gen_state_with_data["dataset"]
     # computes the average predictive probability of the the last N-num_train datapoints under the true model and under the sampled model and returns it
     pass

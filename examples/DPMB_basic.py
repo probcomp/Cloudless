@@ -26,11 +26,8 @@ import numpy
 
 # block 3
 def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
-    dataset = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
-    ##randomize the cluster labels to watch inference happen
-    datasetMod = dataset.copy()
-    datasetMod["zs"] = ds.CRP(numSamples=len(datasetMod["zs"])).zs
-    return dm.gen_sample(inf_seed, datasetMod, num_iters,None,None)
+    observables = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)["xs"]
+    return dm.gen_sample(inf_seed, observables, num_iters,None,None)
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters"], raw_testjob, override=True)
 
