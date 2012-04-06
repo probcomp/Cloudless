@@ -15,9 +15,11 @@ from IPython.parallel import *
 # TODO: Clean up naming of load balanced vs direct views
 Cloudless.base.remote_mode()
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB as dm')
+Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
 Cloudless.base.remote_exec('import time')
 Cloudless.base.remote_exec('import numpy')
 import Cloudless.examples.DPMB as dm
+import Cloudless.examples.DPMB_State as ds
 import time
 import numpy
 
@@ -25,7 +27,10 @@ import numpy
 # block 3
 def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
     dataset = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
-    return dm.gen_sample(inf_seed, dataset, num_iters,None,None)
+    ##randomize the cluster labels to watch inference happen
+    datasetMod = dataset.copy()
+    datasetMod["zs"] = ds.CRP(numSamples=len(datasetMod["zs"])).zs
+    return dm.gen_sample(inf_seed, datasetMod, num_iters,None,None)
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters"], raw_testjob, override=True)
 
