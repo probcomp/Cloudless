@@ -35,7 +35,7 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 XRANGE = 4
 # request the computation (re-eval if e.g. the range changes)
 for x in range(XRANGE):
-    testjob(x,x,1000,20,1,1,3)
+    testjob(0,x,1000,20,1,1,3)
 
 
 # block 5
