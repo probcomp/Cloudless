@@ -32,10 +32,10 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
-XRANGE = 4
+XRANGE = 10
 # request the computation (re-eval if e.g. the range changes)
 for x in range(XRANGE):
-    testjob(0,x,1000,20,1,1,3)
+    testjob(0,x,1000,20,1,1,10)
 
 
 # block 5
@@ -44,7 +44,7 @@ status = testjob.report_status()
 xs = []
 ys = []
 for (k, v) in testjob.iter():
-    xs.append(np.array([x["timing"]["zs"]["delta"] for x in v["stats"]]).cumsum())
+    xs.append(np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v["stats"]]).cumsum())
     ys.append(np.array([x["score"] for x in v["stats"]]))
 
 # block 6
