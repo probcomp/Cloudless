@@ -26,7 +26,7 @@ import numpy
 
 # block 3
 def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
-    observables = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)["xs"]
+    observables = {"xs":dm.gen_dataset(gen_seed,rows,cols,alpha,beta)["xs"]}
     return dm.gen_sample(inf_seed, observables, num_iters,None,None)
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters"], raw_testjob, override=True)

@@ -39,7 +39,7 @@ class DPMB_State():
         if "zs" in dataset:
             tempZs = dataset["zs"] ##this should not often be the case
         else:
-            tempZs = ds.CRP(self.alpha,self.numVectors).zs
+            tempZs = CRP(self.alpha,self.numVectors).zs
         ##
         numClusters = len(np.unique(tempZs))
         for clusterIdx in range(numClusters):
