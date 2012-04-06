@@ -10,11 +10,11 @@ class DPMB():
             seed = nr.randint(sys.maxint)
         nr.seed(int(np.clip(seed,0,np.inf)))
         ##
+        if paramDict is not None:
+            if "__builtins__" in paramDict: paramDict.pop("__builtins__")
+            self.__dict__.update(paramDict)
+        ##
         self.state = ds.DPMB_State(self,paramDict) if state is None else state
-        if paramDict is None:
-            return
-        if "__builtins__" in paramDict: paramDict.pop("__builtins__")
-        self.__dict__.update(paramDict)
 
     def sample_alpha(self):
         self.state.alpha = nr.gamma(self.state.gamma_k,self.state.gamma_theta)
@@ -22,9 +22,6 @@ class DPMB():
     def sample_betas(self):
         self.state.betas = nr.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
         self.state.betas = np.clip(self.state.betas,self.state.clipBeta[0],self.state.clipBeta[1])
-
-    # def sample_thetas(self):
-    #     self.state.thetas = np.array([nr.beta(beta,beta,self.state.numClusters) for beta in self.state.betas]).T
 
     def sample_zs(self):
         self.state.sample_zs()
@@ -74,7 +71,8 @@ class DPMB():
             self.state.infer_alpha_count += 1
         else:
             print "NOT using newAlpha: " + str(newAlpha)
-        self.state.timing.setdefault("alpha",{})["stop"] = datetime.datetime.now()
+        self.state.timing["alpha"]["stop"] = datetime.datetime.now()
+        self.state.timing["alpha"]["delta"] = self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]
         return samples
         
     def transition_betas(self):
@@ -97,7 +95,8 @@ class DPMB():
             else:
                 print "NOT using beta_d " + str((colIdx,newBetaD)) 
         self.state.infer_betas_count += 1
-        self.state.timing.setdefault("beta",{})["stop"] = datetime.datetime.now()
+        self.state.timing["beta"]["stop"] = datetime.datetime.now()
+        self.state.timing["beta"]["delta"] = self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]
         return self.state.betas
 
     def transition_z(self):
@@ -109,25 +108,30 @@ class DPMB():
             clusterIdx = plt.find(nr.multinomial(1,scoreRelative/sum(scoreRelative)))[0]
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
-        self.state.timing.setdefault("zs",{})["stop"] = datetime.datetime.now()
+        self.state.timing["zs"]["stop"] = datetime.datetime.now()
+        self.state.timing["zs"]["delta"] = self.state.timing["zs"]["stop"]-self.state.timing["zs"]["start"]
 
     def transition(self,numSteps=1):
         for counter in range(numSteps):
             printTS("Starting iteration: " + str(self.state.infer_z_count))
+            ##
+            if self.state.inferAlpha:
+                if self.state.verbose:
+                    print "PRE transition_alpha score: " + str(self.state.score)
+                self.transition_alpha()
+            ##
+            if self.state.inferBetas:
+                if self.state.verbose:
+                        print "PRE transition_betas score: " + str(self.state.score)
+                self.transition_betas()
+            ##
             if self.state.verbose:
                 if False:
                     print "alpha: " + str(self.state.alpha)
                     print "betas: " + str(self.state.betas)
                 print "PRE transition_z score: " + str(self.state.score)
             self.transition_z()
-            if self.state.inferAlpha:
-                if self.state.verbose:
-                    print "PRE transition_alpha score: " + str(self.state.score)
-                self.transition_alpha()
-            if self.state.inferBetas:
-                if self.state.verbose:
-                        print "PRE transition_betas score: " + str(self.state.score)
-                self.transition_betas()
+            ##
             if self.state.verbose:
                 print "Cycle end score: " + str(self.state.score)
                 print

@@ -1,6 +1,7 @@
 #!python
-import numpy as np, numpy.random as nr, matplotlib.mlab as mlab
-
+import matplotlib.mlab as mlab,numpy as np, numpy.random as nr,sys
+import DPMB as dm
+reload(dm)
 
 class DPMB_State():
     def __init__(self,parent,paramDict=None,dataset=None,prior_or_gibbs_init=None):
@@ -45,11 +46,6 @@ class DPMB_State():
             cluster = self.cluster_list[clusterIdx]
             self.zs.append(cluster)
             cluster.create_vector(vector_data)
-        ##do inference once if hypers were sampled from prior
-        if prior_or_gibbs_init is None:
-            self.parent.transition_alpha()
-            self.parent.transition_betas()
-
     
     def reset_data(self):
         self.zs = []
@@ -86,6 +82,9 @@ class DPMB_State():
         tempZs = [vector.cluster.clusterIdx for vector in self.xs] if new_zs is None else new_zs
         tempXs = self.xs
         self.reset_data()
+        numClusters = len(np.unique(tempZs))
+        for clusterIdx in range(numClusters):
+            Cluster(self)
         ##
         for vector,clusterIdx in zip(tempXs,tempZs):
             cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)

@@ -1,6 +1,6 @@
 ##data dimensions
 numColumns = 50
-numVectors = 200
+numVectors = 2000
 
 ##priors
 gamma_k = 1 
@@ -9,7 +9,7 @@ gamma_theta = 1
 ##computation
 nGibbsSteps = 3
 
-##other
+##control
 clipBeta = [1E-2,1E10]
 inferAlpha = True
 inferBetas = True

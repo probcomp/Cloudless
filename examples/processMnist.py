@@ -50,26 +50,17 @@ originalZs = train_set[1][:settingsDict["numVectors"]]
 dm.printTS("creating model")
 model = dm.DPMB(paramDict=settingsDict,state=None)
 dm.printTS("creating dataset")
-dataset = {"zs":originalZs,"xs":train_set[0][:settingsDict["numVectors"],]}
+##dataset = {"zs":np.array(originalZs)-1,"xs":np.array(train_set[0][:settingsDict["numVectors"]]>.5,dtype=type(1))}
+dataset = {"zs":np.array(originalZs),"xs":np.array(train_set[0][:settingsDict["numVectors"]]>.5,dtype=type(1))}
 dm.printTS("creating state")
 state = ds.DPMB_State(model,paramDict=settingsDict,dataset=dataset)
 dm.printTS("done creating model,dataset,state")
+##counts are correct but still need to randomize zs
+originalThetas = np.array(model.reconstitute_thetas())
+model.randomize_z()
 
-import pdb
-pdb.set_trace()
-##zs are not randomized
-##still need to randomize
-
-##verify counts are correct
-
-##zs are effectively randomized    
-##still need to refresh the counts
-model.state.refresh_counts()
 
 ##run some transitions  
-print "Transitioning alpha,beta to ensure hypers are in a reasonable state given the data"
-alphas_considered = model.transition_alpha()
-working_betas = model.transition_betas()
 zSnapshotList = []
 ##
 model.transition(model.nGibbsSteps)
