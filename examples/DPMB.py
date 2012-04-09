@@ -204,8 +204,6 @@ def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_meth
     tailIndex = -num_train if num_train is not None else None
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
     ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
-    import pdb
-    pdb.set_trace()
     state = ds.DPMB_State(model,dataset={"xs":observables[:tailIndex]}) ##z's are generated from CRP if not passed
     stats = []
     for iter_num in range(num_iters):

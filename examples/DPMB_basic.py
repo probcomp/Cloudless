@@ -17,11 +17,11 @@ Cloudless.base.remote_mode()
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB as dm')
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
 Cloudless.base.remote_exec('import time')
-Cloudless.base.remote_exec('import numpy')
+Cloudless.base.remote_exec('import numpy as np')
 import Cloudless.examples.DPMB as dm
 import Cloudless.examples.DPMB_State as ds
 import time
-import numpy
+import numpy as np
 
 
 # block 3
