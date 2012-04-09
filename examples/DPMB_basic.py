@@ -52,12 +52,14 @@ for (k, v) in testjob.iter():
     time_delta.append(np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum())
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
     predictive_prob.append(np.array([x["predictive_prob"]["sampled_prob"] for x in v[0]["stats"]]))    
+    true_prob = v[1]["gen_prob"]
 
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
-pylab.figure()
+fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(predictive_prob).T)
+pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
 pylab.xlabel('Time Elapsed')
 pylab.ylabel('predictive_prob')
 pylab.show()
