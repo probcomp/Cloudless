@@ -30,9 +30,16 @@ class DPMB():
         self.state.sample_xs()
 
     def reconstitute_thetas(self):
-        self.state.thetas = [cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list]
-        return self.state.thetas
-            
+        thetas = np.array([cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list])
+        return thetas
+
+    def reconstitute_phis(self):
+        phis = np.array([float(len(cluster.vectorIdxList))/self.state.numVectorsDyn() for cluster in self.state.cluster_list])
+        return phis
+
+    def reconstitute_latents(self):
+        return {"thetas":self.reconstitute_thetas(),"phis":self.reconstitute_phis()}
+    
     def remove_cluster_assignment(self,vectorIdx):
         vector = self.state.xs[vectorIdx]
         cluster = vector.cluster
@@ -189,33 +196,42 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
     state = ds.DPMB_State(None,{"numVectors":rows,"numColumns":cols,"alpha":alpha,"betas":np.repeat(beta,cols)})
     state.create_data(gen_seed)
     ##
-    return {"zs":state.getZIndices(),"xs":state.getXValues(),"thetas":state.getThetas()}
+    observables = state.getXValues()
+    gen_state = {"zs":state.getZIndices(),"thetas":state.getThetas(),"phis":state.getPhis()}
+    return {"observables":observables,"gen_state":gen_state}
         
-def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method):
+def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method, num_train=None):
+    tailIndex = -num_train if num_train is not None else None
     model = DPMB(paramDict=None,state=None,seed=inf_seed)
-    state = ds.DPMB_State(model,dataset=observables)
-    ##should I be randomizing the dataset's zs?
-    state_summary_list = []
+    ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
+    import pdb
+    pdb.set_trace()
+    state = ds.DPMB_State(model,dataset={"xs":observables[:tailIndex]}) ##z's are generated from CRP if not passed
+    stats = []
     for iter_num in range(num_iters):
         model.transition()
-        state_summary_list.append(model.extract_state_summary())
-    latent_vars = model.reconstitute_thetas()
-    return {"state":latent_vars,"stats":state_summary_list}
+        stats.append(model.extract_state_summary())
+        stats[-1]["predictive_prob"] = test_model({"observables":observables},model.reconstitute_latents(),num_train)
+    return {"state":model.reconstitute_latents(),"stats":stats}
 
 def test_model(gen_state_with_data, sampled_state, num_train):
     # computes the average predictive probability of the the last N-num_train datapoints
     # under the true model and under the sampled model and returns it
-    gen_state = gen_state_with_data["gen_state"]
-    dataset = gen_state_with_data["dataset"]
-    trueProbs = [test_model_helper(data,gen_state)
-                 for data in dataset[-num_train:]]
-    sampledProbs = [test_model_helper(data,sampled_state)
-                 for data in dataset[-num_train:]]
-    return trueProbs,sampledProbs
+    tailIndex = -num_train if num_train is not None else None
+    dataset = gen_state_with_data["observables"]
+    if "gen_state" in gen_state_with_data:
+        gen_state = gen_state_with_data["gen_state"]
+        gen_prob = sum([test_model_helper(data,gen_state["thetas"],gen_state["phis"])
+                     for data in dataset[tailIndex:]])
+    else:
+        gen_prob = None
+    sampled_prob = sum([test_model_helper(data,sampled_state["thetas"],sampled_state["phis"])
+                 for data in dataset[tailIndex:]])
+    return {"gen_prob":gen_prob,"sampled_prob":sampled_prob}
 
-def test_model_helper(data,thetas):
+def test_model_helper(data,thetas,phis):
     boolIdx = np.array(data,dtype=type(True))
     runSum = 0
-    for theta in thetas:
-        runSum += np.exp(np.log(theta[boolIdx]).sum() + np.log(1-theta[~boolIdx]).sum())
+    for theta,phi in zip(thetas,phis):
+        runSum += np.exp(np.log(phi) + np.log(theta[boolIdx]).sum() + np.log(1-theta[~boolIdx]).sum())
     return np.log(runSum)

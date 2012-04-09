@@ -116,13 +116,18 @@ class DPMB_State():
         return len(self.xs)
 
     def getZIndices(self):
-        return [vector.cluster.clusterIdx if vector.cluster is not None else None for vector in self.xs]
+        return np.array([vector.cluster.clusterIdx if vector.cluster is not None else None for vector in self.xs])
 
     def getXValues(self):
-        return [vector.data for vector in self.xs]
+        return np.array([vector.data for vector in self.xs])
     
-    def getThetas(self):
-        return [cluster.thetas.copy() for cluster in self.cluster_list]
+    def getThetas(self): ##true thetas
+        return np.array([cluster.thetas for cluster in self.cluster_list])
+
+    def getPhis(self): ##?true? phis
+        phis = np.array([float(len(cluster.vectorIdxList))/self.numVectorsDyn() for cluster in self.cluster_list])
+        return phis
+
 
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)

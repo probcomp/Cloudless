@@ -36,8 +36,8 @@ if False:
     print "What are the actual numbers for my labels?"
     model.compareClustering(originalZs,reverse=True)
 else:  ## basic.py style
-    dataset = dm.gen_dataset(0,1000,20,1,1)
-    datasetMod = dataset.copy()
-    datasetMod["zs"] = ds.CRP(numSamples=len(datasetMod["zs"])).zs
-    sample = dm.gen_sample(0,datasetMod,5,None,None)
+    gen_state_with_data = dm.gen_dataset(0,1000,20,1,1)
+    sample = dm.gen_sample(0,gen_state_with_data,5,None,None,900)
     print [stats["score"] for stats in sample["stats"]] 
+    print sample["stats"][0]["predictive_prob"]["gen_prob"]
+    print [stats["predictive_prob"]["sampled_prob"] for stats in sample["stats"]]

@@ -26,8 +26,10 @@ import numpy
 
 # block 3
 def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
-    observables = {"xs":dm.gen_dataset(gen_seed,rows,cols,alpha,beta)["xs"]}
-    return dm.gen_sample(inf_seed, observables, num_iters,None,None)
+    gen_state_with_data = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=int(np.floor(.9*rows)))
+    predictive_prob = test_model(gen_state_with_data,gen_sample_output["state"],num_train=int(np.floor(.9*rows)))
+    return gen_sample_output,predictive_prob
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters"], raw_testjob, override=True)
 
@@ -57,7 +59,9 @@ pylab.xlabel('Time Elapsed')
 pylab.ylabel('log score')
 pylab.show()
 pylab.savefig('basic-job-results.png')
-
+##
+print sample["stats"][0]["predictive_prob"]["gen_prob"]
+print [stats["predictive_prob"]["sampled_prob"] for stats in sample["stats"]]
 
 # block 7
 # examine the exceptions for the jobs that failed
