@@ -203,7 +203,8 @@ def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_meth
     return {"state":latent_vars,"stats":state_summary_list}
 
 def test_model(gen_state_with_data, sampled_state, num_train):
-    # computes the average predictive probability of the the last N-num_train datapoints under the true model and under the sampled model and returns it
+    # computes the average predictive probability of the the last N-num_train datapoints
+    # under the true model and under the sampled model and returns it
     gen_state = gen_state_with_data["gen_state"]
     dataset = gen_state_with_data["dataset"]
     trueProbs = [test_model_helper(data,gen_state)
@@ -217,4 +218,4 @@ def test_model_helper(data,thetas):
     runSum = 0
     for theta in thetas:
         runSum += np.exp(np.log(theta[boolIdx]).sum() + np.log(1-theta[~boolIdx]).sum())
-    return log(runSum)
+    return np.log(runSum)
