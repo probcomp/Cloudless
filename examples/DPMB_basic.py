@@ -36,10 +36,13 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
-XRANGE = 4
+NUM_SIMS = 4
+NUM_ITERS = 6
+ROWS = 4000
+COLS = 40
 # request the computation (re-eval if e.g. the range changes)
-for x in range(XRANGE):
-    testjob(0,x,4000,40,1,1,6)
+for x in range(NUM_SIMS):
+    testjob(0,x,ROWS,COLS,1,1,NUM_ITERS)
 
 
 # block 5
@@ -49,7 +52,10 @@ time_delta = []
 log_score = []
 predictive_prob = []
 for (k, v) in testjob.iter():
-    time_delta.append(np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum())
+    time_delta.append(np.array([x["timing"]["zs"]["delta"].total_seconds()
+                                + x["timing"]["alpha"]["delta"].total_seconds()
+                                + x["timing"]["beta"]["delta"].total_seconds()
+                                for x in v[0]["stats"]]).cumsum())
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
     predictive_prob.append(np.array([x["predictive_prob"]["sampled_prob"] for x in v[0]["stats"]]))    
     true_prob = v[1]["gen_prob"]
@@ -60,17 +66,37 @@ for (k, v) in testjob.iter():
 fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-pylab.xlabel('Time Elapsed')
+pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('predictive_prob')
 pylab.show()
-pylab.savefig('basic-job-results.png')
+pylab.savefig('predictive_prob_by_time.png')
 ##
 pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(log_score).T)
-pylab.xlabel('Time Elapsed')
+pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('log_score')
 pylab.show()
-pylab.savefig('basic-job-results.png')
+pylab.savefig('log_score_by_time.png')
+##
+##
+fh = pylab.figure()
+pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(predictive_prob).T)
+pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
+pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.xlabel('Iteration number')
+pylab.ylabel('predictive_prob')
+pylab.show()
+pylab.savefig('predictive_prob_by_iter.png')
+##
+pylab.figure()
+pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(log_score).T)
+pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.xlabel('Iteration number')
+pylab.ylabel('log_score')
+pylab.show()
+pylab.savefig('log_score_by_iter.png')
 
 
 # block 7
