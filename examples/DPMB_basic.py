@@ -39,10 +39,14 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 NUM_SIMS = 4
 NUM_ITERS = 6
 ROWS = 4000
-COLS = 40
+COLS = 100
+ALPHA = 1
+BETA = 1
+GEN_SEED = 1
+cluster_dist = dm.gen_dataset(GEN_SEED,ROWS,COLS,ALPHA,BETA)["gen_state"]["phis"]
 # request the computation (re-eval if e.g. the range changes)
 for x in range(NUM_SIMS):
-    testjob(0,x,ROWS,COLS,1,1,NUM_ITERS)
+    testjob(GEN_SEED,x,ROWS,COLS,ALPHA,BETA,NUM_ITERS)
 
 
 # block 5
@@ -102,3 +106,7 @@ pylab.savefig('log_score_by_iter.png')
 # block 7
 # examine the exceptions for the jobs that failed
 testjob.report_status(verbose=True)
+cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,ROWS,COLS,ALPHA,BETA)["gen_state"]["phis"])
+"num material clusters: " + str(sum(cluster_dist.cumsum()>.10))
+
+
