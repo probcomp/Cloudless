@@ -35,12 +35,11 @@ class AsyncMemoize:
     def terminate_pending(self):
         if not Cloudless.base.remote:
             return
-        Cloudless.base.get_view().abort()
-        ##Cloudless.base.remote_client.abort()
-        # for (args, job) in self.jobs_iter():
-        #     if job['remote']:
-        #         async_result = job['async_res']
-        #         async_result.abort()
+    #     return self.client.abort(self.msg_ids, targets=self._targets, block=True)
+        for (args, job) in self.jobs_iter():
+            if job['remote']:
+                async_result = job['async_res']
+                async_result._client.abort(async.msg_ids,targets=async._targets,block=True)
             
     # FIXME: make deleting this object deregister itself from Cloudless
 
