@@ -200,11 +200,11 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta):
     gen_state = {"zs":state.getZIndices(),"thetas":state.getThetas(),"phis":state.getPhis()}
     return {"observables":observables,"gen_state":gen_state}
         
-def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method, num_train=None):
+def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method, num_train=None, paramDict=None):
     tailIndex = -num_train if num_train is not None else None
-    model = DPMB(paramDict=None,state=None,seed=inf_seed)
+    model = DPMB(paramDict=paramDict,state=None,seed=inf_seed)
     ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
-    state = ds.DPMB_State(model,dataset={"xs":observables[:tailIndex]}) ##z's are generated from CRP if not passed
+    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":observables[:tailIndex]}) ##z's are generated from CRP if not passed
     stats = []
     for iter_num in range(num_iters):
         model.transition()

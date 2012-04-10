@@ -26,8 +26,9 @@ import numpy as np
 
 # block 3
 def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
+    paramDict = {"inferAlpha":False,"inferBetas":False}
     gen_state_with_data = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=int(np.floor(.9*rows)))
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=int(np.floor(.9*rows)),paramDict=paramDict)
     predictive_prob = dm.test_model(gen_state_with_data,gen_sample_output["state"],num_train=int(np.floor(.9*rows)))
     return gen_sample_output,predictive_prob
 # make memoized job (re-eval if the job code changes, or to reset cache)
@@ -38,9 +39,9 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 # set constants (re-eval to change the scope of the plot)
 NUM_SIMS = 10
 NUM_ITERS = 10
-ROWS = 4000
-COLS = 100
-ALPHA = 30
+ROWS = 2000
+COLS = 256
+ALPHA = 100
 BETA = 3
 GEN_SEED = 0
 # request the computation (re-eval if e.g. the range changes)
@@ -69,7 +70,7 @@ for (k, v) in testjob.iter():
 fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('predictive_prob')
 pylab.show()
@@ -77,7 +78,7 @@ pylab.savefig('predictive_prob_by_time.png')
 ##
 pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(log_score).T)
-pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('log_score')
 pylab.show()
@@ -87,7 +88,7 @@ pylab.savefig('log_score_by_time.png')
 fh = pylab.figure()
 pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Iteration number')
 pylab.ylabel('predictive_prob')
 pylab.show()
@@ -95,7 +96,7 @@ pylab.savefig('predictive_prob_by_iter.png')
 ##
 pylab.figure()
 pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(log_score).T)
-pylab.title("ROWS: " + str(ROWS) + "; COLS: " + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS))
+pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Iteration number')
 pylab.ylabel('log_score')
 pylab.show()
@@ -106,4 +107,4 @@ pylab.savefig('log_score_by_iter.png')
 # examine the exceptions for the jobs that failed
 testjob.report_status(verbose=True)
 cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,ROWS,COLS,ALPHA,BETA)["gen_state"]["phis"])
-"num material clusters: " + str(sum(cluster_dist.cumsum()>.10))
+print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
