@@ -39,9 +39,7 @@ class AsyncMemoize:
             if job['remote']:
                 async_result = job['async_res']
                 assert not async_result.ready(), "Can't abort, I am already done!"
-                async_result._client.abort(async_result.msg_ids,targets=async_result._targets,block=False)
-                #return self.client.abort(self.msg_ids, targets=self._targets, block=True)
-            
+                async_result._client.abort()
     # FIXME: make deleting this object deregister itself from Cloudless
 
     def start_recording(self):
