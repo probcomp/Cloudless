@@ -35,8 +35,8 @@ class AsyncMemoize:
     def terminate_pending(self):
         if not Cloudless.base.remote:
             return
-        ##Cloudless.base.get_view().abort()
-        Cloudless.base.remote_client.abort()
+        Cloudless.base.get_view().abort()
+        ##Cloudless.base.remote_client.abort()
         # for (args, job) in self.jobs_iter():
         #     if job['remote']:
         #         async_result = job['async_res']
