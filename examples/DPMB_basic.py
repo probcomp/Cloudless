@@ -36,7 +36,7 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
-NUM_SIMS = 4
+NUM_SIMS = 10
 NUM_ITERS = 10
 ROWS = 4000
 COLS = 100
@@ -62,7 +62,7 @@ for (k, v) in testjob.iter():
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
     predictive_prob.append(np.array([x["predictive_prob"]["sampled_prob"] for x in v[0]["stats"]]))    
     true_prob = v[1]["gen_prob"]
-
+##testjob.terminate_pending() ## uncomment to kill non-running jobs
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
