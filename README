@@ -5,10 +5,9 @@ Cloudless --- Distributed computational science made easy, in Python
 
 Cloudless makes it easy to interactively develop and monitor
 computationally intensive pipelines using EC2, and maintain a
-persistent record of computational science work using S3. It builds on
-IPython.parallel for remote execution and data transfer, and
+persistent record of computational science work using EBS Volumes. It
+builds on IPython.parallel for remote execution and data transfer, and
 StarCluster for cluster provisioning and management.
-
 
 *** INSTALLATION ***
 
@@ -110,3 +109,27 @@ To use Cloudless:
    using it in order to STOP PAYING FOR AWS SERVICE:
 
      $ starcluster terminate mycluster
+
+9. If you want to use persistence in the memoizer:
+
+   - Create an EBS volume for your persistent state (here, 10 refers to 10GB,
+     and -n myvol says the name is myvol, to make it easier to find using the
+     AWS tools)
+
+     starcluster createvolume -n myvol 10 us-east-1c
+
+   - Get the volume id of your volume, from the output of:
+
+     starcluster listvolumes
+
+   - Add the volume configuration to your starcluster config:
+
+     [volume myscratch]
+     volume_id = <your-id>
+     mount_path = /scratch
+
+   - Add the volume to your cluster config, under the plugins line:
+     volumes = myscratch
+
+
+   

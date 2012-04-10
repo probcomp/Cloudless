@@ -32,6 +32,21 @@ class AsyncMemoize:
         self.args = {}
         self.jobs = {}
 
+    def save(self, path):
+        if not os.path.exists(path):
+            raise Exception("Tried to save memoizer to bad path: " + str(path))
+
+        import cPickle
+        cPickle.dump(self.memo, open(self.name + "-memo.pickle", "w"))
+        cPickle.dump(self.args, open(self.args + "-args.pickle", "w"))
+
+    def load(self, path):
+        if not os.path.exists(path):
+            raise Exception("Tried to load memoizer from bad path: " + str(path))
+        import cPickle
+        self.memo = cPickle.load(open(self.name + "-memo.pickle", "r"))
+        self.args = cPickle.load(open(self.name + "-args.pickle", "r"))
+
     def terminate_pending(self):
         if not Cloudless.base.remote:
             return

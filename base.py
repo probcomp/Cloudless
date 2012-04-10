@@ -1,5 +1,7 @@
 from IPython.parallel import *
 
+import os.path
+
 global remote_client
 remote_client = None
 
@@ -32,19 +34,25 @@ def clear_all():
 
 def save(name):
     if remote:
-        raise Exception("saving and loading not yet implemented for remote workspaces")
+        if not os.path.exists('/scratch'):
+            raise Exception("can't save memoizer state; missing /scratch, which should come from an EBS")
+        
+        for m in memoizers.values():
+            m.save('/scratch')
     else:
-        raise Exception("saving and loading not yet implemented for local")
-
-    #import pickle
-    # save the memoizers
-    # save the scratch
+        for m in memoizers.values():
+            m.save('/tmp')
 
 def load(name):
     if remote:
-        raise Exception("saving and loading not yet implemented for remote workspaces")
+        if not os.path.exists('/scratch'):
+            raise Exception("can't load memoizer state; missing /scratch, which should come from an EBS")
+
+        for m in memoizers.values():
+            m.load('/scratch')
     else:
-        raise Exception("Saving and loading not yet implemented for local")
+        for m in memoizers.values():
+            m.load('/tmp')
 
 def initialize_client():
     if remote:
