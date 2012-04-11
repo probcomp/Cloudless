@@ -15,38 +15,45 @@ from IPython.parallel import *
 # TODO: Clean up naming of load balanced vs direct views
 Cloudless.base.remote_mode()
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB as dm')
+Cloudless.base.remote_exec('reload(dm)')
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
+Cloudless.base.remote_exec('reload(ds)')
 Cloudless.base.remote_exec('import time')
 Cloudless.base.remote_exec('import numpy as np')
 import Cloudless.examples.DPMB as dm
+reload(dm)
 import Cloudless.examples.DPMB_State as ds
+reload(ds)
 import time
 import numpy as np
 
 
 # block 3
-def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters):
-    paramDict = {"inferAlpha":False,"inferBetas":False}
+def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters,hold_out_ratio,infer_hypers):
+    paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers}
+    num_train = int(np.floor(hold_out_ratio*rows))
     gen_state_with_data = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=int(np.floor(.9*rows)),paramDict=paramDict)
-    predictive_prob = dm.test_model(gen_state_with_data,gen_sample_output["state"],num_train=int(np.floor(.9*rows)))
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=num_train,paramDict=paramDict)
+    predictive_prob = dm.test_model(gen_state_with_data,gen_sample_output["state"],num_train=num_train)
     return gen_sample_output,predictive_prob
 # make memoized job (re-eval if the job code changes, or to reset cache)
-testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters"], raw_testjob, override=True)
+testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters","hold_out_ratio","infer_hypers"], raw_testjob, override=True)
 
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
 NUM_SIMS = 10
-NUM_ITERS = 10
-ROWS = 2000
+NUM_ITERS = 100
+ROWS = 4000
 COLS = 256
+HOLD_OUT_RATIO = .5
 ALPHA = 100
 BETA = 3
-GEN_SEED = 0
+GEN_SEED = 2
+INFER_HYPERS = True
 # request the computation (re-eval if e.g. the range changes)
 for x in range(NUM_SIMS):
-    testjob(GEN_SEED,x,ROWS,COLS,ALPHA,BETA,NUM_ITERS)
+    testjob(GEN_SEED,x,ROWS,COLS,ALPHA,BETA,NUM_ITERS,HOLD_OUT_RATIO,INFER_HYPERS)
 
 
 # block 5
@@ -56,14 +63,20 @@ time_delta = []
 log_score = []
 predictive_prob = []
 for (k, v) in testjob.iter():
-    time_delta.append(np.array([x["timing"]["zs"]["delta"].total_seconds()
-                                + x["timing"]["alpha"]["delta"].total_seconds()
-                                + x["timing"]["beta"]["delta"].total_seconds()
-                                for x in v[0]["stats"]]).cumsum())
+    z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
+    if "alpha" in v[0]["stats"][0]["timing"]:
+        alpha_delta = np.array([x["timing"]["alpha"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
+    else:
+        alpha_delta = np.zeros(np.shape(z_delta))
+    if "beta" in v[0]["stats"][0]["timing"]:
+        beta_delta = np.array([x["timing"]["beta"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
+    else:
+        beta_delta = np.zeros(np.shape(z_delta))
+    time_delta.append(z_delta+alpha_delta+beta_delta)
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
     predictive_prob.append(np.array([x["predictive_prob"]["sampled_prob"] for x in v[0]["stats"]]))    
     true_prob = v[1]["gen_prob"]
-##testjob.terminate_pending() ## uncomment to kill non-running jobs
+
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
@@ -108,3 +121,4 @@ pylab.savefig('log_score_by_iter.png')
 testjob.report_status(verbose=True)
 cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,ROWS,COLS,ALPHA,BETA)["gen_state"]["phis"])
 print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
+##testjob.terminate_pending() ## uncomment to kill non-running jobs
