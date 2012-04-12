@@ -11,8 +11,8 @@ nGibbsSteps = 3
 
 ##control
 clipBeta = [1E-2,1E10]
-inferAlpha = True
-inferBetas = True
+inferAlpha = False
+inferBetas = False
 verbose = True
 
 ##os

@@ -38,7 +38,7 @@ class DPMB():
         return phis
 
     def reconstitute_latents(self):
-        return {"thetas":self.reconstitute_thetas(),"phis":self.reconstitute_phis()}
+        return {"thetas":self.reconstitute_thetas(),"phis":self.reconstitute_phis(),"zs":self.state.getZIndices()}
     
     def remove_cluster_assignment(self,vectorIdx):
         vector = self.state.xs[vectorIdx]
@@ -56,11 +56,12 @@ class DPMB():
         ##new_cluster is auto appended to cluster list
         ##and pops off when vector is deassigned
         new_cluster = ds.Cluster(self.state)
-        self.state.conditionals = []
+        conditionals = []
         for cluster in self.state.cluster_list:
             cluster.add_vector(vector)
-            self.state.conditionals.append(self.state.score)
+            conditionals.append(self.state.score)
             cluster.remove_vector(vector)
+        return conditionals
         
     def transition_alpha(self):
         self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
@@ -110,9 +111,8 @@ class DPMB():
         self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
         for vectorIdx in range(self.state.numVectors):
             self.remove_cluster_assignment(vectorIdx)
-            self.calculate_cluster_conditional(vectorIdx)
-            scoreRelative = np.exp(self.state.conditionals - self.state.score)
-            clusterIdx = plt.find(nr.multinomial(1,scoreRelative/sum(scoreRelative)))[0]
+            conditionals = self.calculate_cluster_conditional(vectorIdx)
+            clusterIdx = renormalize_and_sample(conditionals)
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
         self.state.timing["zs"]["stop"] = datetime.datetime.now()
@@ -192,40 +192,37 @@ def listCount(listIn):
 
 
 ##per vikash's outline: https://docs.google.com/document/d/16iLc2jjtw7Elxy22wyM_TsSPYwW0KOErWKIpFX5k8Y8/edit
-def gen_dataset(gen_seed, rows, cols, alpha, beta):
+def gen_dataset(gen_seed, rows, cols, alpha, beta, zDims=None):
     state = ds.DPMB_State(None,{"numVectors":rows,"numColumns":cols,"alpha":alpha,"betas":np.repeat(beta,cols)})
-    state.create_data(gen_seed)
-    ##
-    observables = state.getXValues()
+    state.create_data(gen_seed,zDims=zDims)
+    train_data = state.getXValues()
     gen_state = {"zs":state.getZIndices(),"thetas":state.getThetas(),"phis":state.getPhis()}
-    return {"observables":observables,"gen_state":gen_state}
+    ##
+    state.sample_xs()
+    state.refresh_counts()
+    test_data = state.getXValues()
+    return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
         
-def gen_sample(inf_seed, observables, num_iters, prior_or_gibbs_init, hyper_method, num_train=None, paramDict=None):
-    tailIndex = -num_train if num_train is not None else None
+def gen_sample(inf_seed, train_data, num_iters, prior_or_gibbs_init, hyper_method, gen_state_with_data=None, paramDict=None):
     model = DPMB(paramDict=paramDict,state=None,seed=inf_seed)
     ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
-    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":observables[:tailIndex]}) ##z's are generated from CRP if not passed
+    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data}) ##z's are generated from CRP if not passed
     stats = []
     for iter_num in range(num_iters):
         model.transition()
         stats.append(model.extract_state_summary())
-        stats[-1]["predictive_prob"] = test_model({"observables":observables},model.reconstitute_latents(),num_train)
+        if gen_state_with_data is not None:
+            latents = model.reconstitute_latents()
+            stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
+            stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
     return {"state":model.reconstitute_latents(),"stats":stats}
 
-def test_model(gen_state_with_data, sampled_state, num_train):
-    # computes the average predictive probability of the the last N-num_train datapoints
-    # under the true model and under the sampled model and returns it
-    tailIndex = -num_train if num_train is not None else None
-    dataset = gen_state_with_data["observables"]
-    if "gen_state" in gen_state_with_data:
-        gen_state = gen_state_with_data["gen_state"]
-        gen_prob = sum([test_model_helper(data,gen_state["thetas"],gen_state["phis"])
-                     for data in dataset[tailIndex:]])
-    else:
-        gen_prob = None
-    sampled_prob = sum([test_model_helper(data,sampled_state["thetas"],sampled_state["phis"])
-                 for data in dataset[tailIndex:]])
-    return {"gen_prob":gen_prob,"sampled_prob":sampled_prob}
+def test_model(test_data, sampled_state):
+    # computes the sum (not average) predictive probability of the the test_data
+    sampled_prob = 0
+    for data in test_data:
+        sampled_prob += test_model_helper(data,sampled_state["thetas"],sampled_state["phis"])
+    return sampled_prob
 
 def test_model_helper(data,thetas,phis):
     boolIdx = np.array(data,dtype=type(True))
@@ -233,3 +230,53 @@ def test_model_helper(data,thetas,phis):
     for theta,phi in zip(thetas,phis):
         runSum += np.exp(np.log(phi) + np.log(theta[boolIdx]).sum() + np.log(1-theta[~boolIdx]).sum())
     return np.log(runSum)
+
+def calc_ari(group_idx_list_1,group_idx_list_2):
+    ##https://en.wikipedia.org/wiki/Rand_index#The_contingency_table
+    ##presumes group_idx's are numbered sequentially starting at 0
+    Ns,As,Bs = gen_contingency_data(group_idx_list_1,group_idx_list_2)
+    n_choose_2 = choose_2_sum(np.array([len(group_idx_list_1)]))
+    cross_sums = choose_2_sum(Ns[Ns>1])
+    a_sums = choose_2_sum(As)
+    b_sums = choose_2_sum(Bs)
+    return ((n_choose_2*cross_sums - a_sums*b_sums)
+            /(.5*n_choose_2*(a_sums+b_sums) - a_sums*b_sums))
+
+def choose_2_sum(x):
+    return sum(x*(x-1)/2.0)
+            
+def count_dict_overlap(dict1,dict2):
+    overlap = 0
+    for key in dict1:
+        if key in dict2:
+            overlap += 1
+    return overlap
+
+def gen_contingency_data(group_idx_list_1,group_idx_list_2):
+    group_idx_dict_1 = {}
+    for list_idx,group_idx in enumerate(group_idx_list_1):
+        group_idx_dict_1.setdefault(group_idx,{})[list_idx] = None
+    group_idx_dict_2 = {}
+    for list_idx,group_idx in enumerate(group_idx_list_2):
+        group_idx_dict_2.setdefault(group_idx,{})[list_idx] = None
+    ##
+    Ns = np.ndarray((len(group_idx_dict_1.keys()),len(group_idx_dict_2.keys())))
+    for key1,value1 in group_idx_dict_1.iteritems():
+        for key2,value2 in group_idx_dict_2.iteritems():
+            Ns[key1,key2] = count_dict_overlap(value1,value2)
+    As = Ns.sum(axis=1)
+    Bs = Ns.sum(axis=0)
+    return Ns,As,Bs
+
+def renormalize_and_sample(logpstar_vec):
+  maxv = max(logpstar_vec)
+  scaled = [logpstar - maxv for logpstar in logpstar_vec]
+  logZ = reduce(np.logaddexp, scaled)
+  logp_vec = [s - logZ for s in scaled]
+  randv = nr.random()
+  for (i, logp) in enumerate(logp_vec):
+      p = np.exp(logp)
+      if randv < p:
+          return i
+      else:
+          randv = randv - p

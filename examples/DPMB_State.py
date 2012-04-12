@@ -12,8 +12,8 @@ class DPMB_State():
         self.timing = {}
         ##default values
         self.verbose = False
-        self.inferAlpha = True
-        self.inferBetas = True
+        self.inferAlpha = False
+        self.inferBetas = False
         self.clipBeta = [1E-2,1E10]
         self.gamma_k = 1
         self.gamma_theta = 1
@@ -63,12 +63,22 @@ class DPMB_State():
         self.infer_betas_count = 0
         self.infer_z_count = 0
 
-    def create_data(self,seed=None):
+    def create_data(self,seed=None,zs=None,zDims=None):
         if seed is None:
             seed = nr.randint(sys.maxint)
         nr.seed(int(np.clip(seed,0,np.inf)))
         self.reset_data()
-        self.sample_zs()
+        if zDims is not None:
+            for zSize in zDims:
+                cluster = Cluster(self)
+                for vector_idx in range(zSize):
+                    self.zs.append(cluster)
+        elif zs is not None:
+            for clusterIdx in zs:
+                cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
+                self.zs.append(cluster)
+        else:
+            self.sample_zs()
         self.sample_xs()
 
     def sample_zs(self):
@@ -132,23 +142,19 @@ class DPMB_State():
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
         self.modifyScore(-scoreDelta)
-        ##self.score -= scoreDelta
 
     def setAlpha(self,lnPdf,alpha):
         scoreDelta = lnPdf(alpha)
         self.modifyScore(scoreDelta)        
-        ##self.score += scoreDelta
         self.alpha = alpha
 
     def removeBetaD(self,lnPdf,colIdx):
         scoreDelta = lnPdf(self.betas[colIdx])
         self.modifyScore(-scoreDelta)        
-        ##self.score -= scoreDelta
 
     def setBetaD(self,lnPdf,colIdx,newBetaD):
         newBetaD = np.clip(newBetaD,self.clipBeta[0],self.clipBeta[1])
         scoreDelta = lnPdf(newBetaD)
-        ##self.score += scoreDelta
         self.modifyScore(scoreDelta)        
         self.betas[colIdx] = newBetaD
 
@@ -170,8 +176,7 @@ class CRP():
         for currNDraw in range(numSamples):
             drawN = len(self.zs)
             modCounts = np.array(np.append(self.counts,self.alpha),dtype=type(1.0))
-            ##should I be determining the draw in some other way
-            draw = mlab.find(nr.multinomial(1,modCounts/sum(modCounts)))[0]
+            draw = dm.renormalize_and_sample(np.log(modCounts))
             if(draw==len(self.counts)):
                 self.counts.append(1)
                 self.indexes.append([drawN])

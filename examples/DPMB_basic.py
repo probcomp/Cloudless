@@ -29,31 +29,32 @@ import numpy as np
 
 
 # block 3
-def raw_testjob(gen_seed,inf_seed,rows,cols,alpha,beta,num_iters,hold_out_ratio,infer_hypers):
+def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,hold_out_ratio,cols,alpha,beta,infer_hypers):
     paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers}
-    num_train = int(np.floor(hold_out_ratio*rows))
-    gen_state_with_data = dm.gen_dataset(gen_seed,rows,cols,alpha,beta)
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,num_train=num_train,paramDict=paramDict)
-    predictive_prob = dm.test_model(gen_state_with_data,gen_sample_output["state"],num_train=num_train)
+    raise Exception("must figure out what to do with num_train")
+    gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,paramDict=paramDict)
+    predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
     return gen_sample_output,predictive_prob
 # make memoized job (re-eval if the job code changes, or to reset cache)
-testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","rows","cols","alpha","beta","num_iters","hold_out_ratio","infer_hypers"], raw_testjob, override=True)
+testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","clusters","points_per_cluster","num_iters","hold_out_ratio","cols","alpha","beta","infer_hypers"], raw_testjob, override=True)
 
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
-NUM_SIMS = 10
-NUM_ITERS = 100
-ROWS = 4000
-COLS = 256
-HOLD_OUT_RATIO = .5
-ALPHA = 100
-BETA = 3
+CLUSTERS = 10
+POINTS_PER_CLUSTER = 10
+NUM_ITERS = 10
 GEN_SEED = 2
-INFER_HYPERS = True
+NUM_SIMS = 10
+##BELOW ARE FAIRLY STATIC VALUES
+COLS = 256
+BETA = .1
+INFER_HYPERS = False
+ALPHA = 10
 # request the computation (re-eval if e.g. the range changes)
-for x in range(NUM_SIMS):
-    testjob(GEN_SEED,x,ROWS,COLS,ALPHA,BETA,NUM_ITERS,HOLD_OUT_RATIO,INFER_HYPERS)
+for inf_seed in range(NUM_SIMS):
+    testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
 
 
 # block 5
@@ -62,6 +63,9 @@ status = testjob.report_status()
 time_delta = []
 log_score = []
 predictive_prob = []
+DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
+true_prob = test_model({"observables":DATASET["test_data"]},DATASET["gen_state"])
+##
 for (k, v) in testjob.iter():
     z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
     if "alpha" in v[0]["stats"][0]["timing"]:
@@ -74,8 +78,7 @@ for (k, v) in testjob.iter():
         beta_delta = np.zeros(np.shape(z_delta))
     time_delta.append(z_delta+alpha_delta+beta_delta)
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
-    predictive_prob.append(np.array([x["predictive_prob"]["sampled_prob"] for x in v[0]["stats"]]))    
-    true_prob = v[1]["gen_prob"]
+    predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))    
 
 
 # block 6
@@ -119,6 +122,6 @@ pylab.savefig('log_score_by_iter.png')
 # block 7
 # examine the exceptions for the jobs that failed
 testjob.report_status(verbose=True)
-cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,ROWS,COLS,ALPHA,BETA)["gen_state"]["phis"])
+cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
 print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
 ##testjob.terminate_pending() ## uncomment to kill non-running jobs
