@@ -206,7 +206,8 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta, zDims=None):
 def gen_sample(inf_seed, train_data, num_iters, prior_or_gibbs_init, hyper_method, gen_state_with_data=None, paramDict=None):
     model = DPMB(paramDict=paramDict,state=None,seed=inf_seed)
     ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
-    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data}) ##z's are generated from CRP if not passed
+    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},prior_or_gibbs_init=prior_or_gibbs_init) ##z's are generated from CRP if not passed
+    init_num_clusters = state.numClustersDyn()
     stats = []
     for iter_num in range(num_iters):
         model.transition()
@@ -215,7 +216,7 @@ def gen_sample(inf_seed, train_data, num_iters, prior_or_gibbs_init, hyper_metho
             latents = model.reconstitute_latents()
             stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
             stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
-    return {"state":model.reconstitute_latents(),"stats":stats}
+    return {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
 
 def test_model(test_data, sampled_state):
     # computes the sum (not average) predictive probability of the the test_data

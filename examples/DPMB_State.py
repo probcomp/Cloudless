@@ -31,9 +31,11 @@ class DPMB_State():
         self.numVectors = len(dataset["xs"])
         ##alpha,beta must be set before loading data to keep track of score
         if prior_or_gibbs_init is not None:
+            print "initializing via prior_or_gibbs_init"
             self.alpha = prior_or_gibbs_init["alpha"]
             self.betas = prior_or_gibbs_init["betas"]
         else:
+            print "initializing via sampling from prior"
             self.parent.sample_alpha()
             self.parent.sample_betas()
         if "zs" in dataset:

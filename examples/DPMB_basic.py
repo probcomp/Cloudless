@@ -30,13 +30,16 @@ import numpy as np
 
 # block 3
 def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
-    paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers}
+    paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
     gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
+                                      ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
     predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
     return gen_sample_output,predictive_prob
+
 # make memoized job (re-eval if the job code changes, or to reset cache)
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","clusters","points_per_cluster","num_iters","cols","alpha","beta","infer_hypers"], raw_testjob, override=True)
+
 
 # block 4
 # make a plot (iterate on this block to fix layout/display issues)
@@ -46,79 +49,33 @@ def do_plots():
     TIME_LABEL = 'Time Elapsed (seconds)'
     ITER_LABEL = 'Iteration number'
     TIME_ARR = np.array(time_delta).T
-    IDX_ARR = repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS)
+    IDX_ARR = np.repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS)
     ##
-    fh = pylab.figure()
-    pylab.plot(TIME_ARR, np.array(ari).T)
-    pylab.title(TITLE_STR)
-    pylab.xlabel(TIME_LABEL)
-    pylab.ylabel('ari')
-    pylab.show()
-    pylab.savefig('ari_by_time.png')
-    ##
-    fh = pylab.figure()
-    pylab.plot(TIME_ARR, np.array(predictive_prob).T)
-    pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-    pylab.title(TITLE_STR)
-    pylab.xlabel('Time Elapsed (seconds)')
-    pylab.ylabel('predictive_prob')
-    pylab.show()
-    pylab.savefig('predictive_prob_by_time.png')
-    ##
-    pylab.figure()
-    pylab.plot(TIME_ARR, np.array(log_score).T)
-    pylab.title(TITLE_STR)
-    pylab.xlabel('Time Elapsed (seconds)')
-    pylab.ylabel('log_score')
-    pylab.show()
-    pylab.savefig('log_score_by_time.png')
-    ##
-    ##
-    fh = pylab.figure()
-    pylab.plot(IDX_ARR, np.array(ari).T)
-    pylab.title(TITLE_STR)
-    pylab.xlabel(ITER_LABEL)
-    pylab.ylabel('ari')
-    pylab.show()
-    pylab.savefig('ari_by_iter.png')
-    ##
-    fh = pylab.figure()
-    pylab.plot(IDX_ARR, np.array(predictive_prob).T)
-    pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-    pylab.title(TITLE_STR)
-    pylab.xlabel(ITER_LABEL)
-    pylab.ylabel('predictive_prob')
-    pylab.show()
-    pylab.savefig('predictive_prob_by_iter.png')
-    ##
-    pylab.figure()
-    pylab.plot(IDX_ARR, np.array(log_score).T)
-    pylab.title(TITLE_STR)
-    pylab.xlabel(ITER_LABEL)
-    pylab.ylabel('log_score')
-    pylab.show()
-    pylab.savefig('log_score_by_iter.png')
-    ##
-    pylab.figure()
-    pylab.plot(IDX_ARR, np.array(num_clusters).T)
-    pylab.title(TITLE_STR)
-    pylab.xlabel(ITER_LABEL)
-    pylab.ylabel('num_clusters')
-    pylab.show()
-    pylab.savefig('num_clusters_by_iter.png')
+    for y_var_str in ["ari","predictive_prob","log_score"]:
+        for x_var_str in ["TIME","ITER"]:
+            fh = pylab.figure()
+            pylab.plot(locals()[x_var_str+"_ARR"], np.array(locals()[y_var_str]).T)
+            if y_var_str=="predictive_prob":
+                pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
+            pylab.title(TITLE_STR)
+            pylab.xlabel(locals()[x_var_str+"_LABEL"])
+            pylab.ylabel(y_var_str)
+            pylab.show()
+            pylab.savefig(y_var_str+'_by_' + x_var_str.lower() + '.png')
+
 
 # block 5
 # set constants (re-eval to change the scope of the plot)
 CLUSTERS = 10
-POINTS_PER_CLUSTER = 100
-NUM_ITERS = 20
+POINTS_PER_CLUSTER = 50
+NUM_ITERS = 10
 GEN_SEED = 2
 NUM_SIMS = 3
 ##BELOW ARE FAIRLY STATIC VALUES
 COLS = 256
 BETA = .1
 INFER_HYPERS = False
-ALPHA = 10
+ALPHA = 100000
 # request the computation (re-eval if e.g. the range changes)
 for inf_seed in range(NUM_SIMS):
     testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
@@ -131,6 +88,7 @@ log_score = []
 predictive_prob = []
 ari = []
 num_clusters = []
+init_num_clusters = []
 DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
 true_prob = dm.test_model(DATASET["test_data"],DATASET["gen_state"])
 ##
@@ -149,6 +107,8 @@ for (k, v) in testjob.iter():
     predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))    
     ari.append(np.array([x["ari"] for x in v[0]["stats"]]))    
     num_clusters.append(np.array([x["numClusters"] for x in v[0]["stats"]]))    
+    init_num_clusters.append(v[0]["init_num_clusters"])
+
 
 # block 7
 do_plots()
