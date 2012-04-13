@@ -1,26 +1,54 @@
 #!python
+
+
 import numpy as np
 import DPMB as dm
 reload(dm)
 import DPMB_State as ds
 reload(ds)
 
+
 clusters = 10
-points_per_cluster = 100
+points_per_cluster = 10
 num_iters = 5
 gen_seed = 0
 num_sims = 1
 ##below are fairly static values
-cols = 256
+cols = 100
 beta = .1
 infer_hypers = False
-alpha = 10
+alpha = 1
 ##
 inf_seed = 0
-paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers}
+
+
+paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
 gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
+##
+##gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
+##                                  ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
+train_data = gen_state_with_data["observables"]
+prior_or_gibbs_init = {"alpha":alpha,"betas":np.repeat(.1,cols)}
+hyper_method=None
+model = dm.DPMB(paramDict=paramDict,state=None,seed=inf_seed)
+##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
+state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},prior_or_gibbs_init=prior_or_gibbs_init) ##z's are generated from CRP if not passed
+state.refresh_counts(np.repeat(0,len(state.getZIndices())))
+init_num_clusters = state.numClustersDyn()
+stats = []
+state.debug = True
+
+for iter_num in range(num_iters):
+    model.transition()
+    stats.append(model.extract_state_summary())
+    if gen_state_with_data is not None:
+        latents = model.reconstitute_latents()
+        stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
+        stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
+gen_sample_output = {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
+
 predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
+
 
 
 if False:

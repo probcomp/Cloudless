@@ -222,7 +222,7 @@ class Cluster():
         self.add_vector(vector)
 
     def add_vector(self,vector):
-        scoreDelta = cluster_predictive(vector,self,self.parent)
+        scoreDelta,alpha_term,data_term = cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(scoreDelta)
         ##
         vector.cluster = self
@@ -242,7 +242,7 @@ class Cluster():
         self.column_sums -= vector.data
         self.parent.zs[vectorIdx] = None
         ##
-        scoreDelta = cluster_predictive(vector,self,self.parent)
+        scoreDelta,alpha_term,data_term = cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
             replacementCluster = self.parent.cluster_list.pop()
@@ -256,15 +256,22 @@ def cluster_predictive(vector,cluster,state):
     alpha = state.alpha
     numVectors = state.numVectorsDyn() ##this value changes when generating the data
     if cluster is None or cluster.count() == 0:
-        retVal = np.log(alpha) - np.log(numVectors-1+alpha) - state.numColumns*np.log(2)
+        alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
+        data_term = state.numColumns*np.log(.5)
+        retVal =  alpha_term + data_term
     else:
         boolIdx = np.array(vector.data,dtype=type(True))
-        firstFactor = np.log(cluster.count()) - np.log(numVectors-1+alpha)
+        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
         secondNumerator1 = cluster.column_sums[boolIdx] + state.betas[boolIdx]
         secondNumerator2 = (cluster.count() - cluster.column_sums[~boolIdx]) + state.betas[~boolIdx]
         secondDenominator = cluster.count() + 2*state.betas
-        secondFactor = np.log(secondNumerator1).sum() + np.log(secondNumerator2).sum() - np.log(secondDenominator).sum()
-        retVal = firstFactor + secondFactor
+        data_term = np.log(secondNumerator1).sum() + np.log(secondNumerator2).sum() - np.log(secondDenominator).sum()
+        retVal = alpha_term + data_term
     if not np.isfinite(retVal):
         pdb.set_trace()
-    return retVal
+    import pdb
+    if hasattr(state,"debug") and state.debug and False:
+        print retVal,alpha_term,data_term,vector.vectorIdx,cluster.clusterIdx
+        pdb.set_trace()
+    temp = 1
+    return retVal,alpha_term,data_term

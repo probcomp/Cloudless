@@ -70,12 +70,12 @@ CLUSTERS = 10
 POINTS_PER_CLUSTER = 50
 NUM_ITERS = 10
 GEN_SEED = 2
-NUM_SIMS = 3
+NUM_SIMS = 1
 ##BELOW ARE FAIRLY STATIC VALUES
 COLS = 256
 BETA = .1
 INFER_HYPERS = False
-ALPHA = 100000
+ALPHA = .0001
 # request the computation (re-eval if e.g. the range changes)
 for inf_seed in range(NUM_SIMS):
     testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)

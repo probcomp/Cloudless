@@ -113,6 +113,10 @@ class DPMB():
             self.remove_cluster_assignment(vectorIdx)
             conditionals = self.calculate_cluster_conditional(vectorIdx)
             clusterIdx = renormalize_and_sample(conditionals)
+            if hasattr(self.state,"debug") and self.state.debug:
+                print clusterIdx,conditionals-max(conditionals)
+                import pdb
+                pdb.set_trace()
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
         self.state.timing["zs"]["stop"] = datetime.datetime.now()
