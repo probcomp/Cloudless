@@ -29,11 +29,10 @@ import numpy as np
 
 
 # block 3
-def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,hold_out_ratio,cols,alpha,beta,infer_hypers):
+def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
     paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers}
-    raise Exception("must figure out what to do with num_train")
-    gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,paramDict=paramDict)
+    gen_state_with_data = dm.gen_dataset(gen_seed,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
+    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,None,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
     predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
     return gen_sample_output,predictive_prob
 # make memoized job (re-eval if the job code changes, or to reset cache)
@@ -63,8 +62,9 @@ status = testjob.report_status()
 time_delta = []
 log_score = []
 predictive_prob = []
+ari = []
 DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
-true_prob = test_model({"observables":DATASET["test_data"]},DATASET["gen_state"])
+true_prob = dm.test_model(DATASET["test_data"],DATASET["gen_state"])
 ##
 for (k, v) in testjob.iter():
     z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
@@ -79,10 +79,21 @@ for (k, v) in testjob.iter():
     time_delta.append(z_delta+alpha_delta+beta_delta)
     log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
     predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))    
+    ari.append(np.array([x["ari"] for x in v[0]["stats"]]))    
 
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
+ROWS = POINTS_PER_CLUSTER*CLUSTERS
+##
+fh = pylab.figure()
+pylab.plot(np.array(time_delta).T, np.array(ari).T)
+pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.xlabel('Time Elapsed (seconds)')
+pylab.ylabel('ari')
+pylab.show()
+pylab.savefig('ari_by_time.png')
+##
 fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
