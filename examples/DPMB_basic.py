@@ -41,8 +41,8 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","cluster
 
 # block 4
 # set constants (re-eval to change the scope of the plot)
-CLUSTERS = 10
-POINTS_PER_CLUSTER = 10
+CLUSTERS = 100
+POINTS_PER_CLUSTER = 100
 NUM_ITERS = 10
 GEN_SEED = 2
 NUM_SIMS = 10
@@ -84,11 +84,11 @@ for (k, v) in testjob.iter():
 
 # block 6
 # make a plot (iterate on this block to fix layout/display issues)
-ROWS = POINTS_PER_CLUSTER*CLUSTERS
+CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
 ##
 fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(ari).T)
-pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.title("{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('ari')
 pylab.show()
@@ -97,7 +97,7 @@ pylab.savefig('ari_by_time.png')
 fh = pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.title("{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('predictive_prob')
 pylab.show()
@@ -105,7 +105,7 @@ pylab.savefig('predictive_prob_by_time.png')
 ##
 pylab.figure()
 pylab.plot(np.array(time_delta).T, np.array(log_score).T)
-pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.title("{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Time Elapsed (seconds)')
 pylab.ylabel('log_score')
 pylab.show()
@@ -115,7 +115,7 @@ pylab.savefig('log_score_by_time.png')
 fh = pylab.figure()
 pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(predictive_prob).T)
 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.title("{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Iteration number')
 pylab.ylabel('predictive_prob')
 pylab.show()
@@ -123,7 +123,7 @@ pylab.savefig('predictive_prob_by_iter.png')
 ##
 pylab.figure()
 pylab.plot(repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS), np.array(log_score).T)
-pylab.title("RxC: " + str(ROWS) + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
+pylab.title("{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA))
 pylab.xlabel('Iteration number')
 pylab.ylabel('log_score')
 pylab.show()
