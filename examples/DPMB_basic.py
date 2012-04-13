@@ -109,11 +109,11 @@ def do_plots():
 
 # block 5
 # set constants (re-eval to change the scope of the plot)
-CLUSTERS = 30
-POINTS_PER_CLUSTER = 30
-NUM_ITERS = 10
+CLUSTERS = 10
+POINTS_PER_CLUSTER = 100
+NUM_ITERS = 20
 GEN_SEED = 2
-NUM_SIMS = 10
+NUM_SIMS = 1
 ##BELOW ARE FAIRLY STATIC VALUES
 COLS = 256
 BETA = .1
