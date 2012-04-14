@@ -43,7 +43,9 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","cluster
 
 # block 4
 # make a plot (iterate on this block to fix layout/display issues)
-def do_plots():
+def do_plots(x_vars=None,y_vars=None):
+    x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
+    y_vars = y_vars if y_vars is not None else ["ari","predictive_prob","log_score"]
     CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
     TITLE_STR = "{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
     TIME_LABEL = 'Time Elapsed (seconds)'
@@ -51,8 +53,8 @@ def do_plots():
     TIME_ARR = np.array(time_delta).T
     IDX_ARR = np.repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS)
     ##
-    for y_var_str in ["ari","predictive_prob","log_score"]:
-        for x_var_str in ["TIME","ITER"]:
+    for y_var_str in y_vars:
+        for x_var_str in x_vars:
             fh = pylab.figure()
             pylab.plot(locals()[x_var_str+"_ARR"], np.array(locals()[y_var_str]).T)
             if y_var_str=="predictive_prob":
@@ -69,8 +71,8 @@ def do_plots():
 CLUSTERS = 10
 POINTS_PER_CLUSTER = 50
 NUM_ITERS = 10
-GEN_SEED = 2
-NUM_SIMS = 1
+GEN_SEED = 0
+NUM_SIMS = 5
 ##BELOW ARE FAIRLY STATIC VALUES
 COLS = 256
 BETA = .1

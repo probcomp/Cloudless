@@ -119,7 +119,7 @@ class DPMB():
             if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
                 import pdb
                 pdb.set_trace()
-            if self.state.print_cluster_switch and prior_cluster_idx != clusterIdx:
+            if hasattr(self.state,"print_cluster_switch") and prior_cluster_idx != clusterIdx:
                 print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(clusterIdx)
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
