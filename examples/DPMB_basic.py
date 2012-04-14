@@ -29,6 +29,31 @@ import numpy as np
 
 
 # block 3
+# make a plot (iterate on this block to fix layout/display issues)
+def do_plots(x_vars=None,y_vars=None):
+    x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
+    y_vars = y_vars if y_vars is not None else ["ari","predictive_prob","log_score"]
+    CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
+    TITLE_STR = "{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
+    TIME_LABEL = 'Time Elapsed (seconds)'
+    ITER_LABEL = 'Iteration number'
+    TIME_ARR = np.array(time_delta).T
+    ITER_ARR = np.repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS)
+    ##
+    for y_var_str in y_vars:
+        for x_var_str in x_vars:
+            fh = pylab.figure()
+            pylab.plot(locals()[x_var_str+"_ARR"], np.array(globals()[y_var_str]).T)
+            if y_var_str=="predictive_prob":
+                pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
+            pylab.title(TITLE_STR)
+            pylab.xlabel(locals()[x_var_str+"_LABEL"])
+            pylab.ylabel(y_var_str)
+            pylab.show()
+            pylab.savefig(y_var_str+'_by_' + x_var_str.lower() + '.png')
+
+
+# block 4
 def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
     paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
     gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
@@ -41,36 +66,11 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
 testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","clusters","points_per_cluster","num_iters","cols","alpha","beta","infer_hypers"], raw_testjob, override=True)
 
 
-# block 4
-# make a plot (iterate on this block to fix layout/display issues)
-def do_plots(x_vars=None,y_vars=None):
-    x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
-    y_vars = y_vars if y_vars is not None else ["ari","predictive_prob","log_score"]
-    CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
-    TITLE_STR = "{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
-    TIME_LABEL = 'Time Elapsed (seconds)'
-    ITER_LABEL = 'Iteration number'
-    TIME_ARR = np.array(time_delta).T
-    IDX_ARR = np.repeat(range(NUM_ITERS),NUM_SIMS).reshape(NUM_ITERS,NUM_SIMS)
-    ##
-    for y_var_str in y_vars:
-        for x_var_str in x_vars:
-            fh = pylab.figure()
-            pylab.plot(locals()[x_var_str+"_ARR"], np.array(locals()[y_var_str]).T)
-            if y_var_str=="predictive_prob":
-                pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
-            pylab.title(TITLE_STR)
-            pylab.xlabel(locals()[x_var_str+"_LABEL"])
-            pylab.ylabel(y_var_str)
-            pylab.show()
-            pylab.savefig(y_var_str+'_by_' + x_var_str.lower() + '.png')
-
-
 # block 5
 # set constants (re-eval to change the scope of the plot)
 CLUSTERS = 10
 POINTS_PER_CLUSTER = 50
-NUM_ITERS = 10
+NUM_ITERS = 30
 GEN_SEED = 0
 NUM_SIMS = 5
 ##BELOW ARE FAIRLY STATIC VALUES
@@ -81,6 +81,7 @@ ALPHA = dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER)
 # request the computation (re-eval if e.g. the range changes)
 for inf_seed in range(NUM_SIMS):
     testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
+
 
 # block 6
 # get plot data locally (re-eval to get more data)
@@ -114,6 +115,7 @@ for (k, v) in testjob.iter():
 
 # block 7
 do_plots()
+
 
 # block 8
 # examine the exceptions for the jobs that failed
