@@ -75,7 +75,7 @@ NUM_SIMS = 1
 COLS = 256
 BETA = .1
 INFER_HYPERS = False
-ALPHA = .0001
+ALPHA = dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER)
 # request the computation (re-eval if e.g. the range changes)
 for inf_seed in range(NUM_SIMS):
     testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)

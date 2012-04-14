@@ -17,7 +17,7 @@ num_sims = 1
 cols = 20
 beta = .1
 infer_hypers = False
-alpha = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,100)])
+alpha = dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster)
 ##
 inf_seed = 0
 

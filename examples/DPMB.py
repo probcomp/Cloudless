@@ -175,7 +175,11 @@ class DPMB():
             ,"numClusters":self.state.numClustersDyn()
             ,"timing":self.state.timing
             }
-    
+
+def mle_alpha(clusters,points_per_cluster,max_alpha=100):
+    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
+    return mle
+
 def mhSample(initVal,nSamples,lnPdf,sampler):
     samples = [initVal]
     priorSample = initVal
@@ -289,3 +293,30 @@ def renormalize_and_sample(logpstar_vec):
           return i
       else:
           randv = randv - p
+
+def cluster_predictive(vector,cluster,state):
+    alpha = state.alpha
+    numVectors = state.numVectorsDyn() ##this value changes when generating the data
+    if cluster is None or cluster.count() == 0:
+        ##if the cluster would be empty without the vector, then its a special case
+        alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
+        data_term = state.numColumns*np.log(.5)
+        retVal =  alpha_term + data_term
+    else:
+        boolIdx = np.array(vector.data,dtype=type(True))
+        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
+        secondNumerator1 = cluster.column_sums[boolIdx] + state.betas[boolIdx]
+        secondNumerator2 = (cluster.count() - cluster.column_sums[~boolIdx]) + state.betas[~boolIdx]
+        secondDenominator = cluster.count() + 2*state.betas
+        data_term = np.log(secondNumerator1).sum() + np.log(secondNumerator2).sum() - np.log(secondDenominator).sum()
+        retVal = alpha_term + data_term
+    if not np.isfinite(retVal):
+        import pdb
+        pdb.set_trace()
+    if hasattr(state,"print_predictive") and state.print_predictive:
+        print retVal,alpha_term,data_term,vector.vectorIdx,cluster.clusterIdx
+    if hasattr(state,"debug_predictive") and state.debug_predictive:
+        import pdb
+        pdb.set_trace()
+        temp = 1 ## if this isn't here, debug start in return and can't see local variables?
+    return retVal,alpha_term,data_term
