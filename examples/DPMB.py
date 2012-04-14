@@ -110,13 +110,17 @@ class DPMB():
     def transition_z(self):
         self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
         for vectorIdx in range(self.state.numVectors):
+            prior_cluster_idx = self.state.zs[vectorIdx].clusterIdx
             self.remove_cluster_assignment(vectorIdx)
             conditionals = self.calculate_cluster_conditional(vectorIdx)
             clusterIdx = renormalize_and_sample(conditionals)
-            if hasattr(self.state,"debug") and self.state.debug:
+            if hasattr(self.state,"print_conditionals") and self.state.print_conditionals:
                 print clusterIdx,conditionals-max(conditionals)
+            if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
                 import pdb
                 pdb.set_trace()
+            if self.state.print_cluster_switch and prior_cluster_idx != clusterIdx:
+                print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(clusterIdx)
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
         self.state.infer_z_count += 1
         self.state.timing["zs"]["stop"] = datetime.datetime.now()

@@ -8,16 +8,16 @@ import DPMB_State as ds
 reload(ds)
 
 
-clusters = 10
-points_per_cluster = 10
-num_iters = 5
+clusters = 50
+points_per_cluster = 100
+num_iters = 10
 gen_seed = 0
 num_sims = 1
 ##below are fairly static values
-cols = 100
+cols = 20
 beta = .1
 infer_hypers = False
-alpha = 1
+alpha = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,100)])
 ##
 inf_seed = 0
 
@@ -36,15 +36,31 @@ state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},prior_
 state.refresh_counts(np.repeat(0,len(state.getZIndices())))
 init_num_clusters = state.numClustersDyn()
 stats = []
-state.debug = True
+state.debug_conditionals = False
+state.print_conditionals = False
+state.debug_predictive = False
+state.print_predictive = False
+state.print_cluster_switch = False
+print "generative state"
+gen_state_with_data["gen_state"]
+print "empirical latents"
+model.reconstitute_latents()
+print "observables"
+model.state.getXValues()
+model.transition()
 
 for iter_num in range(num_iters):
     model.transition()
     stats.append(model.extract_state_summary())
     if gen_state_with_data is not None:
         latents = model.reconstitute_latents()
-        stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
-        stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
+        stats[-1]["predictive_prob"] = dm.test_model(gen_state_with_data["test_data"],latents)
+        stats[-1]["ari"] = dm.calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
+        if len(stats)>1 and stats[-1]["ari"]!=stats[-2]["ari"]:
+            print stats[-1]["ari"]
+        if stats[-1]["ari"]==1:
+            break
+
 gen_sample_output = {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
 
 predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])

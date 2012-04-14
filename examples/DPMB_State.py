@@ -186,7 +186,7 @@ class CRP():
                 self.counts[draw] += 1
                 self.indexes[draw].append(drawN)
             self.zs.append(draw)
-
+        return self
 
 class Vector():
     def __init__(self,cluster,data=None):
@@ -268,10 +268,12 @@ def cluster_predictive(vector,cluster,state):
         data_term = np.log(secondNumerator1).sum() + np.log(secondNumerator2).sum() - np.log(secondDenominator).sum()
         retVal = alpha_term + data_term
     if not np.isfinite(retVal):
+        import pdb
         pdb.set_trace()
-    import pdb
-    if hasattr(state,"debug") and state.debug and False:
+    if hasattr(state,"print_predictive") and state.print_predictive:
         print retVal,alpha_term,data_term,vector.vectorIdx,cluster.clusterIdx
+    if hasattr(state,"debug_predictive") and state.debug_predictive:
+        import pdb
         pdb.set_trace()
-    temp = 1
+        temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term
