@@ -4,7 +4,7 @@ import DPMB as dm
 reload(dm)
 
 class DPMB_State():
-    def __init__(self,parent,paramDict=None,dataset=None,prior_or_gibbs_init=None):
+    def __init__(self,parent,paramDict=None,dataset=None,init_method=None):
         self.parent = parent
         if self.parent is not None:
             parent.state = self
@@ -18,26 +18,40 @@ class DPMB_State():
         self.gamma_k = 1
         self.gamma_theta = 1
         ##
-        if dataset is not None:
-            self.init_from_dataset(dataset,prior_or_gibbs_init)
-        ##
         if paramDict is not None:
             if "__builtins__" in paramDict: paramDict.pop("__builtins__")
             self.__dict__.update(paramDict)
+        ##
+        if not hasattr(self,"alpha") and self.parent is not None:
+            self.parent.sample_alpha()
+        if not hasattr(self,"beta") and self.parent is not None:
+            self.parent.sample_betas()
+        ##
+        if dataset is not None:
+            self.init_from_dataset(dataset,init_method)
 
-    def init_from_dataset(self,dataset,prior_or_gibbs_init):
+    def init_from_dataset(self,dataset,init_method):
         self.reset_data()
         self.numColumns = len(dataset["xs"][0])
         self.numVectors = len(dataset["xs"])
-        ##alpha,beta must be set before loading data to keep track of score
-        if prior_or_gibbs_init is not None:
-            print "initializing via prior_or_gibbs_init"
-            self.alpha = prior_or_gibbs_init["alpha"]
-            self.betas = prior_or_gibbs_init["betas"]
+        ##allow dataset to specify alpha,beta
+        if type(init_method) == dict:
+            if "alpha" in init_method:
+                self.alpha = init_method["alpha"]
+            if "betas" in init_method:
+                self.betas = init_method["betas"]
+        if type(init_method) != dict or "method" not in init_method:
+            print "initializing via sampling from prior"  ##assume already done
         else:
-            print "initializing via sampling from prior"
-            self.parent.sample_alpha()
-            self.parent.sample_betas()
+            if "sample_prior"  == init_method["method"] or "specified_prior"  == init_method["method"]:
+                print "initializing via sampling from prior"  ##assume already done
+            elif "all_together" == init_method["method"]:
+                dataset["zs"] = np.repeat(0,self.numVectors)
+            elif "all_separate" == init_method["method"]:
+                dataset["zs"] = range(self.numVectors)
+            else:  ## init_method has a method key but it didn't match known entries
+                raise Exception("invalid init method passed to DPMB_State.init_from_dataset")
+        ##ready to set zs
         if "zs" in dataset:
             tempZs = dataset["zs"] ##this should not often be the case
         else:

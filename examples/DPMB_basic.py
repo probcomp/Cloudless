@@ -57,8 +57,9 @@ def do_plots(x_vars=None,y_vars=None):
 def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
     paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
     gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-    gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
-                                      ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
+    gen_sample_output = dm.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
+                                      , num_iters=num_iters,init_method={"method":"all-together","alpha":alpha,"betas":np.repeat(.1,cols)}
+                                      , hyper_method=None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
     predictive_prob = None ## dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ##
     return gen_sample_output,predictive_prob
 
