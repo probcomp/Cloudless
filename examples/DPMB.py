@@ -322,7 +322,8 @@ def cluster_predictive(vector,cluster,state):
     if not np.isfinite(retVal):
         pdb.set_trace()
     if hasattr(state,"print_predictive") and state.print_predictive:
-        print retVal.round(2),alpha_term.round(2),data_term.round(2),vector.vectorIdx,cluster.clusterIdx
+        mean_p = np.exp(numerator1 + numerator2 - denominator).mean() if "numerator1" in locals() else 0
+        print retVal.round(2),alpha_term.round(2),data_term.round(2),vector.vectorIdx,cluster.clusterIdx,mean_p
     if hasattr(state,"debug_predictive") and state.debug_predictive:
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
