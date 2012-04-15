@@ -188,12 +188,14 @@ class CRP():
             self.zs.append(draw)
         return self
 
+
 class Vector():
     def __init__(self,cluster,data=None):
         self.cluster = cluster
         self.data = [np.random.binomial(1,theta) for theta in self.cluster.thetas] if data is None else data
-        self.vectorIdx = len(self.cluster.parent.xs)
-        self.cluster.parent.xs.append(self)
+        if self.cluster is not None:
+            self.vectorIdx = len(self.cluster.parent.xs)
+            self.cluster.parent.xs.append(self)
 
 
 class Cluster():
@@ -250,5 +252,3 @@ class Cluster():
             if self.clusterIdx != len(self.parent.cluster_list):
                 replacementCluster.clusterIdx = self.clusterIdx
                 self.parent.cluster_list[self.clusterIdx] = replacementCluster
-
-

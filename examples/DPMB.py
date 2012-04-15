@@ -327,3 +327,19 @@ def cluster_predictive(vector,cluster,state):
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term
+
+def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
+    ##sort by attributed state and then gen_state if available
+    if gen_state is not None:
+        mult_factor = np.round(np.log10(len(gen_state["phis"])))
+        sort_by = np.array(mult_factor * state.getZIndices() + gen_state["zs"],dtype=int)
+    else:
+        sort_by = state.getZIndices()
+    import pylab
+    pylab.ion()
+    fh = pylab.figure()
+    pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,**kwargs)
+    ##
+    xlim = fh.get_axes()[0].get_xlim()
+    h_lines = np.array([cluster.count() for cluster in state.cluster_list]).cumsum()
+    pylab.hlines(h_lines-.5,*xlim)

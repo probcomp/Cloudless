@@ -14,7 +14,7 @@ num_iters = 5
 gen_seed = 2
 num_sims = 1
 ##below are fairly static values
-cols = 10
+cols = 256
 beta = .1
 infer_hypers = False
 alpha = 1 ## dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster) ##
