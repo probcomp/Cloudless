@@ -209,10 +209,11 @@ class Cluster():
         self.clusterIdx = len(self.parent.cluster_list)
         self.parent.cluster_list.append(self)
 
-    def genThetas(self):
+    def genThetas(self,recurrences=0):
         self.thetas = np.squeeze(np.array([np.random.beta(beta,beta,1) for beta in self.parent.betas]).T)
         if sum([not np.isfinite(theta) for theta in self.thetas])>0:
-            self.genThetas()
+            print "genThetas recurrences: ",recurrences+1
+            self.genThetas(recurrences+1)
         
     def count(self):
         return len(self.vectorIdxList)

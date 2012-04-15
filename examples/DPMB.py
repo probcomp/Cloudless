@@ -1,6 +1,7 @@
 #!python
 import datetime,matplotlib.pylab as plt,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
+import pdb
 reload(ds)
 
 
@@ -80,7 +81,7 @@ class DPMB():
         else:
             print "NOT using newAlpha: " + str(newAlpha)
         self.state.timing["alpha"]["stop"] = datetime.datetime.now()
-        self.state.timing["alpha"]["delta"] = self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]
+        self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).total_seconds()
         return samples
         
     def transition_betas(self):
@@ -117,11 +118,12 @@ class DPMB():
             if hasattr(self.state,"print_conditionals") and self.state.print_conditionals:
                 print clusterIdx,conditionals-max(conditionals)
             if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
-                import pdb
                 pdb.set_trace()
-            if hasattr(self.state,"print_cluster_switch") and prior_cluster_idx != clusterIdx:
+            if hasattr(self.state,"print_cluster_switch") and self.state.print_cluster_switch and prior_cluster_idx != clusterIdx:
                 print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(clusterIdx)
             self.assign_vector_to_cluster(vectorIdx,clusterIdx)
+            if hasattr(self.state,"vectorIdx_break") and vectorIdx== self.state.vectorIdx_break:
+                pdb.set_trace()
         self.state.infer_z_count += 1
         self.state.timing["zs"]["stop"] = datetime.datetime.now()
         self.state.timing["zs"]["delta"] = self.state.timing["zs"]["stop"]-self.state.timing["zs"]["start"]
@@ -173,7 +175,8 @@ class DPMB():
             "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
             ,"score":self.state.score
             ,"numClusters":self.state.numClustersDyn()
-            ,"timing":self.state.timing
+            ,"timing":self.state.timing if len(self.state.timing.keys())>0 else {"zs":{"delta":0},"alpha":{"delta":0},"beta":{"delta":0}}
+            ,"infer_z_count":self.state.infer_z_count
             }
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
@@ -219,7 +222,13 @@ def gen_sample(inf_seed, train_data, num_iters, prior_or_gibbs_init, hyper_metho
     model = DPMB(paramDict=paramDict,state=None,seed=inf_seed)
     ##will have to pass prior_or_gibbs_init so that alpha can be set from prior (if so specified)
     state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},prior_or_gibbs_init=prior_or_gibbs_init) ##z's are generated from CRP if not passed
-    init_num_clusters = state.numClustersDyn()
+    state.refresh_counts(np.repeat(0,len(state.getZIndices())))
+    ##capture the initial state
+    init_state = model.extract_state_summary()
+    latents = model.reconstitute_latents()
+    init_predictive_prob = None ## test_model(gen_state_with_data["test_data"],latents)
+    init_ari = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
+    ##
     stats = []
     for iter_num in range(num_iters):
         model.transition()
@@ -228,7 +237,7 @@ def gen_sample(inf_seed, train_data, num_iters, prior_or_gibbs_init, hyper_metho
             latents = model.reconstitute_latents()
             stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
             stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
-    return {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
+    return {"state":model.reconstitute_latents(),"stats":stats,"init_state":{"stats":init_state,"predicitive_prob":init_predictive_prob,"ari":init_ari}}
 
 def test_model(test_data, sampled_state):
     # computes the sum (not average) predictive probability of the the test_data
@@ -305,18 +314,16 @@ def cluster_predictive(vector,cluster,state):
     else:
         boolIdx = np.array(vector.data,dtype=type(True))
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
-        secondNumerator1 = cluster.column_sums[boolIdx] + state.betas[boolIdx]
-        secondNumerator2 = (cluster.count() - cluster.column_sums[~boolIdx]) + state.betas[~boolIdx]
-        secondDenominator = cluster.count() + 2*state.betas
-        data_term = np.log(secondNumerator1).sum() + np.log(secondNumerator2).sum() - np.log(secondDenominator).sum()
+        numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
+        numerator2 = (~boolIdx) * np.log(cluster.count() - cluster.column_sums + state.betas)
+        denominator = np.log(cluster.count() + 2*state.betas)
+        data_term = (numerator1 + numerator2 - denominator).sum()
         retVal = alpha_term + data_term
     if not np.isfinite(retVal):
-        import pdb
         pdb.set_trace()
     if hasattr(state,"print_predictive") and state.print_predictive:
         print retVal,alpha_term,data_term,vector.vectorIdx,cluster.clusterIdx
     if hasattr(state,"debug_predictive") and state.debug_predictive:
-        import pdb
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term

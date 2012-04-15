@@ -8,16 +8,16 @@ import DPMB_State as ds
 reload(ds)
 
 
-clusters = 50
+clusters = 10
 points_per_cluster = 100
-num_iters = 10
-gen_seed = 0
+num_iters = 5
+gen_seed = 2
 num_sims = 1
 ##below are fairly static values
-cols = 20
+cols = 10
 beta = .1
 infer_hypers = False
-alpha = dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster)
+alpha = 1 ## dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster) ##
 ##
 inf_seed = 0
 
@@ -37,10 +37,11 @@ state.refresh_counts(np.repeat(0,len(state.getZIndices())))
 init_num_clusters = state.numClustersDyn()
 stats = []
 state.debug_conditionals = False
-state.print_conditionals = False
+state.print_conditionals = True
 state.debug_predictive = False
-state.print_predictive = False
-state.print_cluster_switch = False
+state.print_predictive = True
+state.print_cluster_switch = True
+state.vectorIdx_break = 100
 print "generative state"
 gen_state_with_data["gen_state"]
 print "empirical latents"

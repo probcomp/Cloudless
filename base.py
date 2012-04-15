@@ -51,8 +51,8 @@ def initialize_client():
         global remote_client
         if remote_client is None:
             # TODO: investigate other packers
-            remote_client = Client(packer="pickle")
-            ##remote_client = Client(packer="json")
+            ##remote_client = Client(packer="pickle")
+            remote_client = Client(packer="json")
     
 def get_view():
     if remote:
