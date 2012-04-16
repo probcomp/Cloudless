@@ -44,7 +44,7 @@ def do_plots(x_vars=None,y_vars=None):
         for x_var_str in x_vars:
             fh = pylab.figure()
             pylab.plot(locals()[x_var_str+"_ARR"], np.array(globals()[y_var_str]).T)
-            if y_var_str=="predictive_prob":
+            if y_var_str=="predictive_prob" and true_prob is not None:
                 pylab.hlines(true_prob,*fh.get_axes()[0].get_xlim(),colors='r',linewidth=3)
             pylab.title(TITLE_STR)
             pylab.xlabel(locals()[x_var_str+"_LABEL"])
@@ -60,7 +60,7 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
     gen_sample_output = dm.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
                                       , num_iters=num_iters,init_method={"method":"all_together","alpha":alpha,"betas":np.repeat(.1,cols)}
                                       , hyper_method=None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
-    predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## None ## 
+    predictive_prob = None ## dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## 
     return gen_sample_output,predictive_prob
 
 # make memoized job (re-eval if the job code changes, or to reset cache)
@@ -72,17 +72,17 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","cluster
 CLUSTERS = 10
 POINTS_PER_CLUSTER = 100
 NUM_ITERS = 20
-GEN_SEED = 0
 NUM_SIMS = 3
 ##BELOW ARE FAIRLY STATIC VALUES
-COLS = [20, 40, 80]
+COLS = 256
 BETA = .1
 INFER_HYPERS = False
-ALPHA = 1 ## dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
-INF_SEED = 0
+ALPHA = dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 1 ## 
+GEN_SEED = 0
+##INF_SEED = 0
 # request the computation (re-eval if e.g. the range changes)
-for cols in COLS:
-    testjob(GEN_SEED,INF_SEED,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,cols,ALPHA,BETA,INFER_HYPERS)
+for inf_seed in range(NUM_SIMS):
+    testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
 
 
 # block 6
@@ -94,8 +94,8 @@ predictive_prob = []
 ari = []
 num_clusters = []
 init_num_clusters = []
-DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
-true_prob = dm.test_model(DATASET["test_data"],DATASET["gen_state"]) ## None ## 
+##DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
+true_prob = None ## dm.test_model(DATASET["test_data"],DATASET["gen_state"]) ## 
 ##
 for (k, v) in testjob.iter():
     z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
@@ -116,7 +116,8 @@ for (k, v) in testjob.iter():
 
 
 # block 7
-do_plots()
+y_vars = ["ari"]
+do_plots(y_vars=y_vars)
 
 
 # block 8
