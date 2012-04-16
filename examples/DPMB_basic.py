@@ -58,9 +58,9 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
     paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
     gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
     gen_sample_output = dm.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
-                                      , num_iters=num_iters,init_method={"method":"all-together","alpha":alpha,"betas":np.repeat(.1,cols)}
+                                      , num_iters=num_iters,init_method={"method":"all_together","alpha":alpha,"betas":np.repeat(.1,cols)}
                                       , hyper_method=None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
-    predictive_prob = None ## dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ##
+    predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## None ## 
     return gen_sample_output,predictive_prob
 
 # make memoized job (re-eval if the job code changes, or to reset cache)
@@ -94,8 +94,8 @@ predictive_prob = []
 ari = []
 num_clusters = []
 init_num_clusters = []
-##DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
-true_prob = None ## dm.test_model(DATASET["test_data"],DATASET["gen_state"]) ##
+DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
+true_prob = dm.test_model(DATASET["test_data"],DATASET["gen_state"]) ## None ## 
 ##
 for (k, v) in testjob.iter():
     z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
