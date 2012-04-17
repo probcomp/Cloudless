@@ -68,7 +68,7 @@ def do_plots(x_vars=None,y_vars=None,path=None):
 
 # block 4
 def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
-    paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta}
+    paramDict = {"infer_alpha":infer_hypers,"infer_beta":infer_hypers,"alpha":alpha,"beta":beta}
     gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
     gen_sample_output = dm.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
                                       , num_iters=num_iters,init_method={"method":"all_together","alpha":alpha,"betas":np.repeat(.1,cols)}
@@ -90,7 +90,7 @@ NUM_ITERS = 10
 ##BELOW ARE FAIRLY STATIC VALUES
 INFER_HYPERS = None
 COLS = 256
-ALPHA = dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 1 ## 
+ALPHA = 1 ## dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
 BETA = .1
 GEN_SEED = 0
 NUM_SIMS = 3

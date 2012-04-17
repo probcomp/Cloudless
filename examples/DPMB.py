@@ -64,13 +64,54 @@ class DPMB():
             cluster.remove_vector(vector)
         return conditionals
     
-    def transition_alpha_discrete_gibbs(self):
-        pass
+    def transition_alpha_discrete_gibbs(self,n_grid=10):
+        self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
+        ##
+        lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
+        lnPdf = lambda alpha: (ss.gammaln(alpha) + self.state.numClustersDyn()*np.log(alpha)
+                               - ss.gammaln(alpha+self.state.numVectorsDyn()) + lnProdGammas)
+        ##
+        logp_list = []
+        grid = 10.0**np.array(range(-2,-2+n_grid))
+        for test_alpha in grid:
+            self.state.removeAlpha(lnPdf)
+            self.state.setAlpha(lnPdf,test_alpha)
+            logp_list.append(self.state.score)
+        alpha_idx = renormalize_and_sample(logp_list)
+        self.state.removeAlpha(lnPdf)
+        self.state.setAlpha(lnPdf,grid[alpha_idx])
+        ##
+        self.state.infer_alpha_count += 1
+        self.state.timing["alpha"]["stop"] = datetime.datetime.now()
+        self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).total_seconds()
 
-    def transition_beta_discrete_gibbs(self):
-        pass
+    def transition_beta_discrete_gibbs(self,n_grid=6):
+        self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
+        ##
+        grid = 10.0**np.array(range(-2,-2+n_grid))
+        for colIdx in range(self.state.numColumns):
+            S_list = [cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
+            R_list = [len(cluster.vectorIdxList) - cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
+            beta_d = self.state.betas[colIdx]
+            lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
+                                        + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
+                                        - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+            logp_list = []
+            ##
+            for test_beta in grid:
+                self.state.removeBetaD(lnPdf,colIdx)
+                self.state.setBetaD(lnPdf,colIdx,test_beta)
+                logp_list.append(self.state.score)
+            beta_idx = renormalize_and_saple(logp_list)
+            self.state.removeBetaD(lnPdf)
+            self.state.setBetaD(lnPdf,colIdx,grid[beta_idx])
+        self.state.infer_betas_count += 1
+        self.state.timing["beta"]["stop"] = datetime.datetime.now()
+        self.state.timing["beta"]["delta"] = self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]
+        return self.state.betas
 
-    def transition_alpha(self):
+
+    def transition_alpha_mh(self):
         self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
         initVal = self.state.alpha
         nSamples = 1000
@@ -90,7 +131,7 @@ class DPMB():
         self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).total_seconds()
         return samples
         
-    def transition_betas(self):
+    def transition_beta_mh(self):
         self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
         nSamples = 100
         sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
@@ -114,6 +155,22 @@ class DPMB():
         self.state.timing["beta"]["delta"] = self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]
         return self.state.betas
 
+    def transition_alpha(self):
+        if self.state.infer_alpha == "MH":
+            self.transition_alpha_mh()
+        elif self.state.infer_alpha == "DISCRETE_GIBBS":
+            self.transition_beta_discrete_gibbs()
+        else:
+            print "state.infer_alpha: " + str(self.state.infer_alpha) + " not understood"
+
+    def transition_beta(self):
+        if self.state.infer_beta == "MH":
+            self.transition_beta_mh()
+        elif self.state.infer_beta == "DISCRETE_GIBBS":
+            self.transition_beta_discrete_gibbs()
+        else:
+            print "state.infer_beta: " + str(self.state.infer_beta) + " not understood"
+            
     def transition_z(self):
         self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
         for vectorIdx in range(self.state.numVectors):
@@ -138,15 +195,15 @@ class DPMB():
         for counter in range(numSteps):
             printTS("Starting iteration: " + str(self.state.infer_z_count))
             ##
-            if self.state.inferAlpha:
+            if self.state.infer_alpha is not None:
                 if self.state.verbose:
                     print "PRE transition_alpha score: " + str(self.state.score)
                 self.transition_alpha()
             ##
-            if self.state.inferBetas:
+            if self.state.infer_beta is not None:
                 if self.state.verbose:
-                        print "PRE transition_betas score: " + str(self.state.score)
-                self.transition_betas()
+                        print "PRE transition_beta score: " + str(self.state.score)
+                self.transition_beta()
             ##
             if self.state.verbose:
                 if False:

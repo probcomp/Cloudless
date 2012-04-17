@@ -1,6 +1,5 @@
 #!python
 
-
 import numpy as np
 import DPMB as dm
 reload(dm)
@@ -8,23 +7,23 @@ import DPMB_State as ds
 reload(ds)
 
 
-clusters = 2
-points_per_cluster = 2
-num_iters = 5
-gen_seed = 2
+clusters = 10
+points_per_cluster = 10
+num_iters = 10
+gen_seed = 0
 num_sims = 1
 ##below are fairly static values
-cols = 2
+cols = 256
 beta = .1
-infer_hypers = False
+infer_alpha = "DISCRETE_GIBBS"
+infer_beta = "DISCRETE_GIBBS"
 alpha = 1 ## dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster) ##
 ##
 inf_seed = 0
 
 
-paramDict = {"inferAlpha":infer_hypers,"inferBetas":infer_hypers,"alpha":alpha,"beta":beta,"print_predictive":True}
+paramDict = {"infer_alpha":infer_alpha,"infer_betas":infer_beta,"alpha":alpha,"beta":beta,"print_predictive":True}
 gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-##
 ##gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
 ##                                  ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
 train_data = gen_state_with_data["observables"]
@@ -34,6 +33,7 @@ model = dm.DPMB(paramDict=paramDict,state=None,seed=inf_seed)
 ##will have to pass init_method so that alpha can be set from prior (if so specified)
 state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method) ##z's are generated from CRP if not passed
 state.score
+##ensure score is same before and after refresh_counts
 state.refresh_counts()
 state.score
 

@@ -12,8 +12,8 @@ class DPMB_State():
         self.timing = {}
         ##default values
         self.verbose = False
-        self.inferAlpha = False
-        self.inferBetas = False
+        self.infer_alpha = None
+        self.infer_betas = None
         self.clipBeta = [1E-2,1E10]
         self.gamma_k = 1
         self.gamma_theta = 1
