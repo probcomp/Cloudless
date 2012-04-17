@@ -63,7 +63,13 @@ class DPMB():
             conditionals.append(self.state.score)
             cluster.remove_vector(vector)
         return conditionals
-        
+    
+    def transition_alpha_discrete_gibbs(self):
+        pass
+
+    def transition_beta_discrete_gibbs(self):
+        pass
+
     def transition_alpha(self):
         self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
         initVal = self.state.alpha
@@ -218,7 +224,7 @@ def gen_dataset(gen_seed, rows, cols, alpha, beta, zDims=None):
     test_data = state.getXValues()
     return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
         
-def gen_sample(inf_seed, train_data, num_iters, init_method, hyper_method, gen_state_with_data=None, paramDict=None):
+def gen_sample(inf_seed, train_data, num_iters, init_method, hyper_method=None, gen_state_with_data=None, paramDict=None):
     model = DPMB(paramDict=paramDict,state=None,seed=inf_seed)
     ##will have to pass init_method so that alpha can be set from prior (if so specified)
     state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method) ##z's are generated from CRP if not passed

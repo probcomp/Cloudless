@@ -5,7 +5,7 @@ reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
 reload(Cloudless.memo) # to make it easy to develop locally
 import matplotlib
-##matplotlib.use('Agg')
+matplotlib.use('Agg')
 import pylab
 from IPython.parallel import *
 
@@ -34,7 +34,7 @@ def do_plots(x_vars=None,y_vars=None):
     x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
     y_vars = y_vars if y_vars is not None else ["ari","predictive_prob","log_score"]
     CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
-    TITLE_STR = "{Clusters*Points}xC: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
+    TITLE_STR = "{Clusters*Points}xCols: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
     TIME_LABEL = 'Time Elapsed (seconds)'
     ITER_LABEL = 'Iteration number'
     TIME_ARR = np.array(time_delta).T
@@ -49,8 +49,19 @@ def do_plots(x_vars=None,y_vars=None):
             pylab.title(TITLE_STR)
             pylab.xlabel(locals()[x_var_str+"_LABEL"])
             pylab.ylabel(y_var_str)
+            pylab.ion()
             pylab.show()
-            pylab.savefig(y_var_str+'_by_' + x_var_str.lower() + '.png')
+            ##
+            inf_str = INFER_HYPERS if INFER_HYPERS is not None else "A="+str(ALPHA),"B="+str(BETA)
+            config_prefix = ",".join(inf_str.__add__(("CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER),"CO="+str(COLS),"GEN_SEED="+str(GEN_SEED)))) 
+            variable_infix = "_" + y_var_str+'_by_' + x_var_str.lower()
+            file_name_prefix = config_prefix + variable_infix
+            pylab.savefig(file_name_prefix  + '.png')
+            ##
+            import cPickle
+            pklDataFile = file_name_prefix + ".pkl"
+            with open(pklDataFile,"wb") as fh:
+                cPickle.dump(sim_params,fh,-1)
 
 
 # block 4
@@ -69,24 +80,39 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","cluster
 
 # block 5
 # set constants (re-eval to change the scope of the plot)
-CLUSTERS = 10
-POINTS_PER_CLUSTER = 100
-NUM_ITERS = 20
-NUM_SIMS = 3
+import sys
+CLUSTERS = 10 if len(sys.argv)<2 else int(sys.argv[1])
+POINTS_PER_CLUSTER = 10 if len(sys.argv)<3 else int(sys.argv[2])
+NUM_ITERS = 10
 ##BELOW ARE FAIRLY STATIC VALUES
+INFER_HYPERS = None
 COLS = 256
-BETA = .1
-INFER_HYPERS = False
 ALPHA = dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 1 ## 
+BETA = .1
 GEN_SEED = 0
-##INF_SEED = 0
+NUM_SIMS = 3
 # request the computation (re-eval if e.g. the range changes)
 for inf_seed in range(NUM_SIMS):
     testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
+sim_params = {
+    "CLUSTERS":CLUSTERS
+    ,"POINTS_PER_CLUSTER":POINTS_PER_CLUSTER
+    ,"NUM_ITERS":NUM_ITERS
+    ,"INFER_HYPERS":INFER_HYPERS
+    ,"COLS":COLS
+    ,"ALPHA":ALPHA
+    ,"BETA":BETA
+    ,"GEN_SEED":GEN_SEED
+    ,"NUM_SIMS":NUM_SIMS
+}
 
 
 # block 6
 # get plot data locally (re-eval to get more data)
+import time ##when run as script, must wait for all data to be ready
+while testjob.report_status()["waiting"]!=0:
+    time.sleep(1)
+
 status = testjob.report_status()
 time_delta = []
 log_score = []
@@ -120,9 +146,9 @@ y_vars = ["ari"]
 do_plots(y_vars=y_vars)
 
 
-# block 8
-# examine the exceptions for the jobs that failed
-testjob.report_status(verbose=True)
-cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
-print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
-##testjob.terminate_pending() ## uncomment to kill non-running jobs
+# # block 8
+# # examine the exceptions for the jobs that failed
+# testjob.report_status(verbose=True)
+# cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
+# print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
+# ##testjob.terminate_pending() ## uncomment to kill non-running jobs
