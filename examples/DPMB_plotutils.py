@@ -57,14 +57,15 @@ def debug_conditionals():
     print tempState.getThetas().round(1)
     dm.plot_state(tempState,{"phis":range(temp_num_clusters),"zs":np.repeat(range(temp_num_clusters),temp_num_rows_per_cluster)},aspect="auto")
 
-def run_jobs(num_clusters_list=None,num_points_per_cluster_list=None):
+def run_jobs(num_clusters_list=None,num_points_per_cluster_list=None,path=None):
     import os
     num_clusters_list = num_clusters_list if num_clusters_list is not None else [10,20,30]
     num_points_per_cluster_list = num_points_per_cluster_list if num_points_per_cluster_list is not None else [10,50,100]
+    path = path if path is not None else ""
     ##
     for num_clusters in num_clusters_list:
         for num_points_per_cluster in num_points_per_cluster_list:
-            system_str = " ".join(["python DPMB_basic.py",str(num_clusters),str(num_points_per_cluster)
+            system_str = " ".join(["python DPMB_basic.py",str(num_clusters),str(num_points_per_cluster),path
                                 ,"_".join([">LogFiles/job",str(num_clusters),str(num_points_per_cluster)])])
             os.system(system_str)
 

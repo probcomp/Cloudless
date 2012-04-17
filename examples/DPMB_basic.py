@@ -30,9 +30,10 @@ import numpy as np
 
 # block 3
 # make a plot (iterate on this block to fix layout/display issues)
-def do_plots(x_vars=None,y_vars=None):
+def do_plots(x_vars=None,y_vars=None,path=None):
     x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
     y_vars = y_vars if y_vars is not None else ["ari","predictive_prob","log_score"]
+    path = path if path is not None else ""
     CLUSTER_STR = str(POINTS_PER_CLUSTER) + "*" + str(CLUSTERS)
     TITLE_STR = "{Clusters*Points}xCols: " + CLUSTER_STR + "x" + str(COLS) + "; NUM_ITERS: " + str(NUM_ITERS) + "; ALPHA: " + str(ALPHA)
     TIME_LABEL = 'Time Elapsed (seconds)'
@@ -55,7 +56,8 @@ def do_plots(x_vars=None,y_vars=None):
             inf_str = INFER_HYPERS if INFER_HYPERS is not None else "A="+str(ALPHA),"B="+str(BETA)
             config_prefix = ",".join(inf_str.__add__(("CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER),"CO="+str(COLS),"GEN_SEED="+str(GEN_SEED)))) 
             variable_infix = "_" + y_var_str+'_by_' + x_var_str.lower()
-            file_name_prefix = config_prefix + variable_infix
+            import os
+            file_name_prefix = os.path.join(path,config_prefix + variable_infix)
             pylab.savefig(file_name_prefix  + '.png')
             ##
             import cPickle
@@ -81,6 +83,7 @@ testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","cluster
 # block 5
 # set constants (re-eval to change the scope of the plot)
 import sys
+path = "" if len(sys.argv)<4 else sys.argv[3]
 CLUSTERS = 10 if len(sys.argv)<2 else int(sys.argv[1])
 POINTS_PER_CLUSTER = 10 if len(sys.argv)<3 else int(sys.argv[2])
 NUM_ITERS = 10
@@ -143,7 +146,7 @@ for (k, v) in testjob.iter():
 
 # block 7
 y_vars = ["ari"]
-do_plots(y_vars=y_vars)
+do_plots(y_vars=y_vars,path=path)
 
 
 # # block 8
