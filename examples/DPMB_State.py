@@ -48,6 +48,8 @@ class DPMB_State():
         if type(init_method) == dict:
             if "alpha" in init_method:
                 self.alpha = init_method["alpha"]
+            if "betas" in init_method:
+                self.betas = init_method["betas"]
         if type(init_method) != dict or "method" not in init_method or "sample_prior" == init_method["method"]:
             print "initializing via sampling from prior"  ##will do below
         elif "all_together" == init_method["method"]:

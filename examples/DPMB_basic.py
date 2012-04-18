@@ -181,7 +181,10 @@ def create_dict():
         ,"NUM_ITERS":10
         ,"INFER_ALPHA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][1]
         ,"INFER_BETA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
-        ,"INIT_METHOD":[{"method":"all_together"},{"method":"all_separate"},{"method":"sample_prior"}][1]
+        ,"INIT_METHOD":[{"method":"all_together","alpha":100,"betas":np.repeat(.1,256)}
+                        ,{"method":"all_separate","alpha":100,"betas":np.repeat(.1,256)}
+                        ,{"method":"sample_prior","alpha":100,"betas":np.repeat(.1,256)}
+                        ][0]
         ##BELOW ARE FAIRLY STATIC VALUES
         ,"ALPHA":100 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
         ,"BETA":.1
