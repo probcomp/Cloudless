@@ -1,5 +1,5 @@
 #!python
-import DPMB_basic as b
+import Cloudless.examples.DPMB_basic as b
 
 if "job_list" not in locals():
     job_list = []
