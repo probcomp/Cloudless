@@ -40,7 +40,19 @@ num_iters = num_iters_list[0]
 
 
 ##want to vary alpha,beta according to low_val,high_val
-paramDict = {"alpha":alpha,"beta":.1,"print_predictive":True,"betas":np.repeat(beta,cols)}
+paramDict = {
+    "alpha":alpha
+    ,"beta":.1
+    ,"print_predictive":True
+    ,"betas":np.repeat(beta,cols)
+    ,"debug_conditionals":False
+    ,"print_conditionals":False
+    ,"debug_predictive":False
+    ,"print_predictive":False
+    ,"print_cluster_switch":True
+    ,"vectorIdx_break":None
+    ,"verbose":True
+    }
 gen_state_with_data = hf.gen_dataset(gen_seed,gen_rows=None,gen_cols=cols,gen_alpha=1.0,gen_beta=gen_beta,zDims=np.repeat(points_per_cluster,clusters))
 ##gen_sample_output = hf.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
 ##                                  ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
@@ -49,22 +61,9 @@ init_method = {"method":init_method_str}
 model = dm.DPMB(inf_seed=inf_seed)
 ##will have to pass init_method so that alpha can be set from prior (if so specified)
 state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method,infer_alpha=infer_alpha,infer_beta=infer_beta) ##z's are generated from CRP if not passed
-##ensure score is same before and after refresh_counts
-score1 = state.score
-state.refresh_counts()
-score2 = state.score
-assert score1==score2,"Score differs before and after refresh_counts()"
 
 
 init_num_clusters = state.numClustersDyn()
-stats = []
-state.debug_conditionals = False
-state.print_conditionals = False
-state.debug_predictive = False
-state.print_predictive = False
-state.print_cluster_switch = True
-state.vectorIdx_break = None
-state.verbose = True
 print "generative state"
 for k,v in gen_state_with_data["gen_state"].iteritems():
     print k
@@ -77,9 +76,12 @@ for k,v in model.reconstitute_latents().iteritems():
 
 print "observables"
 model.state.getXValues()
+
+
 model.transition_z()
 
 
+stats = []
 for iter_num in range(num_iters):
     model.transition()
     stats.append(model.extract_state_summary())
@@ -92,10 +94,9 @@ for iter_num in range(num_iters):
         if stats[-1]["ari"]==1:
             break
 
+
 gen_sample_output = {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
-
 predictive_prob = hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
-
 
 
 if False:

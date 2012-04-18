@@ -80,82 +80,76 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
     predictive_prob = None ## hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## 
     return gen_sample_output,predictive_prob
 
-# make memoized job (re-eval if the job code changes, or to reset cache)
-testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","clusters","points_per_cluster","num_iters","cols","alpha","beta","infer_hypers"], raw_testjob, override=True)
+
+def run():
+    # block 5
+    # set constants (re-eval to change the scope of the plot)
+    import sys
+    path = "" if len(sys.argv)<4 else sys.argv[3]
+    CLUSTERS = 10 if len(sys.argv)<2 else int(sys.argv[1])
+    POINTS_PER_CLUSTER = 10 if len(sys.argv)<3 else int(sys.argv[2])
+    NUM_ITERS = 10
+    ##BELOW ARE FAIRLY STATIC VALUES
+    INFER_HYPERS = None
+    COLS = 256
+    ALPHA = 1 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
+    BETA = .1
+    GEN_SEED = 0
+    NUM_SIMS = 3
+
+    # make memoized job (re-eval if the job code changes, or to reset cache)
+    testjob = Cloudless.memo.AsyncMemoize("testjob", ["gen_seed","inf_seed","clusters","points_per_cluster","num_iters","cols","alpha","beta","infer_hypers"], raw_testjob, override=True)
+
+    # request the computation (re-eval if e.g. the range changes)
+    for inf_seed in range(NUM_SIMS):
+        testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
+    sim_params = {
+        "CLUSTERS":CLUSTERS
+        ,"POINTS_PER_CLUSTER":POINTS_PER_CLUSTER
+        ,"NUM_ITERS":NUM_ITERS
+        ,"INFER_HYPERS":INFER_HYPERS
+        ,"COLS":COLS
+        ,"ALPHA":ALPHA
+        ,"BETA":BETA
+        ,"GEN_SEED":GEN_SEED
+        ,"NUM_SIMS":NUM_SIMS
+    }
 
 
-# block 5
-# set constants (re-eval to change the scope of the plot)
-import sys
-path = "" if len(sys.argv)<4 else sys.argv[3]
-CLUSTERS = 10 if len(sys.argv)<2 else int(sys.argv[1])
-POINTS_PER_CLUSTER = 10 if len(sys.argv)<3 else int(sys.argv[2])
-NUM_ITERS = 10
-##BELOW ARE FAIRLY STATIC VALUES
-INFER_HYPERS = None
-COLS = 256
-ALPHA = 1 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
-BETA = .1
-GEN_SEED = 0
-NUM_SIMS = 3
-# request the computation (re-eval if e.g. the range changes)
-for inf_seed in range(NUM_SIMS):
-    testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INFER_HYPERS)
-sim_params = {
-    "CLUSTERS":CLUSTERS
-    ,"POINTS_PER_CLUSTER":POINTS_PER_CLUSTER
-    ,"NUM_ITERS":NUM_ITERS
-    ,"INFER_HYPERS":INFER_HYPERS
-    ,"COLS":COLS
-    ,"ALPHA":ALPHA
-    ,"BETA":BETA
-    ,"GEN_SEED":GEN_SEED
-    ,"NUM_SIMS":NUM_SIMS
-}
+    # block 6
+    # get plot data locally (re-eval to get more data)
+    import time ##when run as script, must wait for all data to be ready
+    while testjob.report_status()["waiting"]!=0:
+        time.sleep(1)
+
+    status = testjob.report_status()
+    time_delta = []
+    log_score = []
+    predictive_prob = []
+    ari = []
+    num_clusters = []
+    init_num_clusters = []
+    ##DATASET = hf.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
+    true_prob = None ## hf.test_model(DATASET["test_data"],DATASET["gen_state"]) ## 
+    ##
+    for (k, v) in testjob.iter():
+        z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
+        if "alpha" in v[0]["stats"][-1]["timing"]:
+            alpha_delta = np.array([x["timing"]["alpha"]["delta"] for x in v[0]["stats"]]).cumsum()
+        else:
+            alpha_delta = np.zeros(np.shape(z_delta))
+        if "beta" in v[0]["stats"][-1]["timing"]:
+            beta_delta = np.array([x["timing"]["beta"]["delta"] for x in v[0]["stats"]]).cumsum()
+        else:
+            beta_delta = np.zeros(np.shape(z_delta))
+        time_delta.append(z_delta+alpha_delta+beta_delta)
+        log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
+        predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))    
+        ari.append(np.array([x["ari"] for x in v[0]["stats"]]))    
+        num_clusters.append(np.array([x["numClusters"] for x in v[0]["stats"]]))    
+        init_num_clusters.append(v[0]["init_state"]["stats"]["numClusters"])
 
 
-# block 6
-# get plot data locally (re-eval to get more data)
-import time ##when run as script, must wait for all data to be ready
-while testjob.report_status()["waiting"]!=0:
-    time.sleep(1)
-
-status = testjob.report_status()
-time_delta = []
-log_score = []
-predictive_prob = []
-ari = []
-num_clusters = []
-init_num_clusters = []
-##DATASET = hf.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
-true_prob = None ## hf.test_model(DATASET["test_data"],DATASET["gen_state"]) ## 
-##
-for (k, v) in testjob.iter():
-    z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
-    if "alpha" in v[0]["stats"][-1]["timing"]:
-        alpha_delta = np.array([x["timing"]["alpha"]["delta"] for x in v[0]["stats"]]).cumsum()
-    else:
-        alpha_delta = np.zeros(np.shape(z_delta))
-    if "beta" in v[0]["stats"][-1]["timing"]:
-        beta_delta = np.array([x["timing"]["beta"]["delta"] for x in v[0]["stats"]]).cumsum()
-    else:
-        beta_delta = np.zeros(np.shape(z_delta))
-    time_delta.append(z_delta+alpha_delta+beta_delta)
-    log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
-    predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))    
-    ari.append(np.array([x["ari"] for x in v[0]["stats"]]))    
-    num_clusters.append(np.array([x["numClusters"] for x in v[0]["stats"]]))    
-    init_num_clusters.append(v[0]["init_state"]["stats"]["numClusters"])
-
-
-# block 7
-y_vars = ["ari"]
-do_plots(y_vars=y_vars,path=path)
-
-
-# # block 8
-# # examine the exceptions for the jobs that failed
-# testjob.report_status(verbose=True)
-# cluster_dist = np.sort(hf.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
-# print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
-# ##testjob.terminate_pending() ## uncomment to kill non-running jobs
+    # block 7
+    y_vars = ["ari"]
+    do_plots(y_vars=y_vars,path=path)
