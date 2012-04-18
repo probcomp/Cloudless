@@ -99,24 +99,7 @@ def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None
                 cPickle.dump(packed_params,fh,-1)
 
 
-# path = "" if len(sys.argv)<4 else sys.argv[3]
-# CLUSTERS = 10 if len(sys.argv)<2 else int(sys.argv[1])
-# POINTS_PER_CLUSTER = 10 if len(sys.argv)<3 else int(sys.argv[2])
-# NUM_ITERS = 10
-# ##
-# low_val = .01
-# high_val = 1E4
-# INFER_ALPHA = [None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
-# INFER_BETA = [None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
-# INIT_METHOD = ["all_together","all_separate","sample_prior"][1]
-# ##BELOW ARE FAIRLY STATIC VALUES
-# ALPHA = 100 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
-# BETA = .1
-# COLS = 256
-# GEN_SEED = 0 if GEN_SEED is None else GEN_SEED
-# NUM_SIMS = 3
-
-def run(path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
+def queue_jobs(path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
     # block 5
     # set constants (re-eval to change the scope of the plot)
     ##
@@ -125,12 +108,12 @@ def run(path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALP
     # request the computation (re-eval if e.g. the range changes)
     for inf_seed in range(NUM_SIMS):
         testjob(GEN_SEED,inf_seed,CLUSTERS,POINTS_PER_CLUSTER,NUM_ITERS,COLS,ALPHA,BETA,INIT_METHOD,INFER_ALPHA,INFER_BETA)
-    # block 6
-    # get plot data locally (re-eval to get more data)
-    import time ##when run as script, must wait for all data to be ready
-    while testjob.report_status()["waiting"]!=0:
-        time.sleep(1)
-    ##
+    return testjob
+
+def can_plot(testjob):
+    return testjob.report_status()["waiting"]==0
+
+def extract_and_plot(testjob,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
     status = testjob.report_status()
     time_delta = []
     log_score = []
@@ -162,3 +145,36 @@ def run(path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALP
     # block 7
     y_vars = {"ari":ari}
     do_plots(y_vars=y_vars,ari=ari,time_delta=time_delta,packed_params=packed_params,**packed_params)
+
+def filter_plottable(job_list):
+    jobs_ready = []
+    jobs_not_ready = []
+    for testjob,packed_params in job_list:
+        if can_plot(testjob):
+            jobs_ready.append((testjob,packed_params))
+        else:
+            jobs_not_ready.append((testjob,packed_params))
+    ##
+    for testjob,packed_params in jobs_ready:
+        extract_and_plot(testjob,packed_params=packed_params,**packed_params)
+    return jobs_not_ready
+
+def create_dict():
+    low_val=.01
+    high_val=1E4
+    packed_params = {
+        "path":"Plots"
+        ,"CLUSTERS":10
+        ,"POINTS_PER_CLUSTER":10
+        ,"NUM_ITERS":10
+        ,"INFER_ALPHA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][1]
+        ,"INFER_BETA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
+        ,"INIT_METHOD":["all_together","all_separate","sample_prior"][1]
+        ##BELOW ARE FAIRLY STATIC VALUES
+        ,"ALPHA":100 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
+        ,"BETA":.1
+        ,"COLS":256
+        ,"GEN_SEED":0
+        ,"NUM_SIMS":3
+    }
+    return packed_params
