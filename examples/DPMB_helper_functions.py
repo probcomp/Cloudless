@@ -1,5 +1,6 @@
 import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
+import DPMB as dm
 ##
 import pdb
 
@@ -43,7 +44,7 @@ def gen_dataset(gen_seed, gen_rows, gen_cols, gen_alpha, gen_beta, zDims=None):
     return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
         
 def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, infer_beta=None, gen_state_with_data=None, paramDict=None):
-    model = DPMB(inf_seed=inf_seed)
+    model = dm.DPMB(inf_seed=inf_seed)
     state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method) ##z's are generated from CRP if not passed
     ##is this still necessary?
     state.refresh_counts(np.repeat(0,len(state.getZIndices())))
