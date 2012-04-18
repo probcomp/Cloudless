@@ -51,8 +51,11 @@ def initialize_client():
         global remote_client
         if remote_client is None:
             # TODO: investigate other packers
-            remote_client = Client(packer="pickle")
-            ##remote_client = Client(packer="json")
+            import os
+            if os.uname()[1] == 'vagabond':
+                remote_client = Client(packer="json")
+            else: ##alternatively, could test for 'master' for packer="pickle"
+                remote_client = Client(packer="pickle")
     
 def get_view():
     if remote:
