@@ -154,6 +154,10 @@ def extract_and_plot(testjob,y_vars=None,path=None,CLUSTERS=None,POINTS_PER_CLUS
     y_vars = {"ari":ari} if y_vars is None else y_vars
     do_plots(y_vars=y_vars,ari=ari,num_clusters=num_clusters,time_delta=time_delta,packed_params=packed_params,**packed_params)
 
+def plot_all(job_list,y_vars=None):
+    for testjob,packed_params in job_list:
+        extract_and_plot(testjob,y_vars,packed_params=packed_params,**packed_params)
+
 def filter_plottable(job_list,done_list,y_vars=None):
     jobs_ready = []
     jobs_not_ready = []
@@ -163,9 +167,8 @@ def filter_plottable(job_list,done_list,y_vars=None):
         else:
             jobs_not_ready.append((testjob,packed_params))
     ##
-    for testjob,packed_params in jobs_ready:
-        extract_and_plot(testjob,y_vars,packed_params=packed_params,**packed_params)
-    return jobs_not_ready,np.append(done_list,jobs_ready)
+    plot_all(jobs_ready,y_vars)
+    return jobs_not_ready,done_list.__extend__(jobs_ready)
 
 def create_dict():
     low_val=.01
