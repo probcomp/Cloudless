@@ -96,6 +96,7 @@ def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None
             config_prefix = ",".join(inf_str.__add__((init_str,"CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER)))) 
             variable_infix = "_" + y_var_str+'_by_' + x_var_str.lower()
             import os
+            os.makedirs(path)
             file_name_prefix = os.path.join(path,config_prefix + variable_infix)
             pylab.savefig(file_name_prefix  + '.png')
             ##
