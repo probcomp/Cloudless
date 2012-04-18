@@ -152,7 +152,7 @@ def extract_and_plot(testjob,y_vars=None,path=None,CLUSTERS=None,POINTS_PER_CLUS
         init_num_clusters.append(v[0]["init_state"]["stats"]["numClusters"])
     # block 7
     y_vars = {"ari":ari} if y_vars is None else y_vars
-    do_plots(y_vars=y_vars,ari=ari,time_delta=time_delta,packed_params=packed_params,**packed_params)
+    do_plots(y_vars=y_vars,ari=ari,num_clusters=num_clusters,time_delta=time_delta,packed_params=packed_params,**packed_params)
 
 def filter_plottable(job_list,done_list,y_vars=None):
     jobs_ready = []
