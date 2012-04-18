@@ -45,7 +45,7 @@ def gen_dataset(gen_seed, gen_rows, gen_cols, gen_alpha, gen_beta, zDims=None):
         
 def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, infer_beta=None, gen_state_with_data=None, paramDict=None):
     model = dm.DPMB(inf_seed=inf_seed)
-    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method) ##z's are generated from CRP if not passed
+    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method,infer_alpha=infer_alpha,infer_beta=infer_beta) ##z's are generated from CRP if not passed
     ##is this still necessary?
     state.refresh_counts(np.repeat(0,len(state.getZIndices())))
     ##capture the initial state

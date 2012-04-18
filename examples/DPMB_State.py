@@ -29,7 +29,7 @@ class DPMB_State():
         ##
         if dataset is not None:
             self.init_from_dataset(dataset,init_method)
-        ##
+        ##ensure alpha,beta are initialized.  If they are not, score cannot be calculated
         if not hasattr(self,"alpha") and self.parent is not None:
             self.parent.sample_alpha()
         if not hasattr(self,"betas") and self.parent is not None:

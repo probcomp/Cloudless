@@ -174,6 +174,7 @@ def filter_plottable(job_list,done_list,y_vars=None):
 def create_dict():
     low_val=.01
     high_val=1E4
+    alpha = 1
     packed_params = {
         "path":"Plots"
         ,"CLUSTERS":10
@@ -181,15 +182,15 @@ def create_dict():
         ,"NUM_ITERS":10
         ,"INFER_ALPHA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][1]
         ,"INFER_BETA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
-        ,"INIT_METHOD":[{"method":"all_together","alpha":100,"betas":np.repeat(.1,256)}
-                        ,{"method":"all_separate","alpha":100,"betas":np.repeat(.1,256)}
-                        ,{"method":"sample_prior","alpha":100,"betas":np.repeat(.1,256)}
+        ,"INIT_METHOD":[{"method":"all_together","alpha":alpha,"betas":np.repeat(.1,256)}
+                        ,{"method":"all_separate","alpha":alpha,"betas":np.repeat(.1,256)}
+                        ,{"method":"sample_prior","alpha":alpha,"betas":np.repeat(.1,256)}
                         ][0]
         ##BELOW ARE FAIRLY STATIC VALUES
-        ,"ALPHA":100 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
+        ,"ALPHA":alpha ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
         ,"BETA":.1
         ,"COLS":256
         ,"GEN_SEED":0
-        ,"NUM_SIMS":3
+        ,"NUM_SIMS":5
     }
     return packed_params

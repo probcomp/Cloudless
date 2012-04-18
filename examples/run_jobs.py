@@ -13,9 +13,12 @@ if "job_list" not in locals():
     done_list = []
     for CLUSTERS in CLUSTERS_list:
         for POINTS_PER_CLUSTER in POINTS_PER_CLUSTER_list:
+            if CLUSTERS == 64 and POINTS_PER_CLUSTER == 64:
+                continue
             packed_params = b.create_dict()
             packed_params["CLUSTERS"] = CLUSTERS
             packed_params["POINTS_PER_CLUSTER"] = POINTS_PER_CLUSTER
+            packed_params["INIT_METHOD"]["alpha"] = 1
             job_list.append((b.queue_jobs(packed_params=packed_params,**packed_params),packed_params))
 
 job_list,done_list = b.filter_plottable(job_list,done_list)
