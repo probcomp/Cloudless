@@ -168,7 +168,7 @@ def filter_plottable(job_list,done_list,y_vars=None):
             jobs_not_ready.append((testjob,packed_params))
     ##
     plot_all(jobs_ready,y_vars)
-    return jobs_not_ready,done_list.__extend__(jobs_ready)
+    return jobs_not_ready,done_list.extend(jobs_ready)
 
 def create_dict():
     low_val=.01
