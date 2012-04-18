@@ -88,9 +88,9 @@ def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None
             inf_str = INF_ALPHA_STR,INF_BETA_STR
             if type(INIT_METHOD) != dict or "method" not in INIT_METHOD or "sample_prior" == INIT_METHOD["method"]:
                 init_str = "init=P"
-            elif "all_together" == init_method["method"]:
+            elif "all_together" == INIT_METHOD["method"]:
                 init_str = "init=1"
-            elif "all_separate" == init_method["method"]:
+            elif "all_separate" == INIT_METHOD["method"]:
                 init_str = "init=N"
             ##PRESUME COLS is always 256 and GEN_SEED is always 0
             config_prefix = ",".join(inf_str.__add__((init_str,"CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER)))) 
