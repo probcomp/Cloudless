@@ -121,7 +121,7 @@ def queue_jobs(path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,IN
 def can_plot(testjob):
     return testjob.report_status()["waiting"]==0
 
-def extract_and_plot(testjob,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
+def extract_and_plot(testjob,y_vars=None,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
     status = testjob.report_status()
     time_delta = []
     log_score = []
@@ -151,10 +151,10 @@ def extract_and_plot(testjob,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM
         num_clusters.append(np.array([x["numClusters"] for x in v[0]["stats"]]))
         init_num_clusters.append(v[0]["init_state"]["stats"]["numClusters"])
     # block 7
-    y_vars = {"ari":ari}
+    y_vars = {"ari":ari} if y_vars is None else y_vars
     do_plots(y_vars=y_vars,ari=ari,time_delta=time_delta,packed_params=packed_params,**packed_params)
 
-def filter_plottable(job_list,done_list):
+def filter_plottable(job_list,done_list,y_vars=None):
     jobs_ready = []
     jobs_not_ready = []
     for testjob,packed_params in job_list:
@@ -164,7 +164,7 @@ def filter_plottable(job_list,done_list):
             jobs_not_ready.append((testjob,packed_params))
     ##
     for testjob,packed_params in jobs_ready:
-        extract_and_plot(testjob,packed_params=packed_params,**packed_params)
+        extract_and_plot(testjob,y_vars,packed_params=packed_params,**packed_params)
     return jobs_not_ready,np.append(done_list,jobs_ready)
 
 def create_dict():
