@@ -47,7 +47,7 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
 
 # block 3
 # make a plot (iterate on this block to fix layout/display issues)
-def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None
+def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None,num_clusters=None
              ,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM_ITERS=None,INFER_ALPHA=None,INFER_BETA=None
              ,INIT_METHOD=None,ALPHA=None,BETA=None,COLS=None,GEN_SEED=None,NUM_SIMS=None,packed_params=None):
     x_vars = x_vars if x_vars is not None else ["TIME","ITER"]
