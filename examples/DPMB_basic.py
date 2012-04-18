@@ -179,7 +179,7 @@ def create_dict():
         "path":"Plots"
         ,"CLUSTERS":10
         ,"POINTS_PER_CLUSTER":10
-        ,"NUM_ITERS":10
+        ,"NUM_ITERS":20
         ,"INFER_ALPHA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][1]
         ,"INFER_BETA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
         ,"INIT_METHOD":[{"method":"all_together","alpha":alpha,"betas":np.repeat(.1,256)}
