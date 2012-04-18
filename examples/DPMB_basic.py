@@ -86,8 +86,14 @@ def do_plots(x_vars=None,y_vars=None,time_delta=None,true_prob=None,ari=None
                 print "Unkown INFER_BETA value"
                 return
             inf_str = INF_ALPHA_STR,INF_BETA_STR
+            if type(INIT_METHOD) != dict or "method" not in INIT_METHOD or "sample_prior" == INIT_METHOD["method"]:
+                init_str = "init=P"
+            elif "all_together" == init_method["method"]:
+                init_str = "init=1"
+            elif "all_separate" == init_method["method"]:
+                init_str = "init=N"
             ##PRESUME COLS is always 256 and GEN_SEED is always 0
-            config_prefix = ",".join(inf_str.__add__(("CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER)))) 
+            config_prefix = ",".join(inf_str.__add__((init_str,"CL="+str(CLUSTERS),"PPC="+str(POINTS_PER_CLUSTER)))) 
             variable_infix = "_" + y_var_str+'_by_' + x_var_str.lower()
             import os
             file_name_prefix = os.path.join(path,config_prefix + variable_infix)
@@ -146,7 +152,7 @@ def extract_and_plot(testjob,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM
     y_vars = {"ari":ari}
     do_plots(y_vars=y_vars,ari=ari,time_delta=time_delta,packed_params=packed_params,**packed_params)
 
-def filter_plottable(job_list):
+def filter_plottable(job_list,done_list):
     jobs_ready = []
     jobs_not_ready = []
     for testjob,packed_params in job_list:
@@ -157,7 +163,7 @@ def filter_plottable(job_list):
     ##
     for testjob,packed_params in jobs_ready:
         extract_and_plot(testjob,packed_params=packed_params,**packed_params)
-    return jobs_not_ready
+    return jobs_not_ready,np.append(done_list,jobs_ready)
 
 def create_dict():
     low_val=.01
@@ -169,7 +175,7 @@ def create_dict():
         ,"NUM_ITERS":10
         ,"INFER_ALPHA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][1]
         ,"INFER_BETA":[None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}][0]
-        ,"INIT_METHOD":["all_together","all_separate","sample_prior"][1]
+        ,"INIT_METHOD":[{"method":"all_together"},{"method":"all_separate"},{"method":"sample_prior"}][1]
         ##BELOW ARE FAIRLY STATIC VALUES
         ,"ALPHA":100 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
         ,"BETA":.1
