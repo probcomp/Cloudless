@@ -1,8 +1,12 @@
 #!python
-import Cloudless.examples.DPMB_basic as b
 
+
+import Cloudless.examples.DPMB_basic as b
+reload(b)
+##
 CLUSTERS_list = [2,16]
 POINTS_PER_CLUSTER_list = [2,16]
+
 
 if "job_list" not in locals():
     job_list = []
