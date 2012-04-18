@@ -41,7 +41,7 @@ def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alp
     gen_sample_output = hf.gen_sample(inf_seed=inf_seed,train_data=gen_state_with_data["observables"]
                                       , num_iters=num_iters,init_method=init_method,infer_alpha=infer_alpha
                                       , infer_beta=infer_beta,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
-    predictive_prob = hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
+    predictive_prob = None ## hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
     return gen_sample_output,predictive_prob
 
 

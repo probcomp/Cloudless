@@ -52,7 +52,7 @@ def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, i
     init_latents = model.reconstitute_latents()
     init_state = {
         "stats":model.extract_state_summary()
-        ,"predicitive_prob":None if gen_state_with_data is None else test_model(gen_state_with_data["test_data"],init_latents)
+        ##,"predicitive_prob":None if gen_state_with_data is None else test_model(gen_state_with_data["test_data"],init_latents)
         ,"ari":None if gen_state_with_data is None else calc_ari(gen_state_with_data["gen_state"]["zs"],init_latents["zs"])
         }
     ##
@@ -62,7 +62,7 @@ def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, i
         stats.append(model.extract_state_summary())
         if gen_state_with_data is not None:
             latents = model.reconstitute_latents()
-            stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
+            ##stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
             stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
     return {"state":model.reconstitute_latents(),"stats":stats,"init_state":init_state}
 
