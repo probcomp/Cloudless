@@ -146,7 +146,7 @@ def extract_and_plot(testjob,path=None,CLUSTERS=None,POINTS_PER_CLUSTER=None,NUM
         ##
         time_delta.append(z_delta+alpha_delta+beta_delta)
         log_score.append(np.array([x["score"] for x in v[0]["stats"]]))
-        predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))
+        ##predictive_prob.append(np.array([x["predictive_prob"] for x in v[0]["stats"]]))
         ari.append(np.array([x["ari"] for x in v[0]["stats"]]))
         num_clusters.append(np.array([x["numClusters"] for x in v[0]["stats"]]))
         init_num_clusters.append(v[0]["init_state"]["stats"]["numClusters"])

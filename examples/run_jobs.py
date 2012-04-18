@@ -1,11 +1,14 @@
 #!python
 import Cloudless.examples.DPMB_basic as b
 
+CLUSTERS_list = [2,16]
+POINTS_PER_CLUSTER_list = [2,16]
+
 if "job_list" not in locals():
     job_list = []
     done_list = []
-    for CLUSTERS in [2,16,64]:
-        for POINTS_PER_CLUSTER in [2,16,64]:
+    for CLUSTERS in CLUSTERS_list:
+        for POINTS_PER_CLUSTER in POINTS_PER_CLUSTER_list:
             packed_params = b.create_dict()
             packed_params["CLUSTERS"] = CLUSTERS
             packed_params["POINTS_PER_CLUSTER"] = POINTS_PER_CLUSTER
