@@ -18,12 +18,16 @@ Cloudless.base.remote_exec('import Cloudless.examples.DPMB as dm')
 Cloudless.base.remote_exec('reload(dm)')
 Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
 Cloudless.base.remote_exec('reload(ds)')
+Cloudless.base.remote_exec('import Cloudless.examples.DPMB_helper_functions as hf')
+Cloudless.base.remote_exec('reload(hf)')
 Cloudless.base.remote_exec('import time')
 Cloudless.base.remote_exec('import numpy as np')
 import Cloudless.examples.DPMB as dm
 reload(dm)
 import Cloudless.examples.DPMB_State as ds
 reload(ds)
+import Cloudless.examples.DPMB_helper_functions as hf
+reload(hf)
 import time
 import numpy as np
 
@@ -67,13 +71,13 @@ def do_plots(x_vars=None,y_vars=None,path=None):
 
 
 # block 4
-def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_hypers):
-    paramDict = {"infer_alpha":infer_hypers,"infer_beta":infer_hypers,"alpha":alpha,"beta":beta}
-    gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-    gen_sample_output = dm.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
+def raw_testjob(gen_seed,inf_seed,clusters,points_per_cluster,num_iters,cols,alpha,beta,infer_alpha,infer_beta):
+    paramDict = {"infer_alpha":infer_alpha,"infer_beta":infer_beta,"alpha":alpha,"beta":beta}
+    gen_state_with_data = hf.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
+    gen_sample_output = hf.gen_sample(inf_seed=inf_seed, train_data=gen_state_with_data["observables"]
                                       , num_iters=num_iters,init_method={"method":"all_together","alpha":alpha,"betas":np.repeat(.1,cols)}
                                       , hyper_method=None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
-    predictive_prob = None ## dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## 
+    predictive_prob = None ## hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"]) ## 
     return gen_sample_output,predictive_prob
 
 # make memoized job (re-eval if the job code changes, or to reset cache)
@@ -90,7 +94,7 @@ NUM_ITERS = 10
 ##BELOW ARE FAIRLY STATIC VALUES
 INFER_HYPERS = None
 COLS = 256
-ALPHA = 1 ## dm.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
+ALPHA = 1 ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
 BETA = .1
 GEN_SEED = 0
 NUM_SIMS = 3
@@ -123,8 +127,8 @@ predictive_prob = []
 ari = []
 num_clusters = []
 init_num_clusters = []
-##DATASET = dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
-true_prob = None ## dm.test_model(DATASET["test_data"],DATASET["gen_state"]) ## 
+##DATASET = hf.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))
+true_prob = None ## hf.test_model(DATASET["test_data"],DATASET["gen_state"]) ## 
 ##
 for (k, v) in testjob.iter():
     z_delta = np.array([x["timing"]["zs"]["delta"].total_seconds() for x in v[0]["stats"]]).cumsum()
@@ -152,6 +156,6 @@ do_plots(y_vars=y_vars,path=path)
 # # block 8
 # # examine the exceptions for the jobs that failed
 # testjob.report_status(verbose=True)
-# cluster_dist = np.sort(dm.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
+# cluster_dist = np.sort(hf.gen_dataset(GEN_SEED,None,COLS,ALPHA,BETA,np.repeat(POINTS_PER_CLUSTER,CLUSTERS))["gen_state"]["phis"])
 # print str(sum(cluster_dist.cumsum()>.10)) + " clusters comprise 90% of data; " + str(sum(cluster_dist.cumsum()>.30)) + " clusters comprise 70% of data"
 # ##testjob.terminate_pending() ## uncomment to kill non-running jobs

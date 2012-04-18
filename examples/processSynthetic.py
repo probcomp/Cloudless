@@ -5,46 +5,66 @@ import DPMB as dm
 reload(dm)
 import DPMB_State as ds
 reload(ds)
+import DPMB_helper_functions as hf
+reload(hf)
 
 
-clusters = 10
-points_per_cluster = 10
-num_iters = 10
-gen_seed = 0
-num_sims = 1
-##below are fairly static values
-cols = 256
-beta = .1
-infer_alpha = "DISCRETE_GIBBS"
-infer_beta = "DISCRETE_GIBBS"
-alpha = 1 ## dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster) ##
-##
 inf_seed = 0
+low_val = .01
+high_val = 1E4
+##
+gen_seed = 0
+gen_beta = .1
+cols = 256
+num_sims = 5 ##propogates to inf_seed
+##
+alpha_list = [low_val,high_val]
+beta_list = [low_val,high_val]
+clusters_list = [10]
+points_per_cluster_list = [100]
+infer_alpha_list = [None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}]
+infer_beta_list = [None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}]
+init_method_str_list = ["all_together","all_separate","sample_prior"]
+num_iters_list = [10]
+##alpha = 1 ## dm.mle_alpha(clusters=clusters,points_per_cluster=points_per_cluster) ##
 
 
-paramDict = {"infer_alpha":infer_alpha,"infer_betas":infer_beta,"alpha":alpha,"beta":beta,"print_predictive":True}
-gen_state_with_data = dm.gen_dataset(gen_seed,None,cols,alpha,beta,np.repeat(points_per_cluster,clusters))
-##gen_sample_output = dm.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
+alpha = alpha_list[1]
+beta = beta_list[0]
+clusters = clusters_list[0]
+points_per_cluster = points_per_cluster_list[0]
+infer_alpha = infer_alpha_list[1]
+infer_beta = infer_beta_list[0]
+init_method_str = init_method_str_list[0]
+num_iters = num_iters_list[0]
+
+
+##want to vary alpha,beta according to low_val,high_val
+paramDict = {"alpha":alpha,"beta":.1,"print_predictive":True,"betas":np.repeat(beta,cols)}
+gen_state_with_data = hf.gen_dataset(gen_seed,gen_rows=None,gen_cols=cols,gen_alpha=1.0,gen_beta=gen_beta,zDims=np.repeat(points_per_cluster,clusters))
+##gen_sample_output = hf.gen_sample(inf_seed, gen_state_with_data["observables"], num_iters,{"alpha":alpha,"betas":np.repeat(.1,cols)}
 ##                                  ,None,paramDict=paramDict,gen_state_with_data=gen_state_with_data)
 train_data = gen_state_with_data["observables"]
-init_method = {"method":"sample_prior","alpha":alpha,"betas":np.repeat(.1,cols)}
-hyper_method=None
-model = dm.DPMB(paramDict=paramDict,state=None,seed=inf_seed)
+init_method = {"method":init_method_str}
+model = dm.DPMB(inf_seed=inf_seed)
 ##will have to pass init_method so that alpha can be set from prior (if so specified)
-state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method) ##z's are generated from CRP if not passed
-state.score
+state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method,infer_alpha=infer_alpha,infer_beta=infer_beta) ##z's are generated from CRP if not passed
 ##ensure score is same before and after refresh_counts
+score1 = state.score
 state.refresh_counts()
-state.score
+score2 = state.score
+assert score1==score2,"Score differs before and after refresh_counts()"
+
 
 init_num_clusters = state.numClustersDyn()
 stats = []
 state.debug_conditionals = False
-state.print_conditionals = True
+state.print_conditionals = False
 state.debug_predictive = False
-state.print_predictive = True
+state.print_predictive = False
 state.print_cluster_switch = True
-state.vectorIdx_break = 100
+state.vectorIdx_break = None
+state.verbose = True
 print "generative state"
 for k,v in gen_state_with_data["gen_state"].iteritems():
     print k
@@ -57,15 +77,16 @@ for k,v in model.reconstitute_latents().iteritems():
 
 print "observables"
 model.state.getXValues()
-model.transition()
+model.transition_z()
+
 
 for iter_num in range(num_iters):
     model.transition()
     stats.append(model.extract_state_summary())
     if gen_state_with_data is not None:
         latents = model.reconstitute_latents()
-        stats[-1]["predictive_prob"] = dm.test_model(gen_state_with_data["test_data"],latents)
-        stats[-1]["ari"] = dm.calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
+        stats[-1]["predictive_prob"] = hf.test_model(gen_state_with_data["test_data"],latents)
+        stats[-1]["ari"] = hf.calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
         if len(stats)>1 and stats[-1]["ari"]!=stats[-2]["ari"]:
             print stats[-1]["ari"]
         if stats[-1]["ari"]==1:
@@ -73,7 +94,7 @@ for iter_num in range(num_iters):
 
 gen_sample_output = {"state":model.reconstitute_latents(),"stats":stats,"init_num_clusters":init_num_clusters}
 
-predictive_prob = dm.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
+predictive_prob = hf.test_model(gen_state_with_data["observables"],gen_sample_output["state"])
 
 
 
@@ -108,8 +129,8 @@ if False:
     print "What are the actual numbers for my labels?"
     model.compareClustering(originalZs,reverse=True)
 elif False:  ## basic.py style
-    gen_state_with_data = dm.gen_dataset(0,1000,20,1,1)
-    sample = dm.gen_sample(0,gen_state_with_data,5,None,None,900)
+    gen_state_with_data = hf.gen_dataset(0,1000,20,1,1)
+    sample = hf.gen_sample(0,gen_state_with_data,5,None,None,900)
     print [stats["score"] for stats in sample["stats"]] 
     print sample["stats"][0]["predictive_prob"]["gen_prob"]
     print [stats["predictive_prob"]["sampled_prob"] for stats in sample["stats"]]

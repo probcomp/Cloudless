@@ -2,9 +2,14 @@
 import matplotlib.mlab as mlab,numpy as np, numpy.random as nr,sys
 import DPMB as dm
 reload(dm)
+import DPMB_helper_functions as hf
+reload(hf)
+##
+import pdb
+
 
 class DPMB_State():
-    def __init__(self,parent,paramDict=None,dataset=None,init_method=None):
+    def __init__(self,parent,paramDict=None,dataset=None,init_method=None,infer_alpha=None,infer_beta=None):
         self.parent = parent
         if self.parent is not None:
             parent.state = self
@@ -12,8 +17,8 @@ class DPMB_State():
         self.timing = {}
         ##default values
         self.verbose = False
-        self.infer_alpha = None
-        self.infer_betas = None
+        self.infer_alpha = infer_alpha
+        self.infer_beta = infer_beta
         self.clipBeta = [1E-2,1E10]
         self.gamma_k = 1
         self.gamma_theta = 1
@@ -22,35 +27,35 @@ class DPMB_State():
             if "__builtins__" in paramDict: paramDict.pop("__builtins__")
             self.__dict__.update(paramDict)
         ##
-        if not hasattr(self,"alpha") and self.parent is not None:
-            self.parent.sample_alpha()
-        if not hasattr(self,"beta") and self.parent is not None:
-            self.parent.sample_betas()
-        ##
         if dataset is not None:
             self.init_from_dataset(dataset,init_method)
+        ##
+        if not hasattr(self,"alpha") and self.parent is not None:
+            self.parent.sample_alpha()
+        if not hasattr(self,"betas") and self.parent is not None:
+            self.parent.sample_betas()
 
     def init_from_dataset(self,dataset,init_method):
         self.reset_data()
         self.numColumns = len(dataset["xs"][0])
         self.numVectors = len(dataset["xs"])
-        ##allow dataset to specify alpha,beta
+        ##
+        if not hasattr(self,"alpha") and self.parent is not None:
+            self.parent.sample_alpha()
+        if not hasattr(self,"betas") and self.parent is not None:
+            self.parent.sample_betas()
+        ##allow dataset to specify alpha
         if type(init_method) == dict:
             if "alpha" in init_method:
                 self.alpha = init_method["alpha"]
-            if "betas" in init_method:
-                self.betas = init_method["betas"]
-        if type(init_method) != dict or "method" not in init_method:
-            print "initializing via sampling from prior"  ##assume already done
-        else:
-            if "sample_prior"  == init_method["method"] or "specified_prior"  == init_method["method"]:
-                print "initializing via sampling from prior"  ##assume already done
-            elif "all_together" == init_method["method"]:
-                dataset["zs"] = np.repeat(0,self.numVectors)
-            elif "all_separate" == init_method["method"]:
-                dataset["zs"] = range(self.numVectors)
-            else:  ## init_method has a method key but it didn't match known entries
-                raise Exception("invalid init method passed to DPMB_State.init_from_dataset")
+        if type(init_method) != dict or "method" not in init_method or "sample_prior" == init_method["method"]:
+            print "initializing via sampling from prior"  ##will do below
+        elif "all_together" == init_method["method"]:
+            dataset["zs"] = np.repeat(0,self.numVectors)
+        elif "all_separate" == init_method["method"]:
+            dataset["zs"] = range(self.numVectors)
+        else:  ## init_method has a method key but it didn't match known entries
+            raise Exception("invalid init method passed to DPMB_State.init_from_dataset")
         ##ready to set zs
         if "zs" in dataset:
             tempZs = dataset["zs"] ##this should not often be the case
@@ -59,9 +64,8 @@ class DPMB_State():
         ##
         numClusters = len(np.unique(tempZs))
         for clusterIdx in range(numClusters):
-            ##need to initialize clusters first to ensure correct labeling of xs
-            ##else, need to modify cluster creation to create null clusters
-            ##in the event of an index skip
+            ##must initialize clusters first to get correct labeling of xs
+            ##else, index skip results in error
             Cluster(self) ## links self to state
         for clusterIdx,vector_data in zip(tempZs,dataset["xs"]):
             cluster = self.cluster_list[clusterIdx]
@@ -192,7 +196,7 @@ class CRP():
         for currNDraw in range(numSamples):
             drawN = len(self.zs)
             modCounts = np.array(np.append(self.counts,self.alpha),dtype=type(1.0))
-            draw = dm.renormalize_and_sample(np.log(modCounts))
+            draw = hf.renormalize_and_sample(np.log(modCounts))
             if(draw==len(self.counts)):
                 self.counts.append(1)
                 self.indexes.append([drawN])
@@ -239,7 +243,7 @@ class Cluster():
         self.add_vector(vector)
 
     def add_vector(self,vector):
-        scoreDelta,alpha_term,data_term = dm.cluster_predictive(vector,self,self.parent)
+        scoreDelta,alpha_term,data_term = hf.cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(scoreDelta)
         ##
         vector.cluster = self
@@ -259,7 +263,7 @@ class Cluster():
         self.column_sums -= vector.data
         self.parent.zs[vectorIdx] = None
         ##
-        scoreDelta,alpha_term,data_term = dm.cluster_predictive(vector,self,self.parent)
+        scoreDelta,alpha_term,data_term = hf.cluster_predictive(vector,self,self.parent)
         self.parent.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
             replacementCluster = self.parent.cluster_list.pop()

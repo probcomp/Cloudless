@@ -4,6 +4,22 @@ import DPMB_State as ds
 reload(ds)
 import numpy as np
 
+def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
+    ##sort by attributed state and then gen_state if available
+    if gen_state is not None:
+        mult_factor = np.round(np.log10(len(gen_state["phis"])))
+        sort_by = np.array(mult_factor * state.getZIndices() + gen_state["zs"],dtype=int)
+    else:
+        sort_by = state.getZIndices()
+    import pylab
+    pylab.ion()
+    fh = pylab.figure()
+    pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,**kwargs)
+    ##
+    xlim = fh.get_axes()[0].get_xlim()
+    h_lines = np.array([cluster.count() for cluster in state.cluster_list]).cumsum()
+    pylab.hlines(h_lines-.5,*xlim)
+
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab
     cluster_list = cluster_list if cluster_list is not None else 10**np.arange(0,4,.5)
@@ -55,7 +71,7 @@ def debug_conditionals():
     ##
     print dm.cluster_predictive(tempVector,None,tempState),-1
     print tempState.getThetas().round(1)
-    dm.plot_state(tempState,{"phis":range(temp_num_clusters),"zs":np.repeat(range(temp_num_clusters),temp_num_rows_per_cluster)},aspect="auto")
+    plot_state(tempState,{"phis":range(temp_num_clusters),"zs":np.repeat(range(temp_num_clusters),temp_num_rows_per_cluster)},aspect="auto")
 
 def run_jobs(num_clusters_list=None,num_points_per_cluster_list=None,path=None):
     import os
@@ -63,6 +79,9 @@ def run_jobs(num_clusters_list=None,num_points_per_cluster_list=None,path=None):
     num_points_per_cluster_list = num_points_per_cluster_list if num_points_per_cluster_list is not None else [10,50,100]
     path = path if path is not None else ""
     ##
+    ##perhaps I should make DPMB_basic.py a function?
+    ##will each run get its own namespace?
+    ##then can pass in dict for named arguments
     for num_clusters in num_clusters_list:
         for num_points_per_cluster in num_points_per_cluster_list:
             system_str = " ".join(["python DPMB_basic.py",str(num_clusters),str(num_points_per_cluster),path
