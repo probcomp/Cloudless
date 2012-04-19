@@ -1,22 +1,22 @@
 #!python
-import datetime as dt,os, os.path as op
-import gdata
+import datetime as dt,os, os.path as op,sys
+import gdata,gdata.docs.client as gdc
 ##http://gdata-python-client.googlecode.com/hg/pydocs/gdata.docs.html
 
 auth_file_str = "/home/dlovell/google_docs_auth"
 dateStr = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d")
 rootDir = "/usr/local/" if os.uname()[0].lower()=="linux" or os.uname()[0].lower()=="freebsd" else "/cygdrive/c/"
-client = gdata.docs.client.DocsClient()
+client = gdc.DocsClient()
 auth_dict = {} ##for keyword args email,password
 with open(auth_file_str) as fh:
     exec fh in auth_dict
-    auth_dict.pop("__builtins__")
+    temp = auth_dict.pop("__builtins__") ##pop prints otherwise
     client.ClientLogin(source="writely",**auth_dict)
 
 ##find a collection and create a new one in it
 ##http://stackoverflow.com/questions/10054604/google-docs-api-with-python
 q = gdata.docs.client.DocsQuery(
-        title='MetropolisHastings',
+        title='MH',
             title_exact='true',
             show_collections='true'
         )
