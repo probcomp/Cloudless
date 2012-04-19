@@ -52,7 +52,7 @@ def initialize_client():
         if remote_client is None:
             # TODO: investigate other packers
             import os
-            if os.uname()[1] == 'vagabond':
+            if os.uname()[1] == 'vagabond' and False:  ##this may fail for using starcluster shell -p CLUSTER
                 remote_client = Client(packer="json")
             else: ##alternatively, could test for 'master' for packer="pickle"
                 remote_client = Client(packer="pickle")

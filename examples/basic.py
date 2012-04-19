@@ -1,14 +1,11 @@
 # block 1
-# must be run before matplotlib,pylab imports
-matplotlib.use('Agg')
-
-# block 2
 # remote definitions, written for re-evaluation
 import Cloudless.base
 reload(Cloudless.base) # to make it easy to develop locally
 import Cloudless.memo
 reload(Cloudless.memo) # to make it easy to develop locally
 import matplotlib
+matplotlib.use('Agg')
 import pylab
 from IPython.parallel import *
 
