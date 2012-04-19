@@ -1,15 +1,17 @@
 #!python
 import datetime as dt,os, os.path as op
-import gdata,gdata.docs.client as gdc
+import gdata
 ##http://gdata-python-client.googlecode.com/hg/pydocs/gdata.docs.html
 
-
+auth_file_str = "/home/dlovell/google_docs_auth"
 dateStr = dt.datetime.strftime(dt.datetime.now(),"%Y%m%d")
 rootDir = "/usr/local/" if os.uname()[0].lower()=="linux" or os.uname()[0].lower()=="freebsd" else "/cygdrive/c/"
-client = gdc.DocsClient()
-USERNAME = "PUT YOUR USERNAME HERE"
-PASS = "AND PASS HERE"
-client.ClientLogin(USERNAME,PASS,"writely")
+client = gdata.docs.client.DocsClient()
+auth_dict = {} ##for keyword args email,password
+with open(auth_file_str) as fh:
+    exec fh in auth_dict
+    auth_dict.pop("__builtins__")
+    client.ClientLogin(source="writely",**auth_dict)
 
 ##find a collection and create a new one in it
 ##http://stackoverflow.com/questions/10054604/google-docs-api-with-python
@@ -24,6 +26,9 @@ newCol = gdata.docs.data.Resource(type='folder', title=dateStr)
 newCol = client.CreateResource(newCol,collection=mh_folder)
 
 
+##try looking at this for how to upload?
+##https://github.com/greggoryhz/Google-Docs-Sync/
+
 ##push files up to a given collection
 baseDir = "/usr/local/Cloudless/examples/Plots/"
 fileNames = filter(lambda x:x[-3:]=="png",os.listdir(baseDir))
@@ -32,7 +37,7 @@ for fileName in fileNames[:2]:
     if not op.isfile(fullPath):
         continue
     mediaResource = gdata.data.MediaSource(content_type="image/png",file_path=fullPath)
-    myResource = gdata.docs.data.Resource(type="image/png",title=fileName,convert=False)
+    myResource = gdata.docs.data.Resource(type="file",title=fileName,convert=False)
     client.create_resource(myResource,media=mediaResource,collection=newCol)
 
 
