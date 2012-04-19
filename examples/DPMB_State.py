@@ -19,6 +19,7 @@ class DPMB_State():
         self.verbose = False
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
+        self.init_method = init_method
         self.clipBeta = [1E-2,1E10]
         self.gamma_k = 1
         self.gamma_theta = 1
