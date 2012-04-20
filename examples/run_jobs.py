@@ -20,7 +20,7 @@ def create_dict(ALPHA=1,CLUSTERS=10,POINTS_PER_CLUSTER=10,NUM_ITERS=20):
         ,"INIT_METHOD":[{"method":"all_together","alpha":ALPHA,"betas":betas}
                         ,{"method":"all_separate","alpha":ALPHA,"betas":betas}
                         ,{"method":"sample_prior","alpha":ALPHA,"betas":betas}
-                        ][0]
+                        ][1]
         ##BELOW ARE FAIRLY STATIC VALUES
         ,"ALPHA":ALPHA ## hf.mle_alpha(clusters=CLUSTERS,points_per_cluster=POINTS_PER_CLUSTER) ## 
         ,"BETA":beta
@@ -29,6 +29,7 @@ def create_dict(ALPHA=1,CLUSTERS=10,POINTS_PER_CLUSTER=10,NUM_ITERS=20):
         ,"NUM_SIMS":5
     }
     return packed_params
+
 ##
 low_val = .01
 high_val = 1E4
@@ -40,7 +41,6 @@ INFER_BETA_list = [None,{"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":
 INIT_METHOD_list = [{"method":"all_together","alpha":alpha,"betas":np.repeat(.1,256)}
                     ,{"method":"all_separate","alpha":alpha,"betas":np.repeat(.1,256)}
                     ,{"method":"sample_prior","alpha":alpha,"betas":np.repeat(.1,256)}]
-
 
 if "job_list" not in locals():
     job_list = []
