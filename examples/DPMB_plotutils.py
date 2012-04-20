@@ -5,6 +5,13 @@ reload(ds)
 import numpy as np
 import scipy.special as ss
 
+def log_conditional_to_norm_prob(logp_list):
+    maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    logp_vec = [s - logZ for s in scaled]
+    return np.exp(logp_vec)
+
 def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     ##sort by attributed state and then gen_state if available
     if gen_state is not None:
@@ -28,10 +35,7 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     lnPdf = lambda alpha: (ss.gammaln(alpha) + state.numClustersDyn()*np.log(alpha)
                            - ss.gammaln(alpha+state.numVectorsDyn()) + lnProdGammas)
     ##
-    low_val = state.infer_alpha["low_val"]
-    high_val = state.infer_alpha["high_val"]
-    n_grid = state.infer_alpha["n_grid"]
-    grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
+    grid = 10.0**np.linspace(np.log10(state.alpha_min),np.log10(state.alpha_max),state.grid_N) ##endpoint should be set by MLE of all data in its own cluster?
     ##
     logp_list = []
     original_alpha = state.alpha
@@ -42,19 +46,12 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     ##put everything back how you found it
     state.removeAlpha(lnPdf)
     state.setAlpha(lnPdf,original_alpha)
-    maxv = max(logp_list)
-    scaled = [logpstar - maxv for logpstar in logp_list]
-    logZ = reduce(np.logaddexp, scaled)
-    logp_vec = [s - logZ for s in scaled]
     fh2 = pylab.figure()
-    pylab.bar(np.log(grid),np.exp(logp_vec))
+    pylab.bar(np.log(grid),log_conditional_to_norm_prob(logp_list))
     pylab.title("Alpha conditional posterior")
     ##
     ##beta_i
-    low_val = state.infer_beta["low_val"]
-    high_val = state.infer_beta["high_val"]
-    n_grid = state.infer_beta["n_grid"]
-    grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
+    grid = 10.0**np.linspace(np.log10(state.beta_min),np.log10(state.beta_max),state.grid_N) ##endpoint should be set by MLE of all data in its own cluster?
     logp_list = []
     colIdx = 0
     S_list = [cluster.column_sums[colIdx] for cluster in state.cluster_list]
@@ -73,12 +70,8 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     ##put everything back how you found it
     state.removeBetaD(lnPdf,colIdx)
     state.setBetaD(lnPdf,colIdx,original_beta)
-    maxv = max(logp_list)
-    scaled = [logpstar - maxv for logpstar in logp_list]
-    logZ = reduce(np.logaddexp, scaled)
-    logp_vec = [s - logZ for s in scaled]
     fh3 = pylab.figure()
-    pylab.bar(np.log(grid),np.exp(logp_vec))
+    pylab.bar(np.log(grid),log_conditional_to_norm_prob(logp_list))
     pylab.title("Beta conditional posterior")
     ##
     return fh1,fh2,fh3
@@ -121,17 +114,17 @@ def debug_conditionals():
          print  temp_vector.vectorIdx,tempVector.data
          temp_cluster = temp_vector.cluster
          temp_cluster.remove_vector(temp_vector)
-         dm.cluster_predictive(temp_vector,temp_cluster,tempState),temp_cluster.clusterIdx
+         dm.cluster_predictive(temp_vector,temp_cluster,tempState),temp_cluster.cluster_idx
          temp_cluster.add_vector(temp_vector)
     ##
     tempState.zs.append(temp_cluster) ## must increase the vector count so alpha_term is correct
     print
     for temp_cluster in tempState.cluster_list:
          tempVector = ds.Vector(None,data=[np.random.binomial(1,theta) for theta in temp_cluster.thetas])
-         print "Creating from ",temp_cluster.clusterIdx
+         print "Creating from ",temp_cluster.cluster_idx
          print temp_vector.data
          for temp_cluster in tempState.cluster_list:
-              dm.cluster_predictive(tempVector,temp_cluster,tempState),temp_cluster.clusterIdx
+              dm.cluster_predictive(tempVector,temp_cluster,tempState),temp_cluster.cluster_idx
     ##
     print dm.cluster_predictive(tempVector,None,tempState),-1
     print tempState.getThetas().round(1)

@@ -25,13 +25,13 @@ class DPMB():
 
     def sample_betas(self):
         self.state.betas = nr.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
-        self.state.betas = np.clip(self.state.betas,self.state.clipBeta[0],self.state.clipBeta[1])
+        self.state.betas = np.clip(self.state.betas,self.state.clip_beta[0],self.state.clip_beta[1])
 
     def sample_zs(self):
-        self.state.sample_zs()
+        raise Exception("not implemented")
         
     def sample_xs(self):
-        self.state.sample_xs()
+        raise Exception("not implemented")
 
     def reconstitute_thetas(self):
         thetas = np.array([cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list])
@@ -49,9 +49,9 @@ class DPMB():
         cluster = vector.cluster
         cluster.remove_vector(vector)
         
-    def assign_vector_to_cluster(self,vectorIdx,clusterIdx):
+    def assign_vector_to_cluster(self,vectorIdx,cluster_idx):
         vector = self.state.xs[vectorIdx]
-        cluster = self.state.cluster_list[clusterIdx] if clusterIdx<self.state.numClustersDyn() else ds.Cluster(self.state)
+        cluster = self.state.cluster_list[cluster_idx] if cluster_idx<self.state.numClustersDyn() else ds.Cluster(self.state)
         cluster.add_vector(vector)
         
     def calculate_cluster_conditional(self,vectorIdx):
@@ -210,17 +210,17 @@ class DPMB():
             print "PRE transition_z score: " + str(self.state.score)
         self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
         for vectorIdx in range(self.state.numVectors):
-            prior_cluster_idx = self.state.zs[vectorIdx].clusterIdx
+            prior_cluster_idx = self.state.zs[vectorIdx].cluster_idx
             self.remove_cluster_assignment(vectorIdx)
             conditionals = self.calculate_cluster_conditional(vectorIdx)
-            clusterIdx = hf.renormalize_and_sample(conditionals)
+            cluster_idx = hf.renormalize_and_sample(conditionals)
             if hasattr(self.state,"print_conditionals") and self.state.print_conditionals:
-                print clusterIdx,(conditionals-max(conditionals)).round(2)
+                print cluster_idx,(conditionals-max(conditionals)).round(2)
             if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
                 pdb.set_trace()
-            if hasattr(self.state,"print_cluster_switch") and self.state.print_cluster_switch and prior_cluster_idx != clusterIdx:
-                print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(clusterIdx)
-            self.assign_vector_to_cluster(vectorIdx,clusterIdx)
+            if hasattr(self.state,"print_cluster_switch") and self.state.print_cluster_switch and prior_cluster_idx != cluster_idx:
+                print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(cluster_idx)
+            self.assign_vector_to_cluster(vectorIdx,cluster_idx)
             if hasattr(self.state,"vectorIdx_break") and vectorIdx== self.state.vectorIdx_break:
                 pdb.set_trace()
         self.state.infer_z_count += 1
@@ -267,5 +267,5 @@ class DPMB():
             ,"score":self.state.score
             ,"numClusters":self.state.numClustersDyn()
             ,"timing":self.state.timing if len(self.state.timing.keys())>0 else {"zs":{"delta":0},"alpha":{"delta":0},"beta":{"delta":0}}
-            ,"infer_z_count":self.state.infer_z_count
+            ,"state",self.state.clone()
             }

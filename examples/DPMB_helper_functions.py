@@ -5,17 +5,38 @@ import DPMB as dm
 import pdb
 
 ##per vikash's outline: https://docs.google.com/document/d/16iLc2jjtw7Elxy22wyM_TsSPYwW0KOErWKIpFX5k8Y8/edit
-def gen_dataset(gen_seed, gen_rows, gen_cols, gen_alpha, gen_beta, zDims=None):
-    state = ds.DPMB_State(parent=None,paramDict={"numVectors":gen_rows,"numColumns":gen_cols,"alpha":gen_alpha,"betas":np.repeat(gen_beta,gen_cols)})
-    state.create_data(gen_seed,zDims=zDims)
-    train_data = state.getXValues()
-    gen_state = {"zs":state.getZIndices(),"thetas":state.getThetas(),"phis":state.getPhis()}
-    ##
-    state.sample_xs()
-    state.refresh_counts()
-    test_data = state.getXValues()
-    return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
-        
+# FIXME: later, when we support predictive accuracy assessments, include train/test split stuff here
+def gen_problem(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z):
+    state = ds.DPMB_State(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z, None)
+    return state.get_flat_dictionary()
+
+#FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
+
+def infer(run_spec):
+    # returns a list of dictionaries, one per iter. each dict contains:
+    #   - a dict of timing for each kernel
+    #   - a state as a flattened dictionary
+    # look for max iterations and xs (the training data, for initializing the DPMB_State that inference will be done on) inside run_spec
+    # FIXME: Complete
+
+def extract_measurement(which_measurement, one_runs_data):
+    # measurement can be:
+    # "num_clusters"
+    # "alpha"
+    # "beta"
+    # ("ari", z_indices_vec)
+    # work by reconstituting states from the flat dictionary list in one_runs_data[i]["flat_state"] and then applying the desired accessor
+    pass
+
+# FIXME: a state should know how to plot itself. calling that method, on a state, should dump out the figure, to a specified filename
+
+def plot_measurement(memoized_infer, which_measurement, which_dataset):
+    # FIXME: trawl through memoized_infer.iter(), finding the datasets that match
+
+    all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
+    # by first extracting the measurements from memoized_infer 
+    pass
+
 def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, infer_beta=None, gen_state_with_data=None, paramDict=None):
     model = dm.DPMB(inf_seed=inf_seed)
     state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method,infer_alpha=infer_alpha,infer_beta=infer_beta) ##z's are generated from CRP if not passed
@@ -109,7 +130,7 @@ def cluster_predictive(vector,cluster,state):
     if cluster is None or cluster.count() == 0:
         ##if the cluster would be empty without the vector, then its a special case
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
-        data_term = state.numColumns*np.log(.5)
+        data_term = state.num_cols*np.log(.5)
         retVal =  alpha_term + data_term
     else:
         boolIdx = np.array(vector.data,dtype=type(True))
@@ -123,7 +144,7 @@ def cluster_predictive(vector,cluster,state):
         pdb.set_trace()
     if hasattr(state,"print_predictive") and state.print_predictive:
         mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) if "numerator1" in locals() else .5
-        print retVal.round(2),alpha_term.round(2),data_term.round(2),vector.vectorIdx,cluster.clusterIdx,mean_p
+        print retVal.round(2),alpha_term.round(2),data_term.round(2),vector.vectorIdx,cluster.cluster_idx,mean_p
     if hasattr(state,"debug_predictive") and state.debug_predictive:
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?

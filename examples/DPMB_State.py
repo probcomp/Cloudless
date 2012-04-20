@@ -9,138 +9,93 @@ import pdb
 
 
 class DPMB_State():
-    def __init__(self,parent,paramDict=None,dataset=None,init_method=None,infer_alpha=None,infer_beta=None):
-        self.parent = parent
-        if self.parent is not None:
-            parent.state = self
-        self.reset_data()
-        self.timing = {}
-        ##default values
+    def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None,init_z=None,init_x=None
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
+        self.gen_seed = gen_seed
+        self.num_cols = num_cols
+        self.num_rows = num_rows + N_test
+        self.init_alpha = init_alpha
+        self.init_betas = init_betas
+        self.init_z = init_z
+        self.init_x = init_x
+        self.alpha_min = alpha_min
+        self.alpha_max = alpha_max
+        self.beta_min = beta_min
+        self.beta_max = beta_max
+        self.grid_N = grid_N
+        ##
         self.verbose = False
-        self.infer_alpha = infer_alpha
-        self.infer_beta = infer_beta
-        self.init_method = init_method
-        self.clipBeta = [1E-2,1E10]
-        self.gamma_k = 1
-        self.gamma_theta = 1
+        self.clip_beta = [1E-2,1E10]
+        nr.seed(int(np.clip(gen_seed,0,np.inf)))
         ##
-        if paramDict is not None:
-            if "__builtins__" in paramDict: paramDict.pop("__builtins__")
-            self.__dict__.update(paramDict)
+        # note: no score modification here, because of uniform hyperpriors
+        self.alpha = init_alpha if init_alpha is not None else nr.uniform(alpha_min,alpha_max)
+        self.betas = init_betas if init_betas is not None else nr.uniform(beta_min,beta_max,self.num_cols)
         ##
-        if dataset is not None:
-            self.init_from_dataset(dataset,init_method)
-        ##ensure alpha,beta are initialized.  If they are not, score cannot be calculated
-        if not hasattr(self,"alpha") and self.parent is not None:
-            self.parent.sample_alpha()
-        if not hasattr(self,"betas") and self.parent is not None:
-            self.parent.sample_betas()
+        self.score = 0.0 #initially empty score
+        self.cluster_list = [] #all the Cluster s in the model
+        self.zs = [] #will eventually get a list of Cluster references
 
-    def init_from_dataset(self,dataset,init_method):
-        self.reset_data()
-        self.numColumns = len(dataset["xs"][0])
-        self.numVectors = len(dataset["xs"])
+        self.init_z()
+
+        self.xs = [] #will eventually get a list of Vector references
+
+        self.init_x()
+
+    def clone(self):
+        return DPMB_State(self.gen_seed, self.num_cols, self.num_rows, self.alpha, self.betas, self.getZIndices(), self.getXValues(),
+                          self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
+
+    def get_flat_dictionary(self):
+        # returns a dictionary of things in the form where it can be passed in to init.
+        # looks a lot like Clone, just collecting things up in a dict, not returning them
+        raise Exception("not implemented yet")
+            
+    def test_train_split(self, N_test):
+        assert N_test > 0
+        assert N_test <= self.num_rows
+        
+        all_data = self.getXValues()
+        out = {}
+        out["test_data"] = all_data[-N_test:]
+        out["train_data"] = all_data[:N_test]
+        out["train_zs"] = self.getZIndices()[:N_test]
+        return out
+    
+    def init_z(self):
         ##
-        if not hasattr(self,"alpha") and self.parent is not None:
-            self.parent.sample_alpha()
-        if not hasattr(self,"betas") and self.parent is not None:
-            self.parent.sample_betas()
-        ##allow dataset to specify alpha
-        if type(init_method) == dict:
-            if "alpha" in init_method:
-                self.alpha = init_method["alpha"]
-            if "betas" in init_method:
-                self.betas = init_method["betas"]
-        if type(init_method) != dict or "method" not in init_method or "sample_prior" == init_method["method"]:
-            print "initializing via sampling from prior"  ##will do below
-        elif "all_together" == init_method["method"]:
-            dataset["zs"] = np.repeat(0,self.numVectors)
-        elif "all_separate" == init_method["method"]:
-            dataset["zs"] = range(self.numVectors)
+        if self.init_z is None: ##sample
+            zs = CRP(self.alpha,self.num_rows).zs
+        elif self.init_z == 1: ##all in one
+            zs = np.repeat(0,self.num_rows)
+        elif self.init_z == "N": ##all apart
+            zs = range(self.num_rows)
+        elif type(self.init_z)==tuple and self.init_z[0]=="balanced":
+            num_clusters = init_z[1]
+            zs = np.repeat(range(num_clusters),np.int(np.ceil(float(self.num_rows)/num_clusters))[:self.num_rows])
+            zs = np.random.permutation(zs)
+        elif isinstance(self.init_z, list):
+            zs = self.init_z
         else:  ## init_method has a method key but it didn't match known entries
-            raise Exception("invalid init method passed to DPMB_State.init_from_dataset")
-        ##ready to set zs
-        if "zs" in dataset:
-            tempZs = dataset["zs"] ##this should not often be the case
-        else:
-            tempZs = CRP(self.alpha,self.numVectors).zs
-        ##
-        numClusters = len(np.unique(tempZs))
-        for clusterIdx in range(numClusters):
-            ##must initialize clusters first to get correct labeling of xs
-            ##else, index skip results in error
+            raise Exception("invalid init_z passed to DPMB_State.create_data")
+
+        num_clusters = len(np.unique(zs))
+        for cluster_idx in range(num_clusters):
+            ##must initialize clusters first to get correct labeling of xs, else index skip results in error
             Cluster(self) ## links self to state
-        for clusterIdx,vector_data in zip(tempZs,dataset["xs"]):
-            cluster = self.cluster_list[clusterIdx]
+        # now self.cluster_list is initialized!
+        
+        for cluster in self.cluster_list:
             self.zs.append(cluster)
-            cluster.create_vector(vector_data)
-    
-    def reset_data(self):
-        self.zs = []
-        self.xs = []
-        self.cluster_list = []
-        self.score = 0.0
-        self.workingVectorIdx = None
-        self.workingClusterIdx = None
-        self.infer_alpha_count = 0
-        self.infer_betas_count = 0
-        self.infer_z_count = 0
 
-    def create_data(self,seed=None,zs=None,zDims=None):
-        if seed is None:
-            seed = nr.randint(sys.maxint)
-        nr.seed(int(np.clip(seed,0,np.inf)))
-        self.reset_data()
-        if zDims is not None:
-            for zSize in zDims:
-                cluster = Cluster(self)
-                for vector_idx in range(zSize):
-                    self.zs.append(cluster)
-        elif zs is not None:
-            for clusterIdx in zs:
-                cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
-                self.zs.append(cluster)
-        else:
-            self.sample_zs()
-        self.sample_xs()
-
-    def sample_zs(self):
-        self.zs = []
-        tempCrp = CRP(self.alpha,self.numVectors)
-        for clusterIdx in tempCrp.zs:
-            cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
-            self.zs.append(cluster)
-    
-    def sample_xs(self):
-        self.xs = []
-        for cluster in self.zs:
-            cluster.create_vector()
-    
-    def refresh_counts(self,new_zs=None):
-        tempZs = [vector.cluster.clusterIdx for vector in self.xs] if new_zs is None else new_zs
-        tempXs = self.xs
-        self.reset_data()
-        numClusters = len(np.unique(tempZs))
-        for clusterIdx in range(numClusters):
-            Cluster(self)
+        
+            
+    def init_x(self):
         ##
-        for vector,clusterIdx in zip(tempXs,tempZs):
-            cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
-            self.zs.append(cluster)
-            self.xs.append(vector)
-            cluster.add_vector(vector)
-
-    def fixBrokenLinks(self):
-        if self.workingVectorIdx is not None:
-            vector = self.xs[workingVectorIdx]
-            clusterIdx = self.workingClusterIdx
-            cluster = self.cluster_list[clusterIdx] if clusterIdx<self.numClustersDyn() else Cluster(self)
-            vector.cluster = cluster
-        badIndices = mlab.find(np.array([index is None for index in self.getZIndices()]))
-        print "Fixing bad indices: " + str(badIndices)
-        for badIdx in badIndices:
-            self.xs[badIdx].cluster = self.cluster_list[0]
-        self.refresh_counts()
+        xs = self.init_x if self.init_x is not None else np.repeat(None,self.num_rows)
+        ##
+        for (cluster, vector_data) in zip(self.cluster_list, xs):
+            cluster.create_vector(vector_data)
 
     def numClustersDyn(self):
         return len(self.cluster_list)
@@ -149,19 +104,11 @@ class DPMB_State():
         return len(self.xs)
 
     def getZIndices(self):
-        return np.array([vector.cluster.clusterIdx if vector.cluster is not None else None for vector in self.xs])
+        return np.array([vector.cluster.cluster_idx if vector.cluster is not None else None for vector in self.xs])
 
     def getXValues(self):
         return np.array([vector.data for vector in self.xs])
     
-    def getThetas(self): ##true thetas
-        return np.array([cluster.thetas for cluster in self.cluster_list])
-
-    def getPhis(self): ##?true? phis
-        phis = np.array([float(len(cluster.vectorIdxList))/self.numVectorsDyn() for cluster in self.cluster_list])
-        return phis
-
-
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
         self.modifyScore(-scoreDelta)
@@ -176,7 +123,7 @@ class DPMB_State():
         self.modifyScore(-scoreDelta)        
 
     def setBetaD(self,lnPdf,colIdx,newBetaD):
-        newBetaD = np.clip(newBetaD,self.clipBeta[0],self.clipBeta[1])
+        newBetaD = np.clip(newBetaD,self.clip_beta[0],self.clip_beta[1])
         scoreDelta = lnPdf(newBetaD)
         self.modifyScore(scoreDelta)        
         self.betas[colIdx] = newBetaD
@@ -185,7 +132,7 @@ class DPMB_State():
         if not np.isfinite(scoreDelta):
             pdb.set_trace()
         self.score += scoreDelta
-        
+
 class CRP():
     def __init__(self,alpha=1,numSamples=0):
         self.alpha = alpha
@@ -222,14 +169,12 @@ class Vector():
 class Cluster():
     def __init__(self,parent):
         self.parent = parent
-        if hasattr(parent,"betas"):
-            self.genThetas()
-        else:
-            self.thetas = np.repeat(np.nan,self.parent.numColumns)
-        self.column_sums = np.zeros(self.parent.numColumns)
+
+        self.genThetas()
+        self.column_sums = np.zeros(self.parent.num_cols)
         self.vectorIdxList = []
         ##
-        self.clusterIdx = len(self.parent.cluster_list)
+        self.cluster_idx = len(self.parent.cluster_list)
         self.parent.cluster_list.append(self)
 
     def genThetas(self,recurrences=0):
@@ -259,7 +204,7 @@ class Cluster():
         
     def remove_vector(self,vector):
         self.workingVectorIdx = vector.vectorIdx
-        self.workingClusterIdx = vector.cluster.clusterIdx
+        self.workingClusterIdx = vector.cluster.cluster_idx
         vector.cluster = None
         vectorIdx = vector.vectorIdx
         self.vectorIdxList.remove(vectorIdx)
@@ -270,6 +215,6 @@ class Cluster():
         self.parent.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
             replacementCluster = self.parent.cluster_list.pop()
-            if self.clusterIdx != len(self.parent.cluster_list):
-                replacementCluster.clusterIdx = self.clusterIdx
-                self.parent.cluster_list[self.clusterIdx] = replacementCluster
+            if self.cluster_idx != len(self.parent.cluster_list):
+                replacementCluster.cluster_idx = self.cluster_idx
+                self.parent.cluster_list[self.cluster_idx] = replacementCluster
