@@ -3,6 +3,7 @@ reload(dm)
 import DPMB_State as ds
 reload(ds)
 import numpy as np
+import scipy.special as ss
 
 def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     ##sort by attributed state and then gen_state if available
@@ -13,13 +14,76 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
         sort_by = state.getZIndices()
     import pylab
     pylab.ion()
-    fh = pylab.figure()
+    ##plot the data
+    fh1 = pylab.figure()
     pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,**kwargs)
-    ##
-    xlim = fh.get_axes()[0].get_xlim()
+    ##label
+    xlim = fh1.get_axes()[0].get_xlim()
     h_lines = np.array([cluster.count() for cluster in state.cluster_list]).cumsum()
     pylab.hlines(h_lines-.5,*xlim)
+    ##
+    ##plot the conditional posteriors
+    ##alpha
+    lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
+    lnPdf = lambda alpha: (ss.gammaln(alpha) + state.numClustersDyn()*np.log(alpha)
+                           - ss.gammaln(alpha+state.numVectorsDyn()) + lnProdGammas)
+    ##
+    low_val = state.infer_alpha["low_val"]
+    high_val = state.infer_alpha["high_val"]
+    n_grid = state.infer_alpha["n_grid"]
+    grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
+    ##
+    logp_list = []
+    original_alpha = state.alpha
+    for test_alpha in grid:
+        state.removeAlpha(lnPdf)
+        state.setAlpha(lnPdf,test_alpha)
+        logp_list.append(state.score)
+    ##put everything back how you found it
+    state.removeAlpha(lnPdf)
+    state.setAlpha(lnPdf,original_alpha)
+    maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    logp_vec = [s - logZ for s in scaled]
+    fh2 = pylab.figure()
+    pylab.bar(np.log(grid),np.exp(logp_vec))
+    pylab.title("Alpha conditional posterior")
+    ##
+    ##beta_i
+    low_val = state.infer_beta["low_val"]
+    high_val = state.infer_beta["high_val"]
+    n_grid = state.infer_beta["n_grid"]
+    grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
+    logp_list = []
+    colIdx = 0
+    S_list = [cluster.column_sums[colIdx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vectorIdxList) - cluster.column_sums[colIdx] for cluster in state.cluster_list]
+    beta_d = state.betas[colIdx]
+    lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
+                                + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
+                                - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+    logp_list = []
+    ##
+    original_beta = state.betas[colIdx]
+    for test_beta in grid:
+        state.removeBetaD(lnPdf,colIdx)
+        state.setBetaD(lnPdf,colIdx,test_beta)
+        logp_list.append(state.score)
+    ##put everything back how you found it
+    state.removeBetaD(lnPdf,colIdx)
+    state.setBetaD(lnPdf,colIdx,original_beta)
+    maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    logp_vec = [s - logZ for s in scaled]
+    fh3 = pylab.figure()
+    pylab.bar(np.log(grid),np.exp(logp_vec))
+    pylab.title("Beta conditional posterior")
+    ##
+    return fh1,fh2,fh3
 
+    
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab
     cluster_list = cluster_list if cluster_list is not None else 10**np.arange(0,4,.5)

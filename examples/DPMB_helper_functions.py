@@ -4,33 +4,6 @@ import DPMB as dm
 ##
 import pdb
 
-def mle_alpha(clusters,points_per_cluster,max_alpha=100):
-    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
-    return mle
-
-def mhSample(initVal,nSamples,lnPdf,sampler):
-    samples = [initVal]
-    priorSample = initVal
-    for counter in range(nSamples):
-        unif = nr.rand()
-        proposal = sampler(priorSample)
-        thresh = np.exp(lnPdf(proposal) - lnPdf(priorSample)) ## presume symmetric
-        if np.isfinite(thresh) and unif < min(1,thresh):
-            samples.append(proposal)
-        else:
-            samples.append(priorSample)
-        priorSample = samples[-1]
-    return samples
-
-
-def printTS(printStr):
-    print datetime.datetime.now().strftime("%H:%M:%S") + " :: " + printStr
-    sys.stdout.flush()
-
-def listCount(listIn):
-    return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
-
-
 ##per vikash's outline: https://docs.google.com/document/d/16iLc2jjtw7Elxy22wyM_TsSPYwW0KOErWKIpFX5k8Y8/edit
 def gen_dataset(gen_seed, gen_rows, gen_cols, gen_alpha, gen_beta, zDims=None):
     state = ds.DPMB_State(parent=None,paramDict={"numVectors":gen_rows,"numColumns":gen_cols,"alpha":gen_alpha,"betas":np.repeat(gen_beta,gen_cols)})
@@ -155,3 +128,30 @@ def cluster_predictive(vector,cluster,state):
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term
+
+def mle_alpha(clusters,points_per_cluster,max_alpha=100):
+    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
+    return mle
+
+def mhSample(initVal,nSamples,lnPdf,sampler):
+    samples = [initVal]
+    priorSample = initVal
+    for counter in range(nSamples):
+        unif = nr.rand()
+        proposal = sampler(priorSample)
+        thresh = np.exp(lnPdf(proposal) - lnPdf(priorSample)) ## presume symmetric
+        if np.isfinite(thresh) and unif < min(1,thresh):
+            samples.append(proposal)
+        else:
+            samples.append(priorSample)
+        priorSample = samples[-1]
+    return samples
+
+def printTS(printStr):
+    print datetime.datetime.now().strftime("%H:%M:%S") + " :: " + printStr
+    sys.stdout.flush()
+
+def listCount(listIn):
+    return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
+
+
