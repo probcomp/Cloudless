@@ -18,6 +18,7 @@ def infer(run_spec):
     #   - a state as a flattened dictionary
     # look for max iterations and xs (the training data, for initializing the DPMB_State that inference will be done on) inside run_spec
     # FIXME: Complete
+    pass
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
@@ -32,8 +33,7 @@ def extract_measurement(which_measurement, one_runs_data):
 
 def plot_measurement(memoized_infer, which_measurement, which_dataset):
     # FIXME: trawl through memoized_infer.iter(), finding the datasets that match
-
-    all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
+    # all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
     # by first extracting the measurements from memoized_infer 
     pass
 
@@ -149,6 +149,21 @@ def cluster_predictive(vector,cluster,state):
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term
+
+def create_alpha_lnPdf(state):
+    lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
+    lnPdf = lambda alpha: (ss.gammaln(alpha) + state.numClustersDyn()*np.log(alpha)
+                           - ss.gammaln(alpha+state.numVectorsDyn()) + lnProdGammas)
+    return lnPdf
+
+def create_beta_lnPdf(state,col_idx):
+    S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vectorIdxList) - cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    beta_d = state.betas[col_idx]
+    lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
+                                + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
+                                - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+    return lnPdf
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])

@@ -10,7 +10,7 @@ import pdb
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None,init_z=None,init_x=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100,N_test=0):
         self.gen_seed = gen_seed
         self.num_cols = num_cols
         self.num_rows = num_rows + N_test
@@ -36,11 +36,11 @@ class DPMB_State():
         self.cluster_list = [] #all the Cluster s in the model
         self.zs = [] #will eventually get a list of Cluster references
 
-        self.init_z()
+        self.init_z_func()
 
         self.xs = [] #will eventually get a list of Vector references
 
-        self.init_x()
+        self.init_x_func()
 
     def clone(self):
         return DPMB_State(self.gen_seed, self.num_cols, self.num_rows, self.alpha, self.betas, self.getZIndices(), self.getXValues(),
@@ -62,7 +62,7 @@ class DPMB_State():
         out["train_zs"] = self.getZIndices()[:N_test]
         return out
     
-    def init_z(self):
+    def init_z_func(self):
         ##
         if self.init_z is None: ##sample
             zs = CRP(self.alpha,self.num_rows).zs
@@ -85,17 +85,25 @@ class DPMB_State():
             Cluster(self) ## links self to state
         # now self.cluster_list is initialized!
         
-        for cluster in self.cluster_list:
-            self.zs.append(cluster)
+        for cluster_idx in zs:
+            self.zs.append(self.cluster_list[cluster_idx])
 
         
             
-    def init_x(self):
+    def init_x_func(self):
         ##
         xs = self.init_x if self.init_x is not None else np.repeat(None,self.num_rows)
         ##
-        for (cluster, vector_data) in zip(self.cluster_list, xs):
+        for (cluster, vector_data) in zip(self.zs, xs):
             cluster.create_vector(vector_data)
+
+    def get_alpha_grid(self):
+        ##endpoint should be set by MLE of all data in its own cluster?
+        grid = 10.0**np.linspace(np.log10(self.alpha_min),np.log10(self.alpha_max),self.grid_N) 
+
+    def get_beta_grid(self):
+        ##endpoint should be set by MLE of all data in its own cluster?
+        grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N) 
 
     def numClustersDyn(self):
         return len(self.cluster_list)

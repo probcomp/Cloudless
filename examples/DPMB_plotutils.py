@@ -23,7 +23,8 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     pylab.ion()
     ##plot the data
     fh1 = pylab.figure()
-    pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,**kwargs)
+    import matplotlib
+    pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
     ##label
     xlim = fh1.get_axes()[0].get_xlim()
     h_lines = np.array([cluster.count() for cluster in state.cluster_list]).cumsum()
@@ -31,11 +32,8 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     ##
     ##plot the conditional posteriors
     ##alpha
-    lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
-    lnPdf = lambda alpha: (ss.gammaln(alpha) + state.numClustersDyn()*np.log(alpha)
-                           - ss.gammaln(alpha+state.numVectorsDyn()) + lnProdGammas)
-    ##
-    grid = 10.0**np.linspace(np.log10(state.alpha_min),np.log10(state.alpha_max),state.grid_N) ##endpoint should be set by MLE of all data in its own cluster?
+    lnPdf = hf.create_alpha_lnPdf(state)
+    grid = state.get_alpha_grid()
     ##
     logp_list = []
     original_alpha = state.alpha
@@ -51,15 +49,10 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     pylab.title("Alpha conditional posterior")
     ##
     ##beta_i
-    grid = 10.0**np.linspace(np.log10(state.beta_min),np.log10(state.beta_max),state.grid_N) ##endpoint should be set by MLE of all data in its own cluster?
+    grid = state.get_beta_grid()
     logp_list = []
     colIdx = 0
-    S_list = [cluster.column_sums[colIdx] for cluster in state.cluster_list]
-    R_list = [len(cluster.vectorIdxList) - cluster.column_sums[colIdx] for cluster in state.cluster_list]
-    beta_d = state.betas[colIdx]
-    lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
-                                + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
-                                - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+    lnPdf = hf.create_beta_pdf(state,colIdx)
     logp_list = []
     ##
     original_beta = state.betas[colIdx]
@@ -75,7 +68,6 @@ def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
     pylab.title("Beta conditional posterior")
     ##
     return fh1,fh2,fh3
-
     
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab
@@ -144,4 +136,3 @@ def run_jobs(num_clusters_list=None,num_points_per_cluster_list=None,path=None):
             system_str = " ".join(["python DPMB_basic.py",str(num_clusters),str(num_points_per_cluster),path
                                 ,"_".join([">LogFiles/job",str(num_clusters),str(num_points_per_cluster)])])
             os.system(system_str)
-

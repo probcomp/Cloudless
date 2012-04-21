@@ -7,6 +7,17 @@ reload(ds)
 import numpy as np
 import matplotlib.pylab as pylab
 
+
+state_list = []
+init_z = None ## for init_z in [1,None,"N"]:
+DATASET_SPEC = {"gen_seed":4, "num_cols":16, "num_rows":32, "init_alpha":1, "init_betas":np.repeat(.1,16), "init_z":init_z, "init_x":None}
+state = ds.DPMB_State(**DATASET_SPEC)
+state_list.append(state)
+dp.plot_state(state)
+
+    # hf.gen_problem(*DATASET_SPEC)
+    # return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
+
 ALL_DATASET_SPECS = []
 
 for num_clusters in [2**(j+1) for j in range(4)]:
@@ -41,13 +52,6 @@ for run_spec in ALL_RUN_SPECS:
 plot_measurement(memoized_infer, "num_clusters", ALL_DATASET_SPECS[0])
 plot_measurement(memoized_infer, ("ari", memoized_gen_problem(ALL_DATASET_SPECS[0])["zs"]), ALL_DATASET_SPECS[0])
                                   
-DATASET_SPEC = (GEN_SEED, COLS, ROWS, GEN_ALPHA, GEN_BETA, GEN_Z, GEN_X)
-state = ds.DPMB_State(*DATASET_SPEC)
-dp.plot_state(state)
-
-# hf.gen_problem(*DATASET_SPEC)
-# return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
-
 
 # for NUM_CLUSTERS in [8]: ## [2,4,8,16,32]:
 #     POINTS_PER_CLUSTER = DATAPOINTS/NUM_CLUSTERS

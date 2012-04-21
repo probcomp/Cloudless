@@ -70,15 +70,8 @@ class DPMB():
     def transition_alpha_discrete_gibbs(self):
         self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
         ##
-        lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
-        lnPdf = lambda alpha: (ss.gammaln(alpha) + self.state.numClustersDyn()*np.log(alpha)
-                               - ss.gammaln(alpha+self.state.numVectorsDyn()) + lnProdGammas)
-        ##
-        low_val = self.state.infer_alpha["low_val"]
-        high_val = self.state.infer_alpha["high_val"]
-        n_grid = self.state.infer_alpha["n_grid"]
-        grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
-        ##
+        lnPdf = hf.create_alpha_lnPdf(self)
+        grid = self.state.get_alph_grid()
         logp_list = []
         for test_alpha in grid:
             self.state.removeAlpha(lnPdf)
@@ -98,19 +91,10 @@ class DPMB():
     def transition_beta_discrete_gibbs(self):
         self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
         ##
-        low_val = self.state.infer_beta["low_val"]
-        high_val = self.state.infer_beta["high_val"]
-        n_grid = self.state.infer_beta["n_grid"]
-        grid = 10.0**np.linspace(np.log10(low_val),np.log10(high_val),n_grid) ##endpoint should be set by MLE of all data in its own cluster?
-        ##
+        grid = self.state.get_beta_grid()
         logp_list = []
         for colIdx in range(self.state.numColumns):
-            S_list = [cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
-            R_list = [len(cluster.vectorIdxList) - cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
-            beta_d = self.state.betas[colIdx]
-            lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
-                                        + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
-                                        - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+            lnPdf = hf.create_beta_lnPdf(self,colIdx)
             logp_list = []
             ##
             for test_beta in grid:
@@ -133,6 +117,7 @@ class DPMB():
         self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
         initVal = self.state.alpha
         nSamples = 1000
+        
         lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
         lnPdf = lambda alpha: (ss.gammaln(alpha) + self.state.numClustersDyn()*np.log(alpha)
                                - ss.gammaln(alpha+self.state.numVectorsDyn()) + lnProdGammas)
@@ -267,5 +252,5 @@ class DPMB():
             ,"score":self.state.score
             ,"numClusters":self.state.numClustersDyn()
             ,"timing":self.state.timing if len(self.state.timing.keys())>0 else {"zs":{"delta":0},"alpha":{"delta":0},"beta":{"delta":0}}
-            ,"state",self.state.clone()
+            ,"state":self.state.clone()
             }
