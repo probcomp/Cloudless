@@ -9,9 +9,13 @@ import pdb
 
 
 class DPMB():
-    def __init__(self,state,inf_seed):
+    def __init__(self,inf_seed,state,infer_alpha,infer_beta):
         nr.seed(int(np.clip(inf_seed,0,np.inf))) ##who's random seed is used where?  And does it even matter (consider true inf_seed to be f(inf_seed,gen_seed))?
         self.state = state
+        self.infer_alpha = infer_alpha
+        self.infer_beta = infer_beta
+        ##
+        self.infer_z_count = 0
 
     def reconstitute_thetas(self):
         thetas = np.array([cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list])
@@ -151,6 +155,7 @@ class DPMB():
             print "infer_beta: ",infer_beta," not understood"
             
     def transition_z(self):
+        self.transition_z_count += 1
         if self.state.verbose:
             print "PRE transition_z score: ",self.state.score
         start_dt = datetime.datetime.now()
@@ -179,13 +184,12 @@ class DPMB():
 
     def transition(self,numSteps=1):
         for counter in range(numSteps):
-            hf.printTS("Starting iteration: " + str(self.state.infer_z_count))
-            ##
             self.transition_z()
             self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
             self.transition_beta() ##may do nothing if infer_beta == "FIXED"
             ##
             if self.state.verbose:
+                hf.printTS("Starting iteration: ", self.infer_z_count)
                 print "Cycle end score: ",self.state.score
                 print "alpha: ",self.state.alpha
                 print "mean beta: ",self.state.betas.mean()
@@ -197,7 +201,7 @@ class DPMB():
             "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
             ,"score":self.state.score
             ,"numClusters":self.state.numClustersDyn()
-            ,"timing":self.state.timing if len(self.state.timing.keys())>0 else {"zs":{"delta":0},"alpha":{"delta":0},"beta":{"delta":0}}
+            ,"timing":self.state.timing
             ,"state":self.state.clone()
             }
 

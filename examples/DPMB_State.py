@@ -48,6 +48,9 @@ class DPMB_State():
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
 
     def get_flat_dictionary(self):
+        ##init_* naming is used, but its not really init
+        ##makes sense when needed for state creation
+        ##but otherwise only if you want to resume inference
         return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows":self.num_rows, "init_alpha":self.alpha
                 , "init_betas":self.betas, "init_z":self.getZIndices(), "init_x":self.getXValues()
                 , "alpha_min":self.alpha_min, "alpha_max":self.alpha_max, "beta_min":self.beta_min, "beta_max":self.beta_max

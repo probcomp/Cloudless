@@ -10,16 +10,25 @@ def gen_problem(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z):
     state = ds.DPMB_State(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z, None)
     ##return state.get_flat_dictionary() ## all you need is test_train_split unless ??
     ##N_test isn't saved in _State initialization.  Unless it is, need to extract test_train_split (at least in addition to flat_dictionary)
+    ##alternatively, whoever runs gen_problem should know state generation conditions and test_train_split's return value is simpler to work with
     return state.test_train_split()
 ##DONE? #FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
 
 ##run_spec = (dataset_spec,inf_seed, ?num_iters?, init_method,infer_alpha,infer_beta)
-##if runspec contains 
+##if runspec contains
 def infer(run_spec):
-    state = ds.DPMB_State(run_spec["dataset_spec"])
-    ##create state
-    ##instantiate model
-    
+    dataset_spec = run_spec["dataset_spec"]
+    infer_spec = run_spec["infer_spec"]
+    num_iter = run_spec["num_iter"]
+    state = ds.DPMB_State(**datset_spec)
+    model = dm.DPMB(state=state,**infer_spec)
+    ret_list = []
+    ##capture initial states
+    ret_list.append({"summary":model.extract_state_summary,"flat_dict":state.get_flat_dictionary()})
+    for iter_num in range(num_iter):
+        model.transition()
+        ret_list.append({"summary":model.extract_state_summary,"flat_dict":state.get_flat_dictionary()})
+    return ret_list
     # returns a list of dictionaries, one per iter. each dict contains:
     #   - a dict of timing for each kernel
     #   - a state as a flattened dictionary

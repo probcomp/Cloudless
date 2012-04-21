@@ -11,12 +11,12 @@ import matplotlib.pylab as pylab
 state_list = []
 init_z = None ## for init_z in [1,None,"N"]:
 DATASET_SPEC = {"gen_seed":4, "num_cols":16, "num_rows":32, "init_alpha":1, "init_betas":np.repeat(.1,16), "init_z":init_z, "init_x":None}
+INF_SPEC = {"inf_seed":0,"infer_alpha":"GIBBS","infer_beta":"GIBBS"}
+
 state = ds.DPMB_State(**DATASET_SPEC)
 state_list.append(state)
 dp.plot_state(state)
 
-    # hf.gen_problem(*DATASET_SPEC)
-    # return {"observables":train_data,"gen_state":gen_state,"test_data":test_data}
 
 ALL_DATASET_SPECS = []
 
