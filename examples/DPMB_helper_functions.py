@@ -14,8 +14,6 @@ def gen_problem(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z):
     return state.test_train_split()
 ##DONE? #FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
 
-##run_spec = (dataset_spec,inf_seed, ?num_iters?, init_method,infer_alpha,infer_beta)
-##if runspec contains
 def infer(run_spec):
     dataset_spec = run_spec["dataset_spec"]
     infer_spec = run_spec["infer_spec"]
@@ -35,27 +33,6 @@ def infer(run_spec):
     # look for max iterations and xs (the training data, for initializing the DPMB_State that inference will be done on) inside run_spec
     # FIXME: Complete
     pass
-
-def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, infer_beta=None, gen_state_with_data=None, paramDict=None):
-    model = dm.DPMB(inf_seed=inf_seed)
-    state = ds.DPMB_State(model,paramDict=paramDict,dataset={"xs":train_data},init_method=init_method,infer_alpha=infer_alpha,infer_beta=infer_beta) ##z's are generated from CRP if not passed
-    ##capture the initial state
-    init_latents = model.reconstitute_latents()
-    init_state = {
-        "stats":model.extract_state_summary()
-        ##,"predicitive_prob":None if gen_state_with_data is None else test_model(gen_state_with_data["test_data"],init_latents)
-        ,"ari":None if gen_state_with_data is None else calc_ari(gen_state_with_data["gen_state"]["zs"],init_latents["zs"])
-        }
-    ##
-    stats = []
-    for iter_num in range(num_iters):
-        model.transition()
-        stats.append(model.extract_state_summary())
-        if gen_state_with_data is not None:
-            latents = model.reconstitute_latents()
-            ##stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
-            stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
-    return {"state":model.reconstitute_latents(),"stats":stats,"init_state":init_state}
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:

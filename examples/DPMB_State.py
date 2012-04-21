@@ -44,8 +44,11 @@ class DPMB_State():
         self.init_x_func()
 
     def clone(self):
+        ##I don't think this is quite correct
+        ##To maintain seed state after generation, should just recreate the state, so pass self.init_z, not self.getZIndices()
         return DPMB_State(self.gen_seed, self.num_cols, self.num_rows, self.alpha, self.betas, self.getZIndices(), self.getXValues(),
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
+    ##so perhaps test_train_split should be replaced with gen_test, which uses clone to create a new state, create N_test more values and keep only the last N_test of z,x
 
     def get_flat_dictionary(self):
         ##init_* naming is used, but its not really init
@@ -63,8 +66,8 @@ class DPMB_State():
         all_data = self.getXValues()
         out = {}
         out["test_data"] = all_data[-N_test:]
-        out["train_data"] = all_data[:N_test]
-        out["train_zs"] = self.getZIndices()[:N_test]
+        out["train_data"] = all_data[:-N_test]
+        out["train_zs"] = self.getZIndices()[:-N_test]
         return out
     
     def init_z_func(self):
