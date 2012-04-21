@@ -8,33 +8,23 @@ import pdb
 # FIXME: later, when we support predictive accuracy assessments, include train/test split stuff here
 def gen_problem(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z):
     state = ds.DPMB_State(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z, None)
-    return state.get_flat_dictionary()
+    ##return state.get_flat_dictionary() ## all you need is test_train_split unless ??
+    ##N_test isn't saved in _State initialization.  Unless it is, need to extract test_train_split (at least in addition to flat_dictionary)
+    return state.test_train_split()
+##DONE? #FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
 
-#FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
-
+##run_spec = (dataset_spec,inf_seed, ?num_iters?, init_method,infer_alpha,infer_beta)
+##if runspec contains 
 def infer(run_spec):
+    state = ds.DPMB_State(run_spec["dataset_spec"])
+    ##create state
+    ##instantiate model
+    
     # returns a list of dictionaries, one per iter. each dict contains:
     #   - a dict of timing for each kernel
     #   - a state as a flattened dictionary
     # look for max iterations and xs (the training data, for initializing the DPMB_State that inference will be done on) inside run_spec
     # FIXME: Complete
-    pass
-
-def extract_measurement(which_measurement, one_runs_data):
-    # measurement can be:
-    # "num_clusters"
-    # "alpha"
-    # "beta"
-    # ("ari", z_indices_vec)
-    # work by reconstituting states from the flat dictionary list in one_runs_data[i]["flat_state"] and then applying the desired accessor
-    pass
-
-# FIXME: a state should know how to plot itself. calling that method, on a state, should dump out the figure, to a specified filename
-
-def plot_measurement(memoized_infer, which_measurement, which_dataset):
-    # FIXME: trawl through memoized_infer.iter(), finding the datasets that match
-    # all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
-    # by first extracting the measurements from memoized_infer 
     pass
 
 def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, infer_beta=None, gen_state_with_data=None, paramDict=None):
@@ -57,6 +47,23 @@ def gen_sample(inf_seed, train_data, num_iters, init_method, infer_alpha=None, i
             ##stats[-1]["predictive_prob"] = test_model(gen_state_with_data["test_data"],latents)
             stats[-1]["ari"] = calc_ari(gen_state_with_data["gen_state"]["zs"],latents["zs"])
     return {"state":model.reconstitute_latents(),"stats":stats,"init_state":init_state}
+
+def extract_measurement(which_measurement, one_runs_data):
+    # measurement can be:
+    # "num_clusters"
+    # "alpha"
+    # "beta"
+    # ("ari", z_indices_vec)
+    # work by reconstituting states from the flat dictionary list in one_runs_data[i]["flat_state"] and then applying the desired accessor
+    pass
+
+# FIXME: a state should know how to plot itself. calling that method, on a state, should dump out the figure, to a specified filename
+
+def plot_measurement(memoized_infer, which_measurement, which_dataset):
+    # FIXME: trawl through memoized_infer.iter(), finding the datasets that match
+    # all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
+    # by first extracting the measurements from memoized_infer 
+    pass
 
 def test_model(test_data, sampled_state):
     # computes the sum (not average) predictive probability of the the test_data

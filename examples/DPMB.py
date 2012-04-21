@@ -9,29 +9,9 @@ import pdb
 
 
 class DPMB():
-    def __init__(self,paramDict=None,state=None,inf_seed=None):
-        if inf_seed is None:
-            inf_seed = nr.randint(sys.maxint)
-        nr.seed(int(np.clip(inf_seed,0,np.inf)))
-        ##
-        if paramDict is not None:
-            if "__builtins__" in paramDict: paramDict.pop("__builtins__")
-            self.__dict__.update(paramDict)
-        ##
-        self.state = state ## ds.DPMB_State(self,paramDict) if state is None else state
-
-    def sample_alpha(self):
-        self.state.alpha = nr.gamma(self.state.gamma_k,self.state.gamma_theta)
-
-    def sample_betas(self):
-        self.state.betas = nr.gamma(self.state.gamma_k,self.state.gamma_theta,(self.state.numColumns,))
-        self.state.betas = np.clip(self.state.betas,self.state.clip_beta[0],self.state.clip_beta[1])
-
-    def sample_zs(self):
-        raise Exception("not implemented")
-        
-    def sample_xs(self):
-        raise Exception("not implemented")
+    def __init__(self,state,inf_seed):
+        nr.seed(int(np.clip(inf_seed,0,np.inf))) ##who's random seed is used where?  And does it even matter (consider true inf_seed to be f(inf_seed,gen_seed))?
+        self.state = state
 
     def reconstitute_thetas(self):
         thetas = np.array([cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list])
@@ -68,10 +48,10 @@ class DPMB():
         return conditionals
     
     def transition_alpha_discrete_gibbs(self):
-        self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
+        start_dt = datetime.datetime.now()
         ##
-        lnPdf = hf.create_alpha_lnPdf(self)
         grid = self.state.get_alph_grid()
+        lnPdf = hf.create_alpha_lnPdf(self)
         logp_list = []
         for test_alpha in grid:
             self.state.removeAlpha(lnPdf)
@@ -81,15 +61,13 @@ class DPMB():
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
-        self.state.infer_alpha_count += 1
-        self.state.timing["alpha"]["stop"] = datetime.datetime.now()
-        try:
-            self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).total_seconds()
+        try: ##older datetime modules don't have .total_seconds()
+            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
-            self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).seconds
+            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
 
     def transition_beta_discrete_gibbs(self):
-        self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
+        start_dt = datetime.datetime.now()
         ##
         grid = self.state.get_beta_grid()
         logp_list = []
@@ -104,148 +82,116 @@ class DPMB():
             beta_idx = hf.renormalize_and_sample(logp_list)
             self.state.removeBetaD(lnPdf,colIdx)
             self.state.setBetaD(lnPdf,colIdx,grid[beta_idx])
-        self.state.infer_betas_count += 1
-        self.state.timing["beta"]["stop"] = datetime.datetime.now()
-        try:
-            self.state.timing["beta"]["delta"] = (self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]).total_seconds()
+        ##
+        try: ##older datetime modules don't have .total_seconds()
+            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
-            self.state.timing["beta"]["delta"] = (self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]).seconds
-        return self.state.betas
-
+            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
 
     def transition_alpha_mh(self):
-        self.state.timing.setdefault("alpha",{})["start"] = datetime.datetime.now()
+        start_dt = datetime.datetime.now()
+        ##
         initVal = self.state.alpha
         nSamples = 1000
-        
-        lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in self.state.cluster_list])
-        lnPdf = lambda alpha: (ss.gammaln(alpha) + self.state.numClustersDyn()*np.log(alpha)
-                               - ss.gammaln(alpha+self.state.numVectorsDyn()) + lnProdGammas)
+        lnPdf = hf.create_alpha_lnPdf(self)
         sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
         samples = hf.mhSample(initVal,nSamples,lnPdf,sampler)
         newAlpha = samples[-1]
         if np.isfinite(lnPdf(newAlpha)):
             self.state.removeAlpha(lnPdf)
             self.state.setAlpha(lnPdf,newAlpha)
-            self.state.infer_alpha_count += 1
         else:
             print "NOT using newAlpha: " + str(newAlpha)
-        self.state.timing["alpha"]["stop"] = datetime.datetime.now()
-        try:
-            self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).total_seconds()
+        ##
+        ##
+        try: ##older datetime modules don't have .total_seconds()
+            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
-            self.state.timing["alpha"]["delta"] = (self.state.timing["alpha"]["stop"]-self.state.timing["alpha"]["start"]).seconds
-        return samples
+            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
         
     def transition_beta_mh(self):
-        self.state.timing.setdefault("beta",{})["start"] = datetime.datetime.now()
+        start_dt = datetime.datetime.now()
+        ##
         nSamples = 100
         sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
         for colIdx in range(self.state.numColumns):
+            lnPdf = hf.create_beta_lnPdf(self,colIdx)
             initVal = self.state.betas[colIdx]
-            S_list = [cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
-            R_list = [len(cluster.vectorIdxList) - cluster.column_sums[colIdx] for cluster in self.state.cluster_list]
-            beta_d = self.state.betas[colIdx]
-            lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
-                                        + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
-                                        - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
             samples = hf.mhSample(initVal,nSamples,lnPdf,sampler)
             newBetaD = samples[-1]
             if np.isfinite(lnPdf(newBetaD)):
                 self.state.removeBetaD(lnPdf,colIdx)
                 self.state.setBetaD(lnPdf,colIdx,newBetaD)
             else:
-                print "NOT using beta_d " + str((colIdx,newBetaD)) 
-        self.state.infer_betas_count += 1
-        self.state.timing["beta"]["stop"] = datetime.datetime.now()
-        try:
-            self.state.timing["beta"]["delta"] = (self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]).total_seconds()
+                print "NOT using beta_d " + str((colIdx,newBetaD))
+        ##
+        try: ##older datetime modules don't have .total_seconds()
+            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
-            self.state.timing["beta"]["delta"] = (self.state.timing["beta"]["stop"]-self.state.timing["beta"]["start"]).seconds
-        return self.state.betas
+            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
 
     def transition_alpha(self):
         if self.state.verbose:
-            print "PRE transition_alpha score: " + str(self.state.score)
-        if "method" not in self.state.infer_alpha:
-            print "state.infer_alpha does NOT have a \"method\" key"
-            return
-        if "MH" == self.state.infer_alpha["method"]:
-            self.transition_alpha_mh()
-        elif "DISCRETE_GIBBS" == self.state.infer_alpha["method"]:
+            print "PRE transition_alpha score: ",self.state.score
+        if self.infer_alpha == "GIBBS"
             self.transition_alpha_discrete_gibbs()
+        elif self.infer_alpha == "FIXED":
+            self.state.timing["alpha"] = 0 ##ensure last value not carried forward
         else:
-            print "state.infer_alpha[\"method\"]: " + self.state.infer_alpha["method"] + " not understood"
+            print "infer_alpha: ",infer_alpha," not understood"
 
     def transition_beta(self):
         if self.state.verbose:
-            print "PRE transition_beta score: " + str(self.state.score)
-        if "method" not in self.state.infer_beta:
-            print "state.infer_beta does NOT have a \"method\" key"
-            return
-        if "MH" == self.state.infer_beta["method"]:
-            self.transition_beta_mh()
-        elif "DISCRETE_GIBBS" == self.state.infer_beta["method"]:
+            print "PRE transition_beta score: ",self.state.score
+        if self.infer_beta == "GIBBS"
             self.transition_beta_discrete_gibbs()
+        elif self.infer_beta == "FIXED":
+            self.state.timing["betas"] = 0 ##ensure last value not carried forward
         else:
-            print "state.infer_beta[\"method\"]: " + self.state.infer_beta["method"] + " not understood"
+            print "infer_beta: ",infer_beta," not understood"
             
     def transition_z(self):
         if self.state.verbose:
-            print "PRE transition_z score: " + str(self.state.score)
-        self.state.timing.setdefault("zs",{})["start"] = datetime.datetime.now()
+            print "PRE transition_z score: ",self.state.score
+        start_dt = datetime.datetime.now()
+        ##
         for vectorIdx in range(self.state.numVectors):
             prior_cluster_idx = self.state.zs[vectorIdx].cluster_idx
             self.remove_cluster_assignment(vectorIdx)
             conditionals = self.calculate_cluster_conditional(vectorIdx)
             cluster_idx = hf.renormalize_and_sample(conditionals)
+            ##
             if hasattr(self.state,"print_conditionals") and self.state.print_conditionals:
                 print cluster_idx,(conditionals-max(conditionals)).round(2)
             if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
                 pdb.set_trace()
             if hasattr(self.state,"print_cluster_switch") and self.state.print_cluster_switch and prior_cluster_idx != cluster_idx:
                 print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(cluster_idx)
-            self.assign_vector_to_cluster(vectorIdx,cluster_idx)
             if hasattr(self.state,"vectorIdx_break") and vectorIdx== self.state.vectorIdx_break:
                 pdb.set_trace()
-        self.state.infer_z_count += 1
-        self.state.timing["zs"]["stop"] = datetime.datetime.now()
-        self.state.timing["zs"]["delta"] = self.state.timing["zs"]["stop"]-self.state.timing["zs"]["start"]
+            ##
+            self.assign_vector_to_cluster(vectorIdx,cluster_idx)
+        ##
+        try: ##older datetime modules don't have .total_seconds()
+            self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()
+        except Exception, e:
+            self.state.timing["zs"] = (datetime.datetime.now()-start_dt).seconds()
 
     def transition(self,numSteps=1):
         for counter in range(numSteps):
             hf.printTS("Starting iteration: " + str(self.state.infer_z_count))
             ##
             self.transition_z()
-            if type(self.state.infer_alpha) == dict:
-                self.transition_alpha()
-            if type(self.state.infer_beta) == dict:
-                self.transition_beta()
+            self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
+            self.transition_beta() ##may do nothing if infer_beta == "FIXED"
             ##
             if self.state.verbose:
-                print "Cycle end score: " + str(self.state.score)
-                print "alpha: " + str(self.state.alpha)
-                print "mean beta: " + str(self.state.betas.mean())
-                print "empirical phis: ",self.reconstitute_latents()["phis"]
+                print "Cycle end score: ",self.state.score
+                print "alpha: ",self.state.alpha
+                print "mean beta: ",self.state.betas.mean()
+                print "empirical phis: ",self.reconstitute_phis()
                 print
             
-    def randomize_z(self):
-        tempCrp = ds.CRP(self.state.alpha,self.state.numVectors)
-        self.state.refresh_counts(tempCrp.zs)
-
-    def compareClustering(self,originalZs,reverse=False):
-        if reverse:
-            actualValues = np.array(self.state.getZIndices())
-            testValues = np.array(originalZs)
-        else:
-            actualValues = np.array(originalZs)
-            testValues = np.array(self.state.getZIndices())
-        countDict = dict([(actualValue,hf.listCount(testValues[actualValues==actualValue])) for actualValue in np.unique(actualValues)])
-        for actualValue in np.sort(countDict.keys()):
-            print str(actualValue) + ": " + str(sum(countDict[actualValue].values())) + " elements"
-            print countDict[actualValue]
-            print
-
     def extract_state_summary(self):
         return {
             "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
@@ -254,3 +200,9 @@ class DPMB():
             ,"timing":self.state.timing if len(self.state.timing.keys())>0 else {"zs":{"delta":0},"alpha":{"delta":0},"beta":{"delta":0}}
             ,"state":self.state.clone()
             }
+
+    def sample_zs(self):
+        raise Exception("not implemented")
+        
+    def sample_xs(self):
+        raise Exception("not implemented")

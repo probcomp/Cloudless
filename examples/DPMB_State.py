@@ -13,7 +13,7 @@ class DPMB_State():
                  ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100,N_test=0):
         self.gen_seed = gen_seed
         self.num_cols = num_cols
-        self.num_rows = num_rows + N_test
+        self.num_rows = num_rows + N_test ##this is fine as long as states generating test data are not then used to initialize inference
         self.init_alpha = init_alpha
         self.init_betas = init_betas
         self.init_z = init_z
@@ -24,6 +24,7 @@ class DPMB_State():
         self.beta_max = beta_max
         self.grid_N = grid_N
         ##
+        self.timing = {"alpha":0,"betas":0,"zs":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         nr.seed(int(np.clip(gen_seed,0,np.inf)))
@@ -47,9 +48,10 @@ class DPMB_State():
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
 
     def get_flat_dictionary(self):
-        # returns a dictionary of things in the form where it can be passed in to init.
-        # looks a lot like Clone, just collecting things up in a dict, not returning them
-        raise Exception("not implemented yet")
+        return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows":self.num_rows, "init_alpha":self.alpha
+                , "init_betas":self.betas, "init_z":self.getZIndices(), "init_x":self.getXValues()
+                , "alpha_min":self.alpha_min, "alpha_max":self.alpha_max, "beta_min":self.beta_min, "beta_max":self.beta_max
+                , "grid_N":self.grid_N} ## , "N_test":self.N_test} ## N_test isn't save, should it be?
             
     def test_train_split(self, N_test):
         assert N_test > 0
