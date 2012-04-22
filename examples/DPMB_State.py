@@ -207,64 +207,43 @@ class DPMB_State():
             pdb.set_trace()
         self.score += scoreDelta
 
-    def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
+    def plot_state(self,gen_state=None,interpolation="nearest",**kwargs):
         # FIXMEs FOR DAN TO IMPLEMENT:
         # - add z conditional histogram (with red vertical bar for current value)
         # - add red vertical bar for current value of alpha, and for beta_1
         # - make all part of one figure, with subplots (state view on left, three bar charts on right)
+        import matplotlib
+        import pylab
+        pylab.ion()
 
         ##sort by attributed state and then gen_state if available
         if gen_state is not None:
             mult_factor = np.round(np.log10(len(gen_state["phis"])))
-            sort_by = np.array(mult_factor * state.getZIndices() + gen_state["zs"],dtype=int)
+            sort_by = np.array(mult_factor * self.getZIndices() + gen_state["zs"],dtype=int)
         else:
-            sort_by = state.getZIndices()
-        import pylab
-        pylab.ion()
+            sort_by = self.getZIndices()
         ##plot the data
         fh1 = pylab.figure()
-        import matplotlib
-        pylab.imshow(state.getXValues()[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
+        pylab.imshow(self.getXValues()[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
         ##label
         xlim = fh1.get_axes()[0].get_xlim()
-        h_lines = np.array([cluster.count() for cluster in state.cluster_list]).cumsum()
+        h_lines = np.array([cluster.count() for cluster in self.cluster_list]).cumsum()
         pylab.hlines(h_lines-.5,*xlim)
-        ##
+
+
         ##plot the conditional posteriors
         ##alpha
-        lnPdf = hf.create_alpha_lnPdf(state)
-        grid = state.get_alpha_grid()
-        ##
-        logp_list = []
-        original_alpha = state.alpha
-        for test_alpha in grid:
-            state.removeAlpha(lnPdf)
-            state.setAlpha(lnPdf,test_alpha)
-            logp_list.append(state.score)
-        ##put everything back how you found it
-        state.removeAlpha(lnPdf)
-        state.setAlpha(lnPdf,original_alpha)
+        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
+        norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh2 = pylab.figure()
-        pylab.bar(np.log(grid),hf.log_conditional_to_norm_prob(logp_list))
+        pylab.bar(np.log(grid),norm_prob)
         pylab.title("Alpha conditional posterior")
-        ##
+
         ##beta_i
-        grid = state.get_beta_grid()
-        logp_list = []
-        colIdx = 0
-        lnPdf = hf.create_beta_pdf(state,colIdx)
-        logp_list = []
-        ##
-        original_beta = state.betas[colIdx]
-        for test_beta in grid:
-            state.removeBetaD(lnPdf,colIdx)
-            state.setBetaD(lnPdf,colIdx,test_beta)
-            logp_list.append(state.score)
-        ##put everything back how you found it
-        state.removeBetaD(lnPdf,colIdx)
-        state.setBetaD(lnPdf,colIdx,original_beta)
+        logp_list,lnPdf,grid = hf.calc_beta_conditional(self,0)
+        norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh3 = pylab.figure()
-        pylab.bar(np.log(grid),hf.log_conditional_to_norm_prob(logp_list))
+        pylab.bar(np.log(grid),norm_prob)
         pylab.title("Beta conditional posterior")
         ##
         return fh1,fh2,fh3

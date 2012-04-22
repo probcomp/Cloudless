@@ -39,13 +39,7 @@ class DPMB():
     def transition_alpha_discrete_gibbs(self):
         start_dt = datetime.datetime.now()
         ##
-        grid = self.state.get_alpha_grid()
-        lnPdf = hf.create_alpha_lnPdf(self.state)
-        logp_list = []
-        for test_alpha in grid:
-            self.state.removeAlpha(lnPdf)
-            self.state.setAlpha(lnPdf,test_alpha)
-            logp_list.append(self.state.score)
+        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
         alpha_idx = hf.renormalize_and_sample(logp_list,self.state.verbose)
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
@@ -58,19 +52,11 @@ class DPMB():
     def transition_beta_discrete_gibbs(self):
         start_dt = datetime.datetime.now()
         ##
-        grid = self.state.get_beta_grid()
-        logp_list = []
-        for colIdx in range(self.state.num_cols):
-            lnPdf = hf.create_beta_lnPdf(self.state,colIdx)
-            logp_list = []
-            ##
-            for test_beta in grid:
-                self.state.removeBetaD(lnPdf,colIdx)
-                self.state.setBetaD(lnPdf,colIdx,test_beta)
-                logp_list.append(self.state.score)
+        for col_idx in range(self.state.num_cols):
+            logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
             beta_idx = hf.renormalize_and_sample(logp_list)
-            self.state.removeBetaD(lnPdf,colIdx)
-            self.state.setBetaD(lnPdf,colIdx,grid[beta_idx])
+            self.state.removeBetaD(lnPdf,col_idx)
+            self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
         ##
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
@@ -121,9 +107,9 @@ class DPMB():
             # assign it
             cluster.assign_vector(vector)
 
-            # debug print out states:
-            print " --- " + str(self.state.getZIndices())
-            print "     " + str([cluster.count() for cluster in self.state.cluster_list])
+        # debug print out states:
+        print " --- " + str(self.state.getZIndices())
+        print "     " + str([cluster.count() for cluster in self.state.cluster_list])
 
         ##
         try: ##older datetime modules don't have .total_seconds()

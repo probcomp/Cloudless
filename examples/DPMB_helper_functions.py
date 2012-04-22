@@ -264,6 +264,39 @@ def create_beta_lnPdf(state,col_idx):
                                 - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
     return lnPdf
 
+def calc_alpha_conditional(state):
+    ##save original value, should be invariant
+    original_alpha = state.alpha
+    ##
+    grid = state.get_alpha_grid()
+    lnPdf = create_alpha_lnPdf(state)
+    logp_list = []
+    for test_alpha in grid:
+        state.removeAlpha(lnPdf)
+        state.setAlpha(lnPdf,test_alpha)
+        logp_list.append(state.score)
+    ##
+    state.removeAlpha(lnPdf)
+    state.setAlpha(lnPdf,original_alpha)
+    ##
+    return logp_list,lnPdf,grid
+
+def calc_beta_conditional(state,col_idx):
+    lnPdf = create_beta_lnPdf(state,col_idx)
+    grid = state.get_beta_grid()
+    logp_list = []
+    ##
+    original_beta = state.betas[col_idx]
+    for test_beta in grid:
+        state.removeBetaD(lnPdf,col_idx)
+        state.setBetaD(lnPdf,col_idx,test_beta)
+        logp_list.append(state.score)
+    ##put everything back how you found it
+    state.removeBetaD(lnPdf,col_idx)
+    state.setBetaD(lnPdf,col_idx,original_beta)
+    ##
+    return logp_list,lnPdf,grid
+
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
     return mle
