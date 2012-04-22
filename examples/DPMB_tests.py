@@ -155,10 +155,10 @@ if True:
     num_datapoints_in_cluster_0_list = []
     num_clusters_list = []
     for iter_num in range(NUM_ITERS):
-        model.transition()
 
-        state.plot()
-        input
+        model.transition()
+        temp = raw_input("blocking: ---- ")
+        pylab.close('all')
         
         if iter_num % EVERY_N == 0: ## must do this after inference
             alpha_list.append(state.alpha)

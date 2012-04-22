@@ -208,7 +208,9 @@ class DPMB_State():
             pdb.set_trace()
         self.score += scoreDelta
 
-    def plot(self,gen_state=None,interpolation="nearest",**kwargs):
+    def plot(self,which_plots=None,title_append=None,gen_state=None,**kwargs):
+        which_plots = ["data","alpha","beta","cluster"] if which_plots is None else which_plots
+        which_plots = dict(zip(which_plots,np.repeat(None,len(which_plots))))
         # FIXMEs FOR DAN TO IMPLEMENT:
         # - add z conditional histogram (with red vertical bar for current value)
         # - add red vertical bar for current value of alpha, and for beta_1
@@ -217,51 +219,54 @@ class DPMB_State():
         import pylab
         pylab.ion()
 
-        ##sort by attributed state and then gen_state if available
-        if gen_state is not None:
-            mult_factor = np.round(np.log10(len(gen_state["phis"])))
-            sort_by = np.array(mult_factor * self.getZIndices() + gen_state["zs"],dtype=int)
-        else:
-            sort_by = self.getZIndices()
-        ##plot the data
-        fh1 = pylab.figure()
-        pylab.imshow(np.array(self.getXValues())[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
-        ##label
-        xlim = fh1.get_axes()[0].get_xlim()
-        h_lines = np.array([cluster.count() for cluster in self.cluster_list]).cumsum()
-        pylab.hlines(h_lines-.5,*xlim)
+        fh1 = None
+        if "data" in which_plots:
+            ##sort by attributed state and then gen_state if available
+            if gen_state is not None:
+                mult_factor = np.round(np.log10(len(gen_state["phis"])))
+                sort_by = np.array(mult_factor * self.getZIndices() + gen_state["zs"],dtype=int)
+            else:
+                sort_by = self.getZIndices()
+            ##plot the data
+            data = np.array(self.getXValues())[np.argsort(sort_by)]
+            h_lines = np.array([cluster.count() for cluster in self.cluster_list]).cumsum()
+            title_str = "Data" if title_append is None else "Data" + ": " + title_append
+            fh1 = hf.plot_data(data=data,h_lines=h_lines,title_str=title_str)
 
+        fh2 = None
+        if "alpha" in which_plots:
+            logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
+            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            title_str = "alpha" if title_append is None else "alpha" + ": " + title_append
+            fh2 = hf.bar_helper(x=np.log(grid),y=norm_prob,v_line=np.log(self.alpha),title_str=title_str)
 
-        ##plot the conditional posteriors
-        ##alpha
-        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
-        norm_prob = hf.log_conditional_to_norm_prob(logp_list)
-        fh2 = pylab.figure()
-        pylab.bar(np.log(grid),norm_prob,width=min(np.diff(np.log(grid))))
-        pylab.vlines(np.log(self.alpha),*fh2.get_axes()[0].get_ylim(),color="red",linewidth=3)
-        pylab.title("Alpha conditional posterior")
-
-        ##beta_i
-        beta_idx = 0
-        logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
-        norm_prob = hf.log_conditional_to_norm_prob(logp_list)
-        fh3 = pylab.figure()
-        pylab.bar(np.log(grid),norm_prob,width=min(np.diff(np.log(grid))))
-        pylab.vlines(np.log(self.betas[beta_idx]),*fh3.get_axes()[0].get_ylim(),color="red",linewidth=3)
-        pylab.title("Beta conditional posterior")
-
-        ##cluster assignemt
-        vector = self.vector_list[0]
-        cluster = vector.cluster
-        cluster_idx = self.cluster_list.index(cluster)
-        cluster.deassign_vector(vector)
-        # calculate the conditional
-        score_vec = hf.calculate_cluster_conditional(self,vector)
-        norm_prob = hf.log_conditional_to_norm_prob(score_vec)
-        fh4 = pylab.figure()
-        pylab.bar(np.arange(len(norm_prob))-.5,norm_prob)
-        pylab.vlines(cluster_idx,*fh4.get_axes()[0].get_ylim(),color="red",linewidth=3)
-        pylab.title("Cluster conditional posterior")
+        fh3 = None
+        if "beta" in which_plots:
+            beta_idx = 0
+            logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
+            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            title_str  = "Beta conditional posterior" if title_append is None else "Beta conditional posterior" + ": " + title_append
+            fh3 = hf.bar_helper(x=np.log(grid),y=norm_prob,v_line=np.log(self.betas[beta_idx]),title_str=title_str)
+            
+        fh4 = None
+        if "cluster" in which_plots:
+            vector = self.vector_list[0]
+            cluster = vector.cluster
+            cluster_idx = self.cluster_list.index(cluster)
+            ##
+            # calculate the conditional
+            cluster.deassign_vector(vector)
+            score_vec = hf.calculate_cluster_conditional(self,vector)
+            if cluster.state is None: ##handle singleton
+                cluster = self.generate_cluster_assignment(self,force_new=True)
+                cluster.assign_vector(vector)
+            else:
+                cluster.assign_vector(vector)                
+            ##
+            norm_prob = hf.log_conditional_to_norm_prob(score_vec)
+            title_str = "Cluster conditional posterior"
+            title_str  = "Cluster conditional posterior" if title_append is None else "Cluster conditional posterior" + ": " + title_append
+            fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,v_line=cluster_idx,title_str=title_str)
         
         return fh1,fh2,fh3,fh4
 
