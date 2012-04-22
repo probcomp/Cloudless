@@ -91,7 +91,6 @@ class DPMB():
         # debug print out states:
         print " --- " + str(self.state.getZIndices())
         print "     " + str([cluster.count() for cluster in self.state.cluster_list])
-
         ##
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()
@@ -111,19 +110,15 @@ class DPMB():
     def transition(self,numSteps=1, regen_data=False):
         for counter in range(numSteps):
 
-            self.state.plot(which_plots=["data"],title_append="pre")
-            self.state.plot(which_plots=["cluster"],title_append="pre")
-            self.transition_z()
-            self.state.plot(which_plots=["data"],title_append="post")
-            self.state.plot(which_plots=["cluster"],title_append="post")
-
-            self.state.plot(which_plots=["alpha"],title_append="pre")
-            self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
-            self.state.plot(which_plots=["alpha"],title_append="post")
-
-            self.state.plot(which_plots=["beta"],title_append="pre")
             self.transition_beta() ##may do nothing if infer_beta == "FIXED"
-            self.state.plot(which_plots=["beta"],title_append="post")
+            # self.state.plot(which_plots=["beta"],title_append="post")
+            
+            self.transition_z()
+            # self.state.plot(which_plots=["data"],title_append="post")
+            # self.state.plot(which_plots=["cluster"],title_append="post")
+
+            self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
+            # self.state.plot(which_plots=["alpha"],title_append="post")
 
             if regen_data:
                 self.transition_x()

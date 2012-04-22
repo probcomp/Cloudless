@@ -1,7 +1,7 @@
 import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
 import DPMB as dm
-import pylab
+import pylab,matplotlib
 ##
 import pdb
 
@@ -320,24 +320,26 @@ def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
     return mle
 
-def plot_data(data,h_lines=None,title_str=None,interpolation="nearest",**kwargs):
-    import matplotlib
-    fh = pylab.figure()
+def plot_data(data,fh=None,h_lines=None,title_str=None,interpolation="nearest",**kwargs):
+    
+    if fh is None:
+        fh = pylab.figure()
     pylab.imshow(data,interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
     if h_lines is not None:
         xlim = fh.get_axes()[0].get_xlim()
-        pylab.hlines(h_lines-.5,*xlim)
+        pylab.hlines(h_lines-.5,*xlim,color="red",linewidth=3)
     if title_str is not None:
         pylab.title(title_str)
     return fh
 
-def bar_helper(x,y,v_line=None,title_str=None):
-    fh = pylab.figure()
+def bar_helper(x,y,fh=None,v_line=None,title_str=None,which_id=0):
+    if fh is None:
+        fh = pylab.figure()
     pylab.bar(x,y,width=min(np.diff(x)))
     if v_line is not None:
-        pylab.vlines(v_line,*fh.get_axes()[0].get_ylim(),color="red",linewidth=3)
+        pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim(),color="red",linewidth=3)
     if title_str is not None:
-        pylab.title(title_str)
+        pylab.ylabel(title_str)
     return fh
 
 

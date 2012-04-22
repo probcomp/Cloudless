@@ -1,5 +1,5 @@
 #!python
-import matplotlib.mlab as mlab,numpy as np, numpy.random as nr,sys
+import numpy as np, numpy.random as nr,pylab,sys
 import DPMB as dm
 reload(dm)
 import DPMB_helper_functions as hf
@@ -167,6 +167,7 @@ class DPMB_State():
         return self.vector_list
             
     def getZIndices(self):
+        ##CANONICAL zs
         z_indices = []
         next_id = 0
         cluster_ids = {}
@@ -208,19 +209,23 @@ class DPMB_State():
             pdb.set_trace()
         self.score += scoreDelta
 
-    def plot(self,which_plots=None,title_append=None,gen_state=None,**kwargs):
+    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
         which_plots = ["data","alpha","beta","cluster"] if which_plots is None else which_plots
-        which_plots = dict(zip(which_plots,np.repeat(None,len(which_plots))))
+        if which_handles is None:
+            which_handles = np.repeat(None,len(which_plots))
+        handle_lookup = dict(zip(which_plots,which_handles))
+        ## orientation argument to histogram
         # FIXMEs FOR DAN TO IMPLEMENT:
-        # - add z conditional histogram (with red vertical bar for current value)
-        # - add red vertical bar for current value of alpha, and for beta_1
         # - make all part of one figure, with subplots (state view on left, three bar charts on right)
-        import matplotlib
-        import pylab
-        pylab.ion()
+        if show:
+            pylab.ion()
+        else:
+            pylab.ioff()
 
         fh1 = None
-        if "data" in which_plots:
+        fh = pylab.figure()
+        pylab.subplot(411)
+        if "data" in which_plots or True:
             ##sort by attributed state and then gen_state if available
             if gen_state is not None:
                 mult_factor = np.round(np.log10(len(gen_state["phis"])))
@@ -228,46 +233,86 @@ class DPMB_State():
             else:
                 sort_by = self.getZIndices()
             ##plot the data
+                ##FIXME : Am I canonicalizing properly
             data = np.array(self.getXValues())[np.argsort(sort_by)]
-            h_lines = np.array([cluster.count() for cluster in self.cluster_list]).cumsum()
+            h_lines = []
+            z_indices = self.getZIndices()
+            for z_index in np.unique(z_indices):
+                h_lines.append(sum(z_indices==z_index))
+            h_lines = np.array(h_lines).cumsum()
             title_str = "Data" if title_append is None else "Data" + ": " + title_append
-            fh1 = hf.plot_data(data=data,h_lines=h_lines,title_str=title_str)
+            ##fh = handle_lookup["data"]
+            fh1 = hf.plot_data(data=data,fh=fh,h_lines=h_lines,title_str=title_str)
 
         fh2 = None
-        if "alpha" in which_plots:
+        pylab.subplot(412)
+        if "alpha" in which_plots or True:
             logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
             norm_prob = hf.log_conditional_to_norm_prob(logp_list)
             title_str = "alpha" if title_append is None else "alpha" + ": " + title_append
-            fh2 = hf.bar_helper(x=np.log(grid),y=norm_prob,v_line=np.log(self.alpha),title_str=title_str)
+            ##fh = handle_lookup["alpha"]
+            fh2 = hf.bar_helper(x=np.log10(grid),fh=fh,y=norm_prob,v_line=np.log10(self.alpha),title_str=title_str,which_id=1)
 
         fh3 = None
-        if "beta" in which_plots:
+        pylab.subplot(413)
+        if "beta" in which_plots or True:
             beta_idx = 0
             logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
             norm_prob = hf.log_conditional_to_norm_prob(logp_list)
-            title_str  = "Beta conditional posterior" if title_append is None else "Beta conditional posterior" + ": " + title_append
-            fh3 = hf.bar_helper(x=np.log(grid),y=norm_prob,v_line=np.log(self.betas[beta_idx]),title_str=title_str)
+            title_str  = "Beta" if title_append is None else "Beta" + ": " + title_append
+            ##fh = handle_lookup["beta"]
+            fh3 = hf.bar_helper(x=np.log10(grid),y=norm_prob,fh=fh,v_line=np.log10(self.betas[beta_idx]),title_str=title_str,which_id=2)
             
         fh4 = None
-        if "cluster" in which_plots:
+        pylab.subplot(414)
+        if "cluster" in which_plots or True:
             vector = self.vector_list[0]
             cluster = vector.cluster
-            cluster_idx = self.cluster_list.index(cluster)
+            cluster_idx = self.getZIndices()[self.vector_list.index(vector)] ##ALWAYS GO THROUGH getZIndices
             ##
             # calculate the conditional
             cluster.deassign_vector(vector)
+
             score_vec = hf.calculate_cluster_conditional(self,vector)
+            # score_vec is a list of scores, in the order of cluster_list.
+            
             if cluster.state is None: ##handle singleton
                 cluster = self.generate_cluster_assignment(self,force_new=True)
                 cluster.assign_vector(vector)
             else:
                 cluster.assign_vector(vector)                
             ##
-            norm_prob = hf.log_conditional_to_norm_prob(score_vec)
-            title_str = "Cluster conditional posterior"
-            title_str  = "Cluster conditional posterior" if title_append is None else "Cluster conditional posterior" + ": " + title_append
-            fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,v_line=cluster_idx,title_str=title_str)
-        
+            # sort score vec according to the order of the clusters from zindices
+
+            next_id = 0
+            cluster_ids = {}
+            for v in self.get_all_vectors():
+                if v.cluster not in cluster_ids:
+                    cluster_ids[v.cluster] = next_id
+                    next_id += 1
+
+            # cluster_ids has a map from cluster references to z indices
+            # but if a singleton was created and not chosen ("autopopped")
+            # it is missing
+
+            # move the scores according to the ordering we've found
+            sorted_scores = [0 for x in range(len(score_vec))]
+            for (i, cluster) in enumerate(self.cluster_list):
+                sorted_scores[cluster_ids[cluster]] = score_vec[i]
+                
+            if len(vector.cluster.vector_list) > 1:
+                # we need to put the singleton cluster's score at the end
+                sorted_scores[-1] = score_vec[-1]
+
+            norm_prob = hf.log_conditional_to_norm_prob(sorted_scores)
+            
+            title_str  = "Cluster cond" if title_append is None else "Cluster cond" + ": " + title_append
+            ##fh = handle_lookup["cluster"]
+            fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+
+        if save_str is not None:
+            pylab.savefig(save_str)
+
         return fh1,fh2,fh3,fh4
 
 
