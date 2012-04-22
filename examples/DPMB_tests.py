@@ -137,49 +137,54 @@ pylab.title("num_clusters")
 # can automate "are these two histograms similar enough?" by normalizing them into probability distribution estimates, and running a Kolmogorov-Smirnof test
 # but for starters, just eyeballing is enough
 
-start_ts = datetime.datetime.now()
-GEN_SEED = 1
-NUM_COLS = 8
-NUM_ROWS = 8
-INIT_ALPHA = None
-INIT_BETAS = None
-INIT_X = None
-EVERY_N = 50
-NUM_ITERS = 1000
-state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=None,init_x=INIT_X)
-model = dm.DPMB(state=state,inf_seed=0,infer_alpha=True,infer_beta=True)
-##
-alpha_list = []
-beta_0_list = []
-num_datapoints_in_cluster_0_list = []
-num_clusters_list = []
-for iter_num in range(NUM_ITERS):
-    model.transition()
-    if iter_num % EVERY_N == 0: ## must do this after inference
-        alpha_list.append(state.alpha)
-        beta_0_list.append(state.betas[0])
-        num_datapoints_in_cluster_0_list.append(state.cluster_list[0].count())
-        num_clusters_list.append(len(state.cluster_list))
+if True:
+    start_ts = datetime.datetime.now()
+    GEN_SEED = 1
+    NUM_COLS = 8
+    NUM_ROWS = 8
+    INIT_ALPHA = None
+    INIT_BETAS = None
+    INIT_X = None
+    EVERY_N = 50
+    NUM_ITERS = 1000
+    state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=None,init_x=INIT_X)
+    model = dm.DPMB(state=state,inf_seed=0,infer_alpha=True,infer_beta=True)
+    ##
+    alpha_list = []
+    beta_0_list = []
+    num_datapoints_in_cluster_0_list = []
+    num_clusters_list = []
+    for iter_num in range(NUM_ITERS):
+        model.transition()
 
-    prior_zs = np.sort(state.getZIndices()).tolist() ## could there be an issue with inference over canonical clustering? permuate the data?
-    state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
-    model.state = state
+        state.plot()
+        input
+        
+        if iter_num % EVERY_N == 0: ## must do this after inference
+            alpha_list.append(state.alpha)
+            beta_0_list.append(state.betas[0])
+            num_datapoints_in_cluster_0_list.append(state.cluster_list[0].count())
+            num_clusters_list.append(len(state.cluster_list))
 
-print "Time delta: ",datetime.datetime.now()-start_ts
+        prior_zs = np.sort(state.getZIndices()).tolist() ## could there be an issue with inference over canonical clustering? permuate the data?
+        state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
+        model.state = state
 
-pylab.figure()
-pylab.subplot(411)
-pylab.hist(np.log(alpha_list))
-pylab.title("alpha (log10)")
-pylab.subplot(412)
-hist(np.log(beta_0_list))
-pylab.title("beta_0 (log10)")
-pylab.subplot(413)
-hist(num_datapoints_in_cluster_0_list)
-pylab.title("num_datapoints_in_cluster_0")
-pylab.subplot(414)
-hist(num_clusters_list)
-pylab.title("num_clusters")
+    print "Time delta: ",datetime.datetime.now()-start_ts
+
+    pylab.figure()
+    pylab.subplot(411)
+    pylab.hist(np.log(alpha_list))
+    pylab.title("alpha (log10)")
+    pylab.subplot(412)
+    hist(np.log(beta_0_list))
+    pylab.title("beta_0 (log10)")
+    pylab.subplot(413)
+    hist(num_datapoints_in_cluster_0_list)
+    pylab.title("num_datapoints_in_cluster_0")
+    pylab.subplot(414)
+    hist(num_clusters_list)
+    pylab.title("num_clusters")
 
 
 # for the 8 by 8 data matrix that we started to study today:

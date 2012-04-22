@@ -182,7 +182,8 @@ class DPMB_State():
         data = []
         for vec in self.get_all_vectors():
             data.append(vec.data)
-    
+        return data
+
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
         self.modifyScore(-scoreDelta)
@@ -224,7 +225,7 @@ class DPMB_State():
             sort_by = self.getZIndices()
         ##plot the data
         fh1 = pylab.figure()
-        pylab.imshow(self.getXValues()[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
+        pylab.imshow(np.array(self.getXValues())[np.argsort(sort_by)],interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
         ##label
         xlim = fh1.get_axes()[0].get_xlim()
         h_lines = np.array([cluster.count() for cluster in self.cluster_list]).cumsum()
@@ -236,8 +237,8 @@ class DPMB_State():
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
         norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh2 = pylab.figure()
-        pylab.bar(np.log(grid),norm_prob)
-        pylab.vlines(self.alpha,*fh2.get_axes()[0].get_ylim())
+        pylab.bar(np.log(grid),norm_prob,width=min(np.diff(np.log(grid))))
+        pylab.vlines(np.log(self.alpha),*fh2.get_axes()[0].get_ylim(),color="red",linewidth=3)
         pylab.title("Alpha conditional posterior")
 
         ##beta_i
@@ -245,8 +246,8 @@ class DPMB_State():
         logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
         norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh3 = pylab.figure()
-        pylab.bar(np.log(grid),norm_prob)
-        pylab.vlines(self.betas[beta_idx],*fh3.get_axes()[0].get_ylim())
+        pylab.bar(np.log(grid),norm_prob,width=min(np.diff(np.log(grid))))
+        pylab.vlines(np.log(self.betas[beta_idx]),*fh3.get_axes()[0].get_ylim(),color="red",linewidth=3)
         pylab.title("Beta conditional posterior")
 
         ##cluster assignemt
@@ -258,8 +259,8 @@ class DPMB_State():
         score_vec = hf.calculate_cluster_conditional(self,vector)
         norm_prob = hf.log_conditional_to_norm_prob(score_vec)
         fh4 = pylab.figure()
-        pylab.bar(norm_prob)
-        pylab.vlines(cluster_idx,*fh4.get_axes()[0].get_ylim())
+        pylab.bar(np.arange(len(norm_prob))-.5,norm_prob)
+        pylab.vlines(cluster_idx,*fh4.get_axes()[0].get_ylim(),color="red",linewidth=3)
         pylab.title("Cluster conditional posterior")
         
         return fh1,fh2,fh3,fh4
