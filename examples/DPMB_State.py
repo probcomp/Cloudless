@@ -10,14 +10,10 @@ import pdb
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None,init_z=None,init_x=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100,N_test=0):
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
+
         self.gen_seed = gen_seed
         self.num_cols = num_cols
-        self.num_rows = num_rows + N_test ##this is fine as long as states generating test data are not then used to initialize inference
-        self.init_alpha = init_alpha
-        self.init_betas = init_betas
-        self.init_z = init_z
-        self.init_x = init_x
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
@@ -35,95 +31,157 @@ class DPMB_State():
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
-        self.zs = [] #will eventually get a list of Cluster references
+        self.vector_list = [] #contains all added (possibly unassigned) vectors, in order
+        
+        # now deal with init_z and init_x specs:
 
-        self.init_z_func()
+        # FIXME: address issue of Gibbs-type initialization, e.g. to get sharper
+        #        results for the convergence of the sampler
+        for r in range(num_rows):
+            cluster = None
+            if init_z is None:
+                cluster = self.generate_cluster_assignment()
+            elif init_z == 1: ##all in one cluster
+                cluster = self.generate_cluster_assignment(force_last=True)
+            elif init_z == "N": ##all apart
+                cluster = self.generate_cluster_assignment(force_new=True)
+            elif isinstance(init_z, tuple) and init_z[0] == "balanced":
+                num_clusters = init_z[1]
+                if r % num_clusters == 0:
+                    # create a new cluster
+                    cluster = self.generate_cluster_assignment(force_new=True)
+                else:
+                    # use the last cluster
+                    cluster = self.generate_cluster_assignment(force_last=True)
+            elif isinstance(init_z, list):
+                if init_z[r] > len(self.cluster_list):
+                    cluster = self.generate_cluster_assignment(force_new=True)
+                else:
+                    cluster = self.cluster_list[init_z[r]]
+            else:
+                raise Exception("invalid init_z: " + str(init_z))
 
-        self.xs = [] #will eventually get a list of Vector references
+            # now we have the cluster. handle the data
+            if init_x is None:
+                vector = self.generate_vector(cluster = cluster)
+            else:
+                vector = self.generate_vector(data = init_x[r], cluster = cluster)
 
-        self.init_x_func()
+    # sample a cluster from the CRP, possibly resulting in a new one being generated
+    # if force_last is True, always returns the last generated cluster in the model
+    # if force_new is True, always returns a new cluster
+    # force_last and force_new can only both be True if there are no other clusters
+    #
+    # initializing all apart requires repeated calling with force_new=True
+    # initializing all together requires repeated calling with force_last = True
+    # initializing from the prior requires no arguments
+    def generate_cluster_assignment(self, force_last=False, force_new=False):
+        if force_new:
+            draw = len(self.cluster_list)
+        elif force_last:
+            draw = max(0,len(self.cluster_list) - 1)
+        else:
+            unnorm_vec = [cluster.count() for cluster in self.cluster_list] + [self.alpha]
+            draw = hf.renormalize_and_sample(np.log(unnorm_vec))
 
+        if draw == len(self.cluster_list):
+            # create a new cluster and assign it
+            cluster = Cluster(self)
+            self.cluster_list.append(cluster)
+            return cluster
+        else:
+            return self.cluster_list[draw]
+
+    # Given:
+    # data=None, cluster=None: sample cluster from CRP, sample data from predictive of that cluster.
+    # data=None, cluster=c: sample data from c's predictive and incorporate it into c
+    # data=dvec, cluster=c: incorporate dvec into c
+    #
+    # FIXME: Support the case below for GIbbs-type initialization only:
+    # data=dvec, cluster=None: sample cluster from the conditional posterior given the data
+    def generate_vector(self, data=None, cluster=None):
+        if cluster is None:
+            cluster = self.generate_cluster_assignment()
+
+        vector = Vector(cluster, data)
+        self.vector_list.append(vector)
+        cluster.assign_vector(vector)
+        return vector
+
+    # remove the given vector from the model, destroying its cluster if needed
+    def remove_vector(self, vector):
+        # first we deassign it
+        vector.cluster.deassign_vector(vector)
+        vector.cluster = None
+        # now we remove it
+        self.vector_list.remove(vector)
+
+    def calculate_log_predictive(self, vector):
+        if vector.cluster is not None:
+            raise Exception("Tried to do this for a vector already in some model. Not kosher!")
+
+        clusters = list(self.cluster_list) + [None]
+        log_joints = [hf.cluster_vector_joint(vector, cluster, self) for cluster in clusters]
+        log_marginal_on_vector = reduce(np.logaddexp, log_joints)
+        return log_marginal_on_vector
+    
+    def generate_and_score_test_set(self, N_test):
+        xs = []
+        lls = []
+
+        for i in range(N_test):
+            test_vec = self.generate_vector()
+            xs.append(test_vec.data)
+            self.remove_vector(test_vec)
+            lls.append(self.calculate_log_predictive(test_vec))
+
+        return xs,lls
+    
     def clone(self):
-        ##I don't think this is quite correct
-        ##To maintain seed state after generation, should just recreate the state, so pass self.init_z, not self.getZIndices()
-        return DPMB_State(self.gen_seed, self.num_cols, self.num_rows, self.alpha, self.betas, self.getZIndices(), self.getXValues(),
+        # FIXME: can't rely on perfect random seed tracking right now. a future pass should make states modified by a journal of operations,
+        #        and encapsulate a random source, so that we can control its precise state (and reduce all nondeterminism down to the underlying
+        #        nondeterminism of things like Python data structures).
+        return DPMB_State(self.gen_seed, self.num_cols, len(self.vector_list), self.alpha, self.betas, self.getZIndices(), self.getXValues(),
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
-    ##so perhaps test_train_split should be replaced with gen_test, which uses clone to create a new state, create N_test more values and keep only the last N_test of z,x
 
     def get_flat_dictionary(self):
         ##init_* naming is used, but its not really init
         ##makes sense when needed for state creation
         ##but otherwise only if you want to resume inference
-        return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows":self.num_rows, "init_alpha":self.alpha
-                , "init_betas":self.betas, "init_z":self.getZIndices(), "init_x":self.getXValues()
+        return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows": len(self.vector_list), "alpha":self.alpha
+                , "betas":self.betas, "zs":self.getZIndices(), "xs":self.getXValues()
                 , "alpha_min":self.alpha_min, "alpha_max":self.alpha_max, "beta_min":self.beta_min, "beta_max":self.beta_max
                 , "grid_N":self.grid_N} ## , "N_test":self.N_test} ## N_test isn't save, should it be?
             
-    def test_train_split(self, N_test):
-        assert N_test > 0
-        assert N_test <= self.num_rows
-        
-        all_data = self.getXValues()
-        out = {}
-        out["test_data"] = all_data[-N_test:]
-        out["train_data"] = all_data[:-N_test]
-        out["train_zs"] = self.getZIndices()[:-N_test]
-        return out
-    
-    def init_z_func(self):
-        ##
-        if self.init_z is None: ##sample
-            zs = CRP(self.alpha,self.num_rows).zs
-        elif self.init_z == 1: ##all in one
-            zs = np.repeat(0,self.num_rows)
-        elif self.init_z == "N": ##all apart
-            zs = range(self.num_rows)
-        elif type(self.init_z)==tuple and self.init_z[0]=="balanced":
-            num_clusters = init_z[1]
-            zs = np.repeat(range(num_clusters),np.int(np.ceil(float(self.num_rows)/num_clusters))[:self.num_rows])
-            zs = np.random.permutation(zs)
-        elif isinstance(self.init_z, list):
-            zs = self.init_z
-        else:  ## init_method has a method key but it didn't match known entries
-            raise Exception("invalid init_z passed to DPMB_State.create_data")
-
-        num_clusters = len(np.unique(zs))
-        for cluster_idx in range(num_clusters):
-            ##must initialize clusters first to get correct labeling of xs, else index skip results in error
-            Cluster(self) ## links self to state
-        # now self.cluster_list is initialized!
-        
-        for cluster_idx in zs:
-            self.zs.append(self.cluster_list[cluster_idx])
-
-        
-            
-    def init_x_func(self):
-        ##
-        xs = self.init_x if self.init_x is not None else np.repeat(None,self.num_rows)
-        ##
-        for (cluster, vector_data) in zip(self.zs, xs):
-            cluster.create_vector(vector_data)
-
     def get_alpha_grid(self):
         ##endpoint should be set by MLE of all data in its own cluster?
         grid = 10.0**np.linspace(np.log10(self.alpha_min),np.log10(self.alpha_max),self.grid_N) 
-
+        return grid
+    
     def get_beta_grid(self):
         ##endpoint should be set by MLE of all data in its own cluster?
         grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N) 
+        return grid
 
-    def numClustersDyn(self):
-        return len(self.cluster_list)
-
-    def numVectorsDyn(self):
-        return len(self.xs)
-
+    def get_all_vectors(self):
+        return self.vector_list
+            
     def getZIndices(self):
-        return np.array([vector.cluster.cluster_idx if vector.cluster is not None else None for vector in self.xs])
+        z_indices = []
+        next_id = 0
+        cluster_ids = {}
+        for v in self.get_all_vectors():
+            if v.cluster not in cluster_ids:
+                cluster_ids[v.cluster] = next_id
+                next_id += 1
+
+            z_indices.append(cluster_ids[v.cluster])
+        return z_indices
 
     def getXValues(self):
-        return np.array([vector.data for vector in self.xs])
+        data = []
+        for vec in self.get_all_vectors():
+            data.append(vec.data)
     
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
@@ -149,88 +207,46 @@ class DPMB_State():
             pdb.set_trace()
         self.score += scoreDelta
 
-class CRP():
-    def __init__(self,alpha=1,numSamples=0):
-        self.alpha = alpha
-        self.zs = []
-        self.counts = []
-        self.indexes = []
-        if numSamples>0:
-            self.sample(numSamples)
-            
-    def sample(self,numSamples=1):
-        for currNDraw in range(numSamples):
-            drawN = len(self.zs)
-            modCounts = np.array(np.append(self.counts,self.alpha),dtype=type(1.0))
-            draw = hf.renormalize_and_sample(np.log(modCounts))
-            if(draw==len(self.counts)):
-                self.counts.append(1)
-                self.indexes.append([drawN])
-            else:
-                self.counts[draw] += 1
-                self.indexes[draw].append(drawN)
-            self.zs.append(draw)
-        return self
-
-
 class Vector():
     def __init__(self,cluster,data=None):
+        if cluster is None:
+            raise Exception("creating a vector without a cluster")
+        
         self.cluster = cluster
-        self.data = [np.random.binomial(1,theta) for theta in self.cluster.thetas] if data is None else data
-        if self.cluster is not None:
-            self.vectorIdx = len(self.cluster.parent.xs)
-            self.cluster.parent.xs.append(self)
-
+        if data is None:
+            # reconstitute theta from the sufficient statistics for the cluster right now
+            num_heads_vec = cluster.column_sums
+            N_cluster = cluster.count()
+            betas_vec = self.cluster.state.betas
+            thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
+            self.data = [np.random.binomial(1, theta) for theta in thetas]
+        else:
+            self.data = data
 
 class Cluster():
-    def __init__(self,parent):
-        self.parent = parent
-
-        self.genThetas()
-        self.column_sums = np.zeros(self.parent.num_cols)
-        self.vectorIdxList = []
-        ##
-        self.cluster_idx = len(self.parent.cluster_list)
-        self.parent.cluster_list.append(self)
-
-    def genThetas(self,recurrences=0):
-        self.thetas = np.squeeze(np.array([np.random.beta(beta,beta,1) for beta in self.parent.betas]).T)
-        if sum([not np.isfinite(theta) for theta in self.thetas])>0:
-            print "genThetas recurrences: ",recurrences+1
-            self.genThetas(recurrences+1)
+    def __init__(self, state):
+        self.state = state
+        self.column_sums = np.zeros(self.state.num_cols)
+        self.vector_list = []
         
     def count(self):
-        return len(self.vectorIdxList)
-        
-    def create_vector(self,data=None):
-        vector = Vector(self,data)
-        self.add_vector(vector)
+        return len(self.vector_list)
 
-    def add_vector(self,vector):
-        scoreDelta,alpha_term,data_term = hf.cluster_predictive(vector,self,self.parent)
-        self.parent.modifyScore(scoreDelta)
+    def assign_vector(self,vector):
+        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        self.state.modifyScore(scoreDelta)
         ##
-        vector.cluster = self
-        vectorIdx = vector.vectorIdx
-        self.vectorIdxList.append(vectorIdx)
+        self.vector_list.append(vector)
         self.column_sums += vector.data
-        self.parent.zs[vectorIdx] = self
-        self.workingVectorIdx = None
-        self.workingClusterIdx = None
+        vector.cluster = self
         
-    def remove_vector(self,vector):
-        self.workingVectorIdx = vector.vectorIdx
-        self.workingClusterIdx = vector.cluster.cluster_idx
+    def deassign_vector(self,vector):
         vector.cluster = None
-        vectorIdx = vector.vectorIdx
-        self.vectorIdxList.remove(vectorIdx)
         self.column_sums -= vector.data
-        self.parent.zs[vectorIdx] = None
+        self.vector_list.remove(vector)
         ##
-        scoreDelta,alpha_term,data_term = hf.cluster_predictive(vector,self,self.parent)
-        self.parent.modifyScore(-scoreDelta)
+        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        self.state.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
-            replacementCluster = self.parent.cluster_list.pop()
-            if self.cluster_idx != len(self.parent.cluster_list):
-                replacementCluster.cluster_idx = self.cluster_idx
-                self.parent.cluster_list[self.cluster_idx] = replacementCluster
+            self.state.cluster_list.remove(self)
+            self.state = None

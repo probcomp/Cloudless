@@ -15,47 +15,32 @@ class DPMB():
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
         ##
-        self.infer_z_count = 0
+        self.transition_z_count = 0
 
-    def reconstitute_thetas(self):
-        thetas = np.array([cluster.column_sums/float(len(cluster.vectorIdxList)) for cluster in self.state.cluster_list])
-        return thetas
-
-    def reconstitute_phis(self):
-        phis = np.array([float(len(cluster.vectorIdxList))/self.state.numVectorsDyn() for cluster in self.state.cluster_list])
-        return phis
-
-    def reconstitute_latents(self):
-        return {"thetas":self.reconstitute_thetas(),"phis":self.reconstitute_phis(),"zs":self.state.getZIndices()}
-    
-    def remove_cluster_assignment(self,vectorIdx):
-        vector = self.state.xs[vectorIdx]
-        cluster = vector.cluster
-        cluster.remove_vector(vector)
-        
-    def assign_vector_to_cluster(self,vectorIdx,cluster_idx):
-        vector = self.state.xs[vectorIdx]
-        cluster = self.state.cluster_list[cluster_idx] if cluster_idx<self.state.numClustersDyn() else ds.Cluster(self.state)
-        cluster.add_vector(vector)
-        
-    def calculate_cluster_conditional(self,vectorIdx):
+    def calculate_cluster_conditional(self,vector):
         ##vector should be unassigned
-        vector = self.state.xs[vectorIdx]
         ##new_cluster is auto appended to cluster list
         ##and pops off when vector is deassigned
+
+        # FIXME: if there is already an empty cluster (either because deassigning didn't clear it out,
+        #        or for some other reason), then we'll have a problem here. maybe a crash, maybe just
+        #        incorrect probabilities.
         new_cluster = ds.Cluster(self.state)
+        self.state.cluster_list.append(new_cluster)
+        
         conditionals = []
         for cluster in self.state.cluster_list:
-            cluster.add_vector(vector)
+            cluster.assign_vector(vector)
             conditionals.append(self.state.score)
-            cluster.remove_vector(vector)
+            cluster.deassign_vector(vector)
+            
         return conditionals
     
     def transition_alpha_discrete_gibbs(self):
         start_dt = datetime.datetime.now()
         ##
-        grid = self.state.get_alph_grid()
-        lnPdf = hf.create_alpha_lnPdf(self)
+        grid = self.state.get_alpha_grid()
+        lnPdf = hf.create_alpha_lnPdf(self.state)
         logp_list = []
         for test_alpha in grid:
             self.state.removeAlpha(lnPdf)
@@ -75,8 +60,8 @@ class DPMB():
         ##
         grid = self.state.get_beta_grid()
         logp_list = []
-        for colIdx in range(self.state.numColumns):
-            lnPdf = hf.create_beta_lnPdf(self,colIdx)
+        for colIdx in range(self.state.num_cols):
+            lnPdf = hf.create_beta_lnPdf(self.state,colIdx)
             logp_list = []
             ##
             for test_beta in grid:
@@ -92,67 +77,21 @@ class DPMB():
         except Exception, e:
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
 
-    def transition_alpha_mh(self):
-        start_dt = datetime.datetime.now()
-        ##
-        initVal = self.state.alpha
-        nSamples = 1000
-        lnPdf = hf.create_alpha_lnPdf(self)
-        sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
-        samples = hf.mhSample(initVal,nSamples,lnPdf,sampler)
-        newAlpha = samples[-1]
-        if np.isfinite(lnPdf(newAlpha)):
-            self.state.removeAlpha(lnPdf)
-            self.state.setAlpha(lnPdf,newAlpha)
-        else:
-            print "NOT using newAlpha: " + str(newAlpha)
-        ##
-        ##
-        try: ##older datetime modules don't have .total_seconds()
-            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).total_seconds()
-        except Exception, e:
-            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
-        
-    def transition_beta_mh(self):
-        start_dt = datetime.datetime.now()
-        ##
-        nSamples = 100
-        sampler = lambda x: np.clip(x + nr.normal(0.0,.1),1E-10,np.inf)
-        for colIdx in range(self.state.numColumns):
-            lnPdf = hf.create_beta_lnPdf(self,colIdx)
-            initVal = self.state.betas[colIdx]
-            samples = hf.mhSample(initVal,nSamples,lnPdf,sampler)
-            newBetaD = samples[-1]
-            if np.isfinite(lnPdf(newBetaD)):
-                self.state.removeBetaD(lnPdf,colIdx)
-                self.state.setBetaD(lnPdf,colIdx,newBetaD)
-            else:
-                print "NOT using beta_d " + str((colIdx,newBetaD))
-        ##
-        try: ##older datetime modules don't have .total_seconds()
-            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
-        except Exception, e:
-            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
-
     def transition_alpha(self):
         if self.state.verbose:
             print "PRE transition_alpha score: ",self.state.score
-        if self.infer_alpha == "GIBBS"
+        if self.infer_alpha:
             self.transition_alpha_discrete_gibbs()
-        elif self.infer_alpha == "FIXED":
+        elif self.infer_alpha:
             self.state.timing["alpha"] = 0 ##ensure last value not carried forward
-        else:
-            print "infer_alpha: ",infer_alpha," not understood"
 
     def transition_beta(self):
         if self.state.verbose:
             print "PRE transition_beta score: ",self.state.score
-        if self.infer_beta == "GIBBS"
+        if self.infer_beta:
             self.transition_beta_discrete_gibbs()
-        elif self.infer_beta == "FIXED":
+        elif self.infer_beta:
             self.state.timing["betas"] = 0 ##ensure last value not carried forward
-        else:
-            print "infer_beta: ",infer_beta," not understood"
             
     def transition_z(self):
         self.transition_z_count += 1
@@ -160,33 +99,55 @@ class DPMB():
             print "PRE transition_z score: ",self.state.score
         start_dt = datetime.datetime.now()
         ##
-        for vectorIdx in range(self.state.numVectors):
-            prior_cluster_idx = self.state.zs[vectorIdx].cluster_idx
-            self.remove_cluster_assignment(vectorIdx)
-            conditionals = self.calculate_cluster_conditional(vectorIdx)
-            cluster_idx = hf.renormalize_and_sample(conditionals)
-            ##
-            if hasattr(self.state,"print_conditionals") and self.state.print_conditionals:
-                print cluster_idx,(conditionals-max(conditionals)).round(2)
-            if hasattr(self.state,"debug_conditionals") and self.state.debug_conditionals:
-                pdb.set_trace()
-            if hasattr(self.state,"print_cluster_switch") and self.state.print_cluster_switch and prior_cluster_idx != cluster_idx:
-                print "New cluster assignement: ",str(vectorIdx),str(prior_cluster_idx),str(cluster_idx)
-            if hasattr(self.state,"vectorIdx_break") and vectorIdx== self.state.vectorIdx_break:
-                pdb.set_trace()
-            ##
-            self.assign_vector_to_cluster(vectorIdx,cluster_idx)
+        # for each vector
+        for vector in self.state.get_all_vectors():
+            # FIXME: randomize order?
+            
+            # deassign it
+            vector.cluster.deassign_vector(vector)
+            
+            # calculate the conditional
+            score_vec = self.calculate_cluster_conditional(vector)
+
+            # sample an assignment
+            draw = hf.renormalize_and_sample(score_vec)
+
+            cluster = None
+            if draw == len(self.state.cluster_list):
+                cluster = self.state.generate_cluster_assignment(force_new = True)
+            else:
+                cluster = self.state.cluster_list[draw]
+
+            # assign it
+            cluster.assign_vector(vector)
+
+            # debug print out states:
+            print " --- " + str(self.state.getZIndices())
+            print "     " + str([cluster.count() for cluster in self.state.cluster_list])
+
         ##
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).seconds()
 
-    def transition(self,numSteps=1):
+    def transition_x():
+        # regenerate new vector values, preserving the exact same clustering
+        # create a new state, where you force init_z to be the current markov_chain, but you don't pass in init_x
+        # then copy out the data vectors from this new state (getXValues())
+        # then you replace your state's vector's data fields with these values
+        # then you manually or otherwise recalculate the counts and the score --- write a full_score_and_count refresh
+        # or do the state-swapping thing, where you switch points
+        
+        pass
+    
+    def transition(self,numSteps=1, regen_data=False):
         for counter in range(numSteps):
             self.transition_z()
             self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
             self.transition_beta() ##may do nothing if infer_beta == "FIXED"
+            if regen_data:
+                self.transition_x()
             ##
             if self.state.verbose:
                 hf.printTS("Starting iteration: ", self.infer_z_count)
@@ -197,16 +158,14 @@ class DPMB():
                 print
             
     def extract_state_summary(self):
+        print "Z: " + str(self.state.getZIndices())
+        print "score: " + str(self.state.score)
+        print "num_clusters: " + str(len(self.state.cluster_list))
+        
         return {
             "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
             ,"score":self.state.score
-            ,"numClusters":self.state.numClustersDyn()
+            ,"numClusters":len(self.state.cluster_list)
             ,"timing":self.state.timing
-            ,"state":self.state.clone()
+            ,"state":self.state.get_flat_dictionary()
             }
-
-    def sample_zs(self):
-        raise Exception("not implemented")
-        
-    def sample_xs(self):
-        raise Exception("not implemented")

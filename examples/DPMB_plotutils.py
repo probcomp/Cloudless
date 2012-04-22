@@ -13,6 +13,11 @@ def log_conditional_to_norm_prob(logp_list):
     return np.exp(logp_vec)
 
 def plot_state(state,gen_state=None,interpolation="nearest",**kwargs):
+    # FIXMEs FOR DAN TO IMPLEMENT:
+    # - add z conditional histogram (with red vertical bar for current value)
+    # - add red vertical bar for current value of alpha, and for beta_1
+    # - make all part of one figure, with subplots (state view on left, three bar charts on right)
+    
     ##sort by attributed state and then gen_state if available
     if gen_state is not None:
         mult_factor = np.round(np.log10(len(gen_state["phis"])))

@@ -78,7 +78,9 @@ class AsyncMemoize:
             else:
                 # we are running locally
                 try:
-                    res = apply(self.f, args)
+                    #print "calling on args: " + str(args)
+                    #print "f: " + str(self.f)
+                    res = self.f(*args)
                     self.memo[key] = res
                     return res
                 except Exception as e:

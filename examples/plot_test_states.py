@@ -8,75 +8,77 @@ import numpy as np
 import matplotlib.pylab as pylab
 
 
-state_list = []
-init_z = None ## for init_z in [1,None,"N"]:
-DATASET_SPEC = {"gen_seed":4, "num_cols":16, "num_rows":32, "init_alpha":1, "init_betas":np.repeat(.1,16), "init_z":init_z, "init_x":None}
-INF_SPEC = {"inf_seed":0,"infer_alpha":"GIBBS","infer_beta":"GIBBS"}
-
-state = ds.DPMB_State(**DATASET_SPEC)
-state_list.append(state)
-dp.plot_state(state)
-
-
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2**(j+1) for j in range(4)]:
+for num_clusters in [2**(j+1) for j in range(3)]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 16
-    dataset_spec["num_rows"] = 32
-    dataset_spec["init_alpha"] = 1.0 #FIXME: could make it MLE alpha later
-    dataset_spec["init_beta"] = np.repeat(0.01, dataset_spec["num_cols"])
-    dataset_spec["init_z"] = ("balanced", num_clusters)
+    dataset_spec["num_cols"] = 8
+    dataset_spec["num_rows"] = 8
+    dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
+    dataset_spec["gen_betas"] = np.repeat(0.01, dataset_spec["num_cols"])
+    dataset_spec["gen_z"] = ("balanced", num_clusters)
+    dataset_spec["N_test"] = 5
     ALL_DATASET_SPECS.append(dataset_spec)
 
-memoized_gen_problem = Cloudless.memo.AsyncMemoize(...) #FIXME
-# generate the actual datasets, by mapping dataset_spec through gen_problem
-for dataset_spec in ALL_DATASET_SPEC:
-    memoized_gen_problem(**dataset_spec)
-    
+print "Generated " + str(len(ALL_DATASET_SPECS)) + " dataset specs!"
+
+ALL_PROBLEMS = []
+for dataset_spec in ALL_DATASET_SPECS:
+    problem = hf.gen_problem(dataset_spec)
+    ALL_PROBLEMS.append(problem)
+
+print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
+
+# now we have, in ALL_PROBLEMs, the dataset specs, along with training
+# data, test data, the generating zs for the training data, and the average
+# log probability of the test data under the generating model
+
+# NOTE: Can clean up using itertools.product()
 ALL_RUN_SPECS = []
-for dataset_spec in ALL_DATSET_SPECS:
-    for inf_seed in range(5):
-        xs = memoized_gen_problem(dataset_spec)["xs"]
-        # store xs in run_spec. this is the training data that the given run will be run on
-        pass
-    # FIXME: complete iteration over different possibilities, mirroring the above
+num_iters = 20
+count = 0
+for problem in ALL_PROBLEMS:
+    for infer_seed in range(5):
+        for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
+            for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
+                for infer_do_alpha_inference in [True, False]:
+                    for infer_do_betas_inference in [True, False]:
+                        for infer_init_z in [1, "N", "P"]:
+                            run_spec = {}
+                            run_spec["num_iters"] = num_iters
+                            run_spec["infer_seed"] = infer_seed
+                            run_spec["infer_init_alpha"] = infer_init_alpha
+                            run_spec["infer_init_betas"] = infer_init_betas
+                            run_spec["infer_do_alpha_inference"] = infer_do_alpha_inference
+                            run_spec["infer_do_betas_inference"] = infer_do_betas_inference
+                            run_spec["infer_init_z"] = infer_init_z
+                            run_spec["problem"] = problem
+                            ALL_RUN_SPECS.append(run_spec)
+
+print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"
+# until success:
+ALL_RUN_SPECS = ALL_RUN_SPECS[:1]
+
+print "Running inference on " + str(len(ALL_RUN_SPECS)) + " problems..."
 
 # now request the inference
-memoized_infer = Cloudless.memo.AsyncMemoize(...) #FIXME
+import sys
+sys.path.append("c://")
+import Cloudless
+reload(Cloudless)
+import Cloudless.memo
+reload(Cloudless.memo)
+
+memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, override=True) #FIXME once we've debugged, we can eliminate this override
+
+print "Created memoizer"
+
 for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
 # now you can interactively call
-plot_measurement(memoized_infer, "num_clusters", ALL_DATASET_SPECS[0])
-plot_measurement(memoized_infer, ("ari", memoized_gen_problem(ALL_DATASET_SPECS[0])["zs"]), ALL_DATASET_SPECS[0])
-                                  
-
-# for NUM_CLUSTERS in [8]: ## [2,4,8,16,32]:
-#     POINTS_PER_CLUSTER = DATAPOINTS/NUM_CLUSTERS
-#     gen_state_with_data = hf.gen_dataset(gen_seed=GEN_SEED, gen_rows=None, gen_cols=COLS, gen_alpha=10
-#                                          , gen_beta=GEN_BETA, zDims=np.repeat(POINTS_PER_CLUSTER,NUM_CLUSTERS))
-#     state = ds.DPMB_State(None,paramDict={"alpha":1,"betas":np.repeat(1.0,COLS)}
-#                           ,dataset={"xs":gen_state_with_data["observables"]},init_method=None
-#                           ,infer_alpha={"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100}
-#                           ,infer_beta={"method":"DISCRETE_GIBBS","low_val":low_val,"high_val":high_val,"n_grid":100})
-    
-#     state.refresh_counts(gen_state_with_data["gen_state"]["zs"])
-#     fh1,fh2,fh3 = dp.plot_state(state=state)
-#     fh1.title("NUM_CLUSTERS="+str(NUM_CLUSTERS))
-
-# after you make model.extract_state_summary() contain the state
-# sequence for every iteration (remember to copy! otherwise you may
-# see overwriting), then write something very similar to the above,
-# but using gen_sample instead of gen_dataset, and pulling the state
-# out of the summary at iteration 0 (after initialization, but before
-# the first gibbs scan).
-#
-# the goal is to test that all the initialization glue really works.
-#
-# future: could be interesting to look at after one iteration too.
-#
-# at the end: running this test script should do the "draw datasets
-# according to truth, and also after initialization" and dump the results
-# into a directory.
+target_problem = ALL_PROBLEMS[0]
+hf.plot_measurement(memoized_infer, "num_clusters", target_problem)
+#hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem)
+#hf.plot_measurement(memoized_infer, "predictive", target_problem)

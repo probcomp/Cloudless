@@ -1,71 +1,158 @@
 import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
 import DPMB as dm
+import pylab
 ##
 import pdb
 
-##per vikash's outline: https://docs.google.com/document/d/16iLc2jjtw7Elxy22wyM_TsSPYwW0KOErWKIpFX5k8Y8/edit
-# FIXME: later, when we support predictive accuracy assessments, include train/test split stuff here
-def gen_problem(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z):
-    state = ds.DPMB_State(gen_seed, gen_cols, gen_rows, gen_alpha, gen_beta, gen_z, None)
-    ##return state.get_flat_dictionary() ## all you need is test_train_split unless ??
-    ##N_test isn't saved in _State initialization.  Unless it is, need to extract test_train_split (at least in addition to flat_dictionary)
-    ##alternatively, whoever runs gen_problem should know state generation conditions and test_train_split's return value is simpler to work with
-    return state.test_train_split()
-##DONE? #FIXME: finish get_flat_dictionary from DPMB_State (mirroring clone)
+# takes in a dataset spec
+# returns a dictionary describing the problem, containing:
+# out["dataset_spec"] --- input dataset spec
+# out["zs"] --- generating zs for training data
+# out["xs"] --- list of raw vectors for the training data
+# out["test_xs"] --- list of raw vectors for the test data
+# out["test_lls_under_gen"] --- list of the log predictive probabilities of the test vectors under the generating model
+
+def gen_problem(dataset_spec):
+    # generate a state, initialized according to the generation parameters from dataset spec,
+    # containing all the training data only
+    state = ds.DPMB_State(dataset_spec["gen_seed"],
+                          dataset_spec["num_cols"],
+                          dataset_spec["num_rows"],
+                          init_alpha=dataset_spec["gen_alpha"],
+                          init_betas=dataset_spec["gen_betas"],
+                          init_z=dataset_spec["gen_z"],
+                          init_x = None)
+    problem = {}
+    problem["dataset_spec"] = dataset_spec
+    problem["zs"] = state.getZIndices()
+    problem["xs"] = state.getXValues()
+    test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
+    problem["test_xs"] = test_xs
+    problem["test_lls_under_gen"] = test_lls
+    return problem
 
 def infer(run_spec):
-    dataset_spec = run_spec["dataset_spec"]
-    infer_spec = run_spec["infer_spec"]
-    num_iter = run_spec["num_iter"]
-    state = ds.DPMB_State(**datset_spec)
-    model = dm.DPMB(state=state,**infer_spec)
-    ret_list = []
-    ##capture initial states
-    ret_list.append({"summary":model.extract_state_summary,"flat_dict":state.get_flat_dictionary()})
-    for iter_num in range(num_iter):
-        model.transition()
-        ret_list.append({"summary":model.extract_state_summary,"flat_dict":state.get_flat_dictionary()})
-    return ret_list
-    # returns a list of dictionaries, one per iter. each dict contains:
-    #   - a dict of timing for each kernel
-    #   - a state as a flattened dictionary
-    # look for max iterations and xs (the training data, for initializing the DPMB_State that inference will be done on) inside run_spec
-    # FIXME: Complete
-    pass
+    problem = run_spec["problem"]
+    dataset_spec = problem["dataset_spec"]
+
+    print "doing run: "
+    for (k, v) in run_spec.items():
+        print "   " + str(k) + " ---- " + str(v)
+        
+    print "initializing"
+    
+    initial_state = ds.DPMB_State(run_spec["infer_seed"],
+                                  dataset_spec["num_cols"],
+                                  dataset_spec["num_rows"],
+                                  init_alpha = run_spec["infer_init_alpha"],
+                                  init_betas = run_spec["infer_init_betas"],
+                                  init_z = run_spec["infer_init_z"],
+                                  init_x = problem["xs"])
+
+    print "...initialized"
+    
+    transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
+                           state = initial_state,
+                           infer_alpha = run_spec["infer_do_alpha_inference"],
+                           infer_beta = run_spec["infer_do_betas_inference"])
+
+    summaries = []
+
+    summaries.append(transitioner.extract_state_summary())
+
+    print "saved initialization"
+    
+    for i in range(run_spec["num_iters"]):
+        transitioner.transition()
+        print "finished doing iteration" + str(i)
+        summaries.append(transitioner.extract_state_summary())
+        print "finished saving iteration" + str(i)
+
+    return summaries
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
     # "num_clusters"
-    # "alpha"
-    # "beta"
-    # ("ari", z_indices_vec)
-    # work by reconstituting states from the flat dictionary list in one_runs_data[i]["flat_state"] and then applying the desired accessor
-    pass
+    # "alpha" FIXME
+    # "beta" FIXME
+    # ("ari", z_indices_vec) FIXME checking that z_indices is in the right form, etc etc
+    # "predictive" FIXME
+    # "score" FIXME
+    if which_measurement == "num_clusters":
+        return [summary["numClusters"] for summary in one_runs_data]
+    else:
+        raise Exception("not implemented yet: " + str(which_measurement))
 
-# FIXME: a state should know how to plot itself. calling that method, on a state, should dump out the figure, to a specified filename
+# FIXME: do generate_from_prior test (to make Ryan happy)
 
-def plot_measurement(memoized_infer, which_measurement, which_dataset):
-    # FIXME: trawl through memoized_infer.iter(), finding the datasets that match
-    # all_runs, finding the datasets matching which_dataset, and then make the pair of plots for which_measurement
-    # by first extracting the measurements from memoized_infer 
-    pass
+def plot_measurement(memoized_infer, which_measurement, target_problem):
+    matching_runs = []
+    matching_summaries = []
+    
+    for (args, summaries) in memoized_infer.iter():
+        run_spec = args[0]
+        if run_spec["problem"] == target_problem:
+            matching_runs.append(run_spec)
+            matching_summaries.append(summaries)
 
-def test_model(test_data, sampled_state):
-    # computes the sum (not average) predictive probability of the the test_data
-    sampled_prob = 0
-    for data in test_data:
-        sampled_prob += test_model_helper(data,sampled_state["thetas"],sampled_state["phis"])
-    return sampled_prob
+    if len(matching_summaries) == 0:
+        res = memoized_infer.report_status()
+        if len(res["failures"]) > 0:
+            print "**********************************************************"
+            print "FIRST EXCEPTION: "
+            print "**********************************************************"
+            print res["failures"][0][1]
+        raise Exception("No data to plot with these characteristics!")
+    
+    matching_measurements = []
+    matching_linespecs = []
+    for (run, summary) in zip(matching_runs, matching_summaries):
+        matching_measurements.append(extract_measurement(which_measurement, summary))
+        linespec = {}
 
-def test_model_helper(data,thetas,phis):
-    boolIdx = np.array(data,dtype=type(True))
-    runSum = 0
-    for theta,phi in zip(thetas,phis):
-        runSum += np.exp(np.log(phi) + np.log(theta[boolIdx]).sum() + np.log(1-theta[~boolIdx]).sum())
-    return np.log(runSum)
+        # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
+        if run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
+            linespec["color"] = "red"
+        else:
+            linespec["color"] = "black"
+
+        # linestyle for initialization
+        init_z = run["infer_init_z"]
+        if init_z == 1:
+            linespec["linestyle"] = "-"
+        elif init_z == "N":
+            linespec["linestyle"] = "--"
+        else:
+            linespec["linestyle"] = ":"
+            
+        matching_linespecs.append(linespec)
+
+    # FIXME: enable plots. still need to debug timing ***urgent***
+    return
+
+    pylab.figure()
+
+    #import pdb
+    #pdb.set_trace()
+
+    pylab.subplot(211)
+    for measurement,linespec in zip(matching_measurements,matching_linespecs):
+        pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
+
+    pylab.subplot(212)
+    for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+        xs = extract_time_elapsed_vs_iterations(summary)
+        pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
+        
+    # FIXME FOR DAN TO IMPLEMENT PLOTTING THINGS VERSUS ITERATION
+    ##measurements are actual values
+    
+    # FIXME: add something which creates a second plot that calculates wallclock as a function of iter
+    #        and replots with that, below
 
 def calc_ari(group_idx_list_1,group_idx_list_2):
+    # FIXME: be sure that the canonicalized vectors coming out of the above code go into ARI correctly
     ##https://en.wikipedia.org/wiki/Rand_index#The_contingency_table
     ##presumes group_idx's are numbered sequentially starting at 0
     Ns,As,Bs = gen_contingency_data(group_idx_list_1,group_idx_list_2)
@@ -75,6 +162,18 @@ def calc_ari(group_idx_list_1,group_idx_list_2):
     b_sums = choose_2_sum(Bs)
     return ((n_choose_2*cross_sums - a_sums*b_sums)
             /(.5*n_choose_2*(a_sums+b_sums) - a_sums*b_sums))
+
+def extract_time_elapsed_vs_iterations(summary_seq):
+    out = []
+    cumsum = 0
+
+    for summary in summary_seq:
+        timing = summary["timing"]
+        iter_sum = sum(timing.values())
+        cumsum += iter_sum
+        out.append(cumsum)
+    
+    return out
 
 def choose_2_sum(x):
     return sum(x*(x-1)/2.0)
@@ -117,9 +216,13 @@ def renormalize_and_sample(logpstar_vec,verbose=False):
       else:
           randv = randv - p
 
-def cluster_predictive(vector,cluster,state):
+def cluster_vector_joint(vector,cluster,state):
+    # FIXME: Is np.log(0.5) correct? (Probably, since it comes from symmetry plus beta_d < 1.0.) How does
+    # this relate to the idea that we mix out of all-in-one by first finding the prior over zs (by first
+    # washing out the effect of the data, by raising the betas so high that all clusters are nearly perfectly
+    # likely to be noisy)
     alpha = state.alpha
-    numVectors = state.numVectorsDyn() ##this value changes when generating the data
+    numVectors = len(state.get_all_vectors())
     if cluster is None or cluster.count() == 0:
         ##if the cluster would be empty without the vector, then its a special case
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
@@ -137,7 +240,7 @@ def cluster_predictive(vector,cluster,state):
         pdb.set_trace()
     if hasattr(state,"print_predictive") and state.print_predictive:
         mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) if "numerator1" in locals() else .5
-        print retVal.round(2),alpha_term.round(2),data_term.round(2),vector.vectorIdx,cluster.cluster_idx,mean_p
+        print retVal.round(2),alpha_term.round(2),data_term.round(2),state.vector_list.index(vector),state.cluster_list.index(cluster),mean_p
     if hasattr(state,"debug_predictive") and state.debug_predictive:
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
@@ -145,13 +248,13 @@ def cluster_predictive(vector,cluster,state):
 
 def create_alpha_lnPdf(state):
     lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
-    lnPdf = lambda alpha: (ss.gammaln(alpha) + state.numClustersDyn()*np.log(alpha)
-                           - ss.gammaln(alpha+state.numVectorsDyn()) + lnProdGammas)
+    lnPdf = lambda alpha: (ss.gammaln(alpha) + len(state.cluster_list)*np.log(alpha)
+                           - ss.gammaln(alpha+len(state.vector_list)) + lnProdGammas)
     return lnPdf
 
 def create_beta_lnPdf(state,col_idx):
     S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
-    R_list = [len(cluster.vectorIdxList) - cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] for cluster in state.cluster_list]
     beta_d = state.betas[col_idx]
     lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
