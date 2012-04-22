@@ -35,6 +35,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # log probability of the test data under the generating model
 
 # NOTE: Can clean up using itertools.product()
+# http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
 num_iters = 20
 count = 0

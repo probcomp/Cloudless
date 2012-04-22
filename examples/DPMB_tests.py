@@ -108,7 +108,7 @@ for gen_seed in range(1000):
     beta_0_list.append(state.betas[0])
     cluster_0_count_list.append(state.cluster_list[0].count())
     num_clusters_list.append(len(state.cluster_list))
-##only the first one is appending?
+
 pylab.figure()
 pylab.subplot(411)
 pylab.hist(np.log(alpha_list))
@@ -137,14 +137,15 @@ pylab.title("num_clusters")
 # can automate "are these two histograms similar enough?" by normalizing them into probability distribution estimates, and running a Kolmogorov-Smirnof test
 # but for starters, just eyeballing is enough
 
+start_ts = datetime.datetime.now()
 GEN_SEED = 1
 NUM_COLS = 8
 NUM_ROWS = 8
 INIT_ALPHA = None
 INIT_BETAS = None
 INIT_X = None
-EVERY_N = 2
-NUM_ITERS = 20
+EVERY_N = 50
+NUM_ITERS = 1000
 state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=None,init_x=INIT_X)
 model = dm.DPMB(state=state,inf_seed=0,infer_alpha=True,infer_beta=True)
 ##
@@ -161,10 +162,25 @@ for iter_num in range(NUM_ITERS):
         num_clusters_list.append(len(state.cluster_list))
 
     prior_zs = np.sort(state.getZIndices()).tolist() ## could there be an issue with inference over canonical clustering? permuate the data?
-    state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
+    state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
     model.state = state
 
-    
+print "Time delta: ",datetime.datetime.now()-start_ts
+
+pylab.figure()
+pylab.subplot(411)
+pylab.hist(np.log(alpha_list))
+pylab.title("alpha (log10)")
+pylab.subplot(412)
+hist(np.log(beta_0_list))
+pylab.title("beta_0 (log10)")
+pylab.subplot(413)
+hist(num_datapoints_in_cluster_0_list)
+pylab.title("num_datapoints_in_cluster_0")
+pylab.subplot(414)
+hist(num_clusters_list)
+pylab.title("num_clusters")
+
 # for the 8 by 8 data matrix that we started to study today:
 # - create a balanced 4-cluster problem with beta_d = 0.05 or so (so very clean data)
 # - initialize to all-in-one and all-apart
