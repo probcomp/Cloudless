@@ -26,8 +26,8 @@ class DPMB_State():
         nr.seed(int(np.clip(gen_seed,0,np.inf)))
         ##
         # note: no score modification here, because of uniform hyperpriors
-        self.alpha = init_alpha if init_alpha is not None else nr.uniform(alpha_min,alpha_max)
-        self.betas = init_betas if init_betas is not None else nr.uniform(beta_min,beta_max,self.num_cols)
+        self.alpha = init_alpha if init_alpha is not None else 10.0**nr.uniform(np.log10(alpha_min),np.log10(alpha_max))
+        self.betas = init_betas if init_betas is not None else 10.0**nr.uniform(np.log10(beta_min),np.log10(beta_max),self.num_cols)
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
@@ -37,27 +37,27 @@ class DPMB_State():
 
         # FIXME: address issue of Gibbs-type initialization, e.g. to get sharper
         #        results for the convergence of the sampler
-        for r in range(num_rows):
+        for R in range(num_rows):
             cluster = None
             if init_z is None:
                 cluster = self.generate_cluster_assignment()
-            elif init_z == 1: ##all in one cluster
+            elif type(init_z) == int and init_z == 1: ##all in one cluster
                 cluster = self.generate_cluster_assignment(force_last=True)
             elif init_z == "N": ##all apart
                 cluster = self.generate_cluster_assignment(force_new=True)
             elif isinstance(init_z, tuple) and init_z[0] == "balanced":
                 num_clusters = init_z[1]
-                if r % num_clusters == 0:
+                if R % num_clusters == 0:
                     # create a new cluster
                     cluster = self.generate_cluster_assignment(force_new=True)
                 else:
                     # use the last cluster
                     cluster = self.generate_cluster_assignment(force_last=True)
             elif isinstance(init_z, list):
-                if init_z[r] > len(self.cluster_list):
+                if init_z[R] >= len(self.cluster_list):
                     cluster = self.generate_cluster_assignment(force_new=True)
                 else:
-                    cluster = self.cluster_list[init_z[r]]
+                    cluster = self.cluster_list[init_z[R]]
             else:
                 raise Exception("invalid init_z: " + str(init_z))
 
@@ -65,7 +65,7 @@ class DPMB_State():
             if init_x is None:
                 vector = self.generate_vector(cluster = cluster)
             else:
-                vector = self.generate_vector(data = init_x[r], cluster = cluster)
+                vector = self.generate_vector(data = init_x[R], cluster = cluster)
 
     # sample a cluster from the CRP, possibly resulting in a new one being generated
     # if force_last is True, always returns the last generated cluster in the model
