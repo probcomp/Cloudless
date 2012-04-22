@@ -202,19 +202,22 @@ def gen_contingency_data(group_idx_list_1,group_idx_list_2):
     return Ns,As,Bs
 
 def renormalize_and_sample(logpstar_vec,verbose=False):
-  maxv = max(logpstar_vec)
-  scaled = [logpstar - maxv for logpstar in logpstar_vec]
-  logZ = reduce(np.logaddexp, scaled)
-  logp_vec = [s - logZ for s in scaled]
-  randv = nr.random()
-  for (i, logp) in enumerate(logp_vec):
-      p = np.exp(logp)
-      if randv < p:
-          if verbose:
-              print i,np.array(logp_vec).round(2)
-          return i
-      else:
-          randv = randv - p
+    p_vec = log_conditional_to_norm_prob(logpstar_vec)
+    randv = nr.random()
+    for (i, p) in enumerate(p_vec):
+        if randv < p:
+            if verbose:
+                print i,np.array(np.log(p_vec)).round(2)
+            return i
+        else:
+            randv = randv - p
+
+def log_conditional_to_norm_prob(logp_list):
+    maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    logp_vec = [s - logZ for s in scaled]
+    return np.exp(logp_vec)
 
 def cluster_vector_joint(vector,cluster,state):
     # FIXME: Is np.log(0.5) correct? (Probably, since it comes from symmetry plus beta_d < 1.0.) How does
@@ -285,5 +288,3 @@ def printTS(printStr):
 
 def listCount(listIn):
     return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
-
-

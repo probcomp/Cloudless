@@ -181,6 +181,7 @@ pylab.subplot(414)
 hist(num_clusters_list)
 pylab.title("num_clusters")
 
+
 # for the 8 by 8 data matrix that we started to study today:
 # - create a balanced 4-cluster problem with beta_d = 0.05 or so (so very clean data)
 # - initialize to all-in-one and all-apart
