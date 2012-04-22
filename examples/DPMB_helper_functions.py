@@ -297,6 +297,25 @@ def calc_beta_conditional(state,col_idx):
     ##
     return logp_list,lnPdf,grid
 
+def calculate_cluster_conditional(state,vector):
+    ##vector should be unassigned
+    ##new_cluster is auto appended to cluster list
+    ##and pops off when vector is deassigned
+
+    # FIXME: if there is already an empty cluster (either because deassigning didn't clear it out,
+    #        or for some other reason), then we'll have a problem here. maybe a crash, maybe just
+    #        incorrect probabilities.
+    new_cluster = ds.Cluster(state)
+    state.cluster_list.append(new_cluster)
+    ##
+    conditionals = []
+    for cluster in state.cluster_list:
+        cluster.assign_vector(vector)
+        conditionals.append(state.score)
+        cluster.deassign_vector(vector)
+    ##
+    return conditionals
+
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
     return mle

@@ -112,7 +112,7 @@ class DPMB_State():
     def remove_vector(self, vector):
         # first we deassign it
         vector.cluster.deassign_vector(vector)
-        vector.cluster = None
+        vector.cluster = None ##deassign does this as well
         # now we remove it
         self.vector_list.remove(vector)
 
@@ -207,7 +207,7 @@ class DPMB_State():
             pdb.set_trace()
         self.score += scoreDelta
 
-    def plot_state(self,gen_state=None,interpolation="nearest",**kwargs):
+    def plot(self,gen_state=None,interpolation="nearest",**kwargs):
         # FIXMEs FOR DAN TO IMPLEMENT:
         # - add z conditional histogram (with red vertical bar for current value)
         # - add red vertical bar for current value of alpha, and for beta_1
@@ -237,16 +237,32 @@ class DPMB_State():
         norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh2 = pylab.figure()
         pylab.bar(np.log(grid),norm_prob)
+        pylab.vlines(self.alpha,*fh2.get_axes()[0].get_ylim())
         pylab.title("Alpha conditional posterior")
 
         ##beta_i
-        logp_list,lnPdf,grid = hf.calc_beta_conditional(self,0)
+        beta_idx = 0
+        logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
         norm_prob = hf.log_conditional_to_norm_prob(logp_list)
         fh3 = pylab.figure()
         pylab.bar(np.log(grid),norm_prob)
+        pylab.vlines(self.betas[beta_idx],*fh3.get_axes()[0].get_ylim())
         pylab.title("Beta conditional posterior")
-        ##
-        return fh1,fh2,fh3
+
+        ##cluster assignemt
+        vector = self.vector_list[0]
+        cluster = vector.cluster
+        cluster_idx = self.cluster_list.index(cluster)
+        cluster.deassign_vector(vector)
+        # calculate the conditional
+        score_vec = hf.calculate_cluster_conditional(self,vector)
+        norm_prob = hf.log_conditional_to_norm_prob(score_vec)
+        fh4 = pylab.figure()
+        pylab.bar(norm_prob)
+        pylab.vlines(cluster_idx,*fh4.get_axes()[0].get_ylim())
+        pylab.title("Cluster conditional posterior")
+        
+        return fh1,fh2,fh3,fh4
 
 
 class Vector():

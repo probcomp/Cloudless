@@ -16,25 +16,6 @@ class DPMB():
         self.infer_beta = infer_beta
         ##
         self.transition_z_count = 0
-
-    def calculate_cluster_conditional(self,vector):
-        ##vector should be unassigned
-        ##new_cluster is auto appended to cluster list
-        ##and pops off when vector is deassigned
-
-        # FIXME: if there is already an empty cluster (either because deassigning didn't clear it out,
-        #        or for some other reason), then we'll have a problem here. maybe a crash, maybe just
-        #        incorrect probabilities.
-        new_cluster = ds.Cluster(self.state)
-        self.state.cluster_list.append(new_cluster)
-        
-        conditionals = []
-        for cluster in self.state.cluster_list:
-            cluster.assign_vector(vector)
-            conditionals.append(self.state.score)
-            cluster.deassign_vector(vector)
-            
-        return conditionals
     
     def transition_alpha_discrete_gibbs(self):
         start_dt = datetime.datetime.now()
@@ -93,7 +74,7 @@ class DPMB():
             vector.cluster.deassign_vector(vector)
             
             # calculate the conditional
-            score_vec = self.calculate_cluster_conditional(vector)
+            score_vec = hf.calculate_cluster_conditional(self.state,vector)
 
             # sample an assignment
             draw = hf.renormalize_and_sample(score_vec)
