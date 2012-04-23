@@ -92,12 +92,14 @@ def extract_measurement(which_measurement, one_runs_data):
 
 # FIXME: do generate_from_prior test (to make Ryan happy)
 
-def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
+def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
     matching_runs = []
     matching_summaries = []
     
     for (args, summaries) in memoized_infer.iter():
         run_spec = args[0]
+        if run_spec_filter is not run_spec_filter(run_spec):
+            continue
         if run_spec["problem"] == target_problem:
             matching_runs.append(run_spec)
             matching_summaries.append(summaries)

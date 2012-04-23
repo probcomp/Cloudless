@@ -101,6 +101,8 @@ print "Created memoizer"
 for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
+run_spec_filter = lambda x: x["infer_init_z"]==1
+
 # now you can interactively call
 for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
     # FIXME : temporary workaround for gen_z bug
@@ -116,8 +118,9 @@ for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
     config_str = "_".join([col_str,row_str,cluster_str])    
     # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
     #                     ,title_str="num_clusters",ylabel_str="num_clusters")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png"
-                        ,title_str=[config_str,"ari"],ylabel_str="ari")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
+                        ,save_str="ari_" + config_str + ".png",title_str=[config_str,"ari"],ylabel_str="ari"
+                        ,legend_args={"ncol":2,"markerscale":2})
     
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
