@@ -103,8 +103,8 @@ for run_spec in ALL_RUN_SPECS:
 
 # now you can interactively call
 target_problem = ALL_PROBLEMS[0]
-hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters.jpg")
-hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari.jpg")
+hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters.png")
+hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari.png")
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
 # with open("pickled_jobs.pkl","wb") as fh:
