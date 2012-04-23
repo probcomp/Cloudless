@@ -40,13 +40,13 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2**(j+1) for j in [2]]:
+for num_clusters in [2,16,64]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 8
-    dataset_spec["num_rows"] = 64
+    dataset_spec["num_cols"] = 16
+    dataset_spec["num_rows"] = 1024
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
-    dataset_spec["gen_betas"] = np.repeat(0.01, dataset_spec["num_cols"])
+    dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", num_clusters)
     dataset_spec["N_test"] = 5
     ALL_DATASET_SPECS.append(dataset_spec)
@@ -67,7 +67,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 20
+num_iters = 10
 count = 0
 for problem in ALL_PROBLEMS:
     for infer_seed in range(1):
@@ -102,9 +102,10 @@ for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
 # now you can interactively call
-target_problem = ALL_PROBLEMS[0]
-hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters.png")
-hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari.png")
+for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
+    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + str(problem_idx) + ".png")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + str(problem_idx) + ".png")
+    
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
 # with open("pickled_jobs.pkl","wb") as fh:
