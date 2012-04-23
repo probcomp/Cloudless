@@ -40,16 +40,17 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2,8,32]:##[2**(j+1) for j in [2]]:
-    dataset_spec = {}
-    dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 64
-    dataset_spec["num_rows"] = 256
-    dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
-    dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
-    dataset_spec["gen_z"] = ("balanced", num_clusters)
-    dataset_spec["N_test"] = 5
-    ALL_DATASET_SPECS.append(dataset_spec)
+for num_clusters in [4,16,64]:##[2**(j+1) for j in [2]]:
+    for num_cols in [64,128]:
+        dataset_spec = {}
+        dataset_spec["gen_seed"] = 0
+        dataset_spec["num_cols"] = num_cols
+        dataset_spec["num_rows"] = 512
+        dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
+        dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
+        dataset_spec["gen_z"] = ("balanced", num_clusters)
+        dataset_spec["N_test"] = 5
+        ALL_DATASET_SPECS.append(dataset_spec)
 
 print "Generated " + str(len(ALL_DATASET_SPECS)) + " dataset specs!"
 
@@ -67,7 +68,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 10
+num_iters = 200
 count = 0
 for problem in ALL_PROBLEMS:
     for infer_seed in range(1):
