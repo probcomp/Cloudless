@@ -43,7 +43,7 @@ ALL_DATASET_SPECS = []
 for num_clusters in [2,8,32]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 16
+    dataset_spec["num_cols"] = 64
     dataset_spec["num_rows"] = 256
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
@@ -103,8 +103,10 @@ for run_spec in ALL_RUN_SPECS:
 
 # now you can interactively call
 for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + str(problem_idx) + ".png",title_str="num_clusters")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + str(problem_idx) + ".png",title_str="ari")
+    config_str = ("cols" + str(target_problem["dataset_spec"]["num_cols"]) + "_rows"
+                  + str(target_problem["dataset_spec"]["num_rows"]) + "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]))
+    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png",title_str="num_clusters")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png",title_str="ari")
     
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
