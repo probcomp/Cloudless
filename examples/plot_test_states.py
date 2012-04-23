@@ -103,8 +103,8 @@ for run_spec in ALL_RUN_SPECS:
 
 # now you can interactively call
 for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + str(problem_idx) + ".png")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + str(problem_idx) + ".png")
+    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + str(problem_idx) + ".png",title_str="num_clusters")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + str(problem_idx) + ".png",title_str="ari")
     
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
