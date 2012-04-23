@@ -118,10 +118,13 @@ for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
     config_str = "_".join([col_str,row_str,cluster_str])    
     # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
     #                     ,title_str="num_clusters",ylabel_str="num_clusters")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
-                        ,save_str="ari_" + config_str + ".png",title_str=[config_str,"ari"],ylabel_str="ari"
-                        ,legend_args={"ncol":2,"markerscale":2})
-    
+    try:
+        hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
+                            ,save_str="ari_" + config_str + ".png",title_str=[config_str,"ari"],ylabel_str="ari"
+                            ,legend_args={"ncol":2,"markerscale":2})
+    except Exception, e:
+        print e
+        
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
 # with open("pickled_jobs.pkl","wb") as fh:
