@@ -183,7 +183,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
         pylab.ylabel(ylabel_str)
 
     pylab.subplot(313)
-    pylab.legend(line_list,matching_legendstrs,ncol=3)
+    pylab.legend(line_list,matching_legendstrs,ncol=3,prop={"size":"small"})
     
     pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
