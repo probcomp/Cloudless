@@ -184,7 +184,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
 
     pylab.subplot(212)
     if legend_args is None:
-        legend_args = {"ncol"=3,"prop"={"size":"small"}}
+        legend_args = {"ncol":3,"prop":{"size":"small"}}
     pylab.legend(line_list,matching_legendstrs,**legend_args)
     
     ##pylab.subplots_adjust(hspace=.4)
