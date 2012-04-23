@@ -92,7 +92,7 @@ def extract_measurement(which_measurement, one_runs_data):
 
 # FIXME: do generate_from_prior test (to make Ryan happy)
 
-def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=None,title_str=None):
+def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=None,title_str=None,ylabel_str=None):
     matching_runs = []
     matching_summaries = []
     
@@ -152,15 +152,29 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
     for measurement,linespec in zip(matching_measurements,matching_linespecs):
         pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
         pylab.xlabel("iter")
-
+    ##
     if title_str is not None:
-        pylab.title(title_str)
+        if type(title_str) is str:
+            pylab.title(title_str)
+        else:
+            pylab.title(title_str[0])
+    if ylabel_str is not None:
+        pylab.ylabel(ylabel_str)
+        
     pylab.subplot(212)
     for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
         xs = extract_time_elapsed_vs_iterations(summary)
         pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
         pylab.xlabel("time")
-
+    ##
+    if title_str is not None:
+        if type(title_str) is str:
+            pylab.title(title_str)
+        else:
+            pylab.title(title_str[1])
+    if ylabel_str is not None:
+        pylab.ylabel(ylabel_str)
+        
     if save_str is not None:
         pylab.savefig(save_str)
     
