@@ -113,45 +113,52 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
     
     matching_measurements = []
     matching_linespecs = []
+    matching_legendstrs = []
     for (run, summary) in zip(matching_runs, matching_summaries):
         matching_measurements.append(extract_measurement(which_measurement, summary))
         linespec = {}
-
+        legendstr = ""
         # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
         if run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
             linespec["color"] = "red"
+            legendstr += "infer_alpha=T,infer_beta=T"
         elif run["infer_do_alpha_inference"] and not run["infer_do_betas_inference"]:
             linespec["color"] = "green"
+            legendstr += "infer_alpha=T,infer_beta=F"
         elif not run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
             linespec["color"] = "magenta"
+            legendstr += "infer_alpha=F,infer_beta=T"
         else:
             linespec["color"] = "black"
+            legendstr += "infer_alpha=F,infer_beta=F"
 
         # linestyle for initialization
         init_z = run["infer_init_z"]
         if init_z == 1:
             linespec["linestyle"] = "-."
+            legendstr += ";init=all_together"
         elif init_z == "N":
             linespec["linestyle"] = "--"
+            legendstr += ";init=all_apart"
         elif init_z == None:
             linespec["linestyle"] = "-"
+            legendstr += ";init=according_to_prior"
         else:
             raise Exception("invalid init_z" + str(init_z))
         
             
         matching_linespecs.append(linespec)
-
+        matching_legendstrs.append(legendstr)
     # FIXME: enable plots. still need to debug timing ***urgent***
 
     pylab.figure()
 
-    #import pdb
-    #pdb.set_trace()
-
-    pylab.subplot(211)
+    pylab.subplot(311)
+    line_list = []
     for measurement,linespec in zip(matching_measurements,matching_linespecs):
-        pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
+        fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
         pylab.xlabel("iter")
+        line_list.append(fh[0])
     ##
     if title_str is not None:
         if type(title_str) is str:
@@ -161,11 +168,11 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
         
-    pylab.subplot(212)
+    pylab.subplot(312)
     for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
         xs = extract_time_elapsed_vs_iterations(summary)
         pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
-        pylab.xlabel("time")
+        pylab.xlabel("time (seconds)")
     ##
     if title_str is not None:
         if type(title_str) is str:
@@ -175,6 +182,9 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
 
+    pylab.subplot(313)
+    pylab.legend(line_list,matching_legendstrs)
+    
     pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
