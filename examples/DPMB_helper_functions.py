@@ -114,22 +114,28 @@ def plot_measurement(memoized_infer, which_measurement, target_problem):
         # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
         if run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
             linespec["color"] = "red"
+        elif run["infer_do_alpha_inference"] and not run["infer_do_betas_inference"]:
+            linespec["color"] = "green"
+        elif not run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
+            linespec["color"] = "magenta"
         else:
             linespec["color"] = "black"
 
         # linestyle for initialization
         init_z = run["infer_init_z"]
         if init_z == 1:
-            linespec["linestyle"] = "-"
+            linespec["linestyle"] = "-."
         elif init_z == "N":
             linespec["linestyle"] = "--"
+        elif init_z == None:
+            linespec["linestyle"] = "-"
         else:
-            linespec["linestyle"] = ":"
+            raise Exception("invalid init_z" + str(init_z))
+        
             
         matching_linespecs.append(linespec)
 
     # FIXME: enable plots. still need to debug timing ***urgent***
-    return
 
     pylab.figure()
 

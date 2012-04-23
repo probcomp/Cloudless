@@ -14,7 +14,7 @@ for num_clusters in [2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = 8
-    dataset_spec["num_rows"] = 16
+    dataset_spec["num_rows"] = 64
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.01, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", num_clusters)
@@ -40,12 +40,12 @@ ALL_RUN_SPECS = []
 num_iters = 20
 count = 0
 for problem in ALL_PROBLEMS:
-    for infer_seed in range(5):
+    for infer_seed in range(1):
         for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
             for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
                 for infer_do_alpha_inference in [True, False]:
                     for infer_do_betas_inference in [True, False]:
-                        for infer_init_z in [1, "N", "P"]:
+                        for infer_init_z in [1, "N", None]:
                             run_spec = {}
                             run_spec["num_iters"] = num_iters
                             run_spec["infer_seed"] = infer_seed
@@ -59,7 +59,7 @@ for problem in ALL_PROBLEMS:
 
 print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"
 # until success:
-ALL_RUN_SPECS = ALL_RUN_SPECS[:1]
+#ALL_RUN_SPECS = ALL_RUN_SPECS[:1]
 
 print "Running inference on " + str(len(ALL_RUN_SPECS)) + " problems..."
 
@@ -83,3 +83,20 @@ target_problem = ALL_PROBLEMS[0]
 hf.plot_measurement(memoized_infer, "num_clusters", target_problem)
 #hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem)
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
+
+# with open("pickled_jobs.pkl","wb") as fh:
+#     cPickle.dump({"memo":memoized_infer.memo,"ALL_RUN_SPECS":ALL_RUN_SPECS},fh)
+
+temp = []
+for spec in ALL_RUN_SPECS:
+    key = str((spec,))
+    if key  in memoized_infer.memo:
+        temp.append((spec,memoized_infer.memo[key]))
+
+len(temp)
+##prints 3
+
+psuedomemo_zipped = zip(ALL_RUN_SPECS,[memoized_infer.memo[str((spec,))] for spec in ALL_RUN_SPECS])
+with open("pickled_jobs.pkl","wb") as fh:
+    cPickle.dump({"psuedomemo_zipped":psuedomemo_zipped,"ALL_RUN_SPECS":ALL_RUN_SPECS},fh)
+
