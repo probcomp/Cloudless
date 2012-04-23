@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import DPMB_plotutils as dp
 reload(dp)
 import DPMB_State as ds
@@ -5,8 +7,6 @@ reload(ds)
 import DPMB_helper_functions as hf
 reload(hf)
 import numpy as np
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pylab as pylab
 ##
 import sys
