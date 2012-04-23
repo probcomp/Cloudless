@@ -112,9 +112,9 @@ for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
     gen_num_rows = len(target_problem["zs"])
     cluster_str = "_clusters" + str(gen_num_rows/gen_num_clusters) ## 
     config_str = (col_str + row_str + cluster_str)    
-    title_str = ["red:a=T,b=T\tgreen:a=T,b=F\tmagenta:a=F,b=T\tblack:a=F,b=F","-. :all_in_one\t--:all_apart\t-:according_to_prior"]
-    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png",title_str=title_str,ylabel="num_clusters")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png",title_str=title_str,ylabel="ari")
+    title_str = ["red:a=T,b=T   green:a=T,b=F   magenta:a=F,b=T   black:a=F,b=F","-. :all_in_one   --:all_apart   -:according_to_prior"]
+    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png",title_str=title_str,ylabel_str="num_clusters")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png",title_str=title_str,ylabel_str="ari")
     
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 

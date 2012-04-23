@@ -174,7 +174,8 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
             pylab.title(title_str[1])
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
-        
+
+    pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
     
