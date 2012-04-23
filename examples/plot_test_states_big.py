@@ -103,18 +103,21 @@ for run_spec in ALL_RUN_SPECS:
 
 # now you can interactively call
 for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    col_str = "_cols" + str(target_problem["dataset_spec"]["num_cols"])
-    row_str = "_rows" + str(target_problem["dataset_spec"]["num_rows"])
     # FIXME : temporary workaround for gen_z bug
     ##cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
     ##Must override for now till generation issue is fixed
     gen_num_clusters = target_problem["dataset_spec"]["gen_z"][1]
     gen_num_rows = len(target_problem["zs"])
-    cluster_str = "_clusters" + str(gen_num_rows/gen_num_clusters) ## 
-    config_str = (col_str + row_str + cluster_str)    
-    title_str = ["red:a=T,b=T   green:a=T,b=F   magenta:a=F,b=T   black:a=F,b=F","-. :all_in_one   --:all_apart   -:according_to_prior"]
-    hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png",title_str=title_str,ylabel_str="num_clusters")
-    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png",title_str=title_str,ylabel_str="ari")
+    workaround_num_clusters = gen_num_rows/gen_num_clusters
+    ##
+    col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
+    row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
+    cluster_str = "clusters" + str(workaround_num_clusters) ## 
+    config_str = "_".join([col_str,row_str,cluster_str])    
+    # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
+    #                     ,title_str="num_clusters",ylabel_str="num_clusters")
+    hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem,save_str="ari_" + config_str + ".png"
+                        ,title_str=[config_str,"ari"],ylabel_str="ari")
     
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 

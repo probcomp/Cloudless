@@ -153,7 +153,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
 
     pylab.figure()
 
-    pylab.subplot(311)
+    pylab.subplot(211)
     line_list = []
     for measurement,linespec in zip(matching_measurements,matching_linespecs):
         fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
@@ -168,24 +168,24 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
         
-    pylab.subplot(312)
-    for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
-        xs = extract_time_elapsed_vs_iterations(summary)
-        pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
-        pylab.xlabel("time (seconds)")
-    ##
-    if title_str is not None:
-        if type(title_str) is str:
-            pylab.title(title_str)
-        else:
-            pylab.title(title_str[1])
-    if ylabel_str is not None:
-        pylab.ylabel(ylabel_str)
+    # pylab.subplot(312)
+    # for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+    #     xs = extract_time_elapsed_vs_iterations(summary)
+    #     pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
+    #     pylab.xlabel("time (seconds)")
+    # ##
+    # if title_str is not None:
+    #     if type(title_str) is str:
+    #         pylab.title(title_str)
+    #     else:
+    #         pylab.title(title_str[1])
+    # if ylabel_str is not None:
+    #     pylab.ylabel(ylabel_str)
 
-    pylab.subplot(313)
+    pylab.subplot(212)
     pylab.legend(line_list,matching_legendstrs,ncol=3,prop={"size":"small"})
     
-    pylab.subplots_adjust(hspace=.4)
+    ##pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
     
