@@ -81,7 +81,13 @@ def extract_measurement(which_measurement, one_runs_data):
     # "score" FIXME
     if which_measurement == "num_clusters":
         return [summary["numClusters"] for summary in one_runs_data]
+    elif type(which_measurement)==tuple and  which_measurement[0]== "ari":
+        ##true_zs = one_runs_data["problem"]["dataset_spec"]["gen_z"]
+        true_zs = which_measurement[1]
+        return [calc_ari(summary["state"]["zs"],true_zs) for summary in one_runs_data]
     else:
+        import pdb
+        pdb.set_trace()
         raise Exception("not implemented yet: " + str(which_measurement))
 
 # FIXME: do generate_from_prior test (to make Ryan happy)

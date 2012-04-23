@@ -1,4 +1,4 @@
-##from IPython.parallel import *
+from IPython.parallel import *
 
 global remote_client
 remote_client = None
