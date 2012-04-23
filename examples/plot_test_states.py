@@ -40,11 +40,11 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2,16,64]:##[2**(j+1) for j in [2]]:
+for num_clusters in [2,8,32]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = 16
-    dataset_spec["num_rows"] = 1024
+    dataset_spec["num_rows"] = 256
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", num_clusters)
