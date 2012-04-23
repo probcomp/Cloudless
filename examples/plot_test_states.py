@@ -1,9 +1,39 @@
 import DPMB_plotutils as dp
 reload(dp)
-import DPMB_helper_functions as hf
-reload(hf)
 import DPMB_State as ds
 reload(ds)
+import DPMB_helper_functions as hf
+reload(hf)
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pylab as pylab
+##
+import sys
+import Cloudless
+reload(Cloudless)
+import Cloudless.memo
+reload(Cloudless.memo)
+
+
+# block 2
+# configure remote nodes
+# TODO: Clean up naming of load balanced vs direct views
+Cloudless.base.remote_mode()
+Cloudless.base.remote_exec('import Cloudless.examples.DPMB_plotutils as dp')
+Cloudless.base.remote_exec('reload(dp)')
+Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
+Cloudless.base.remote_exec('reload(ds)')
+Cloudless.base.remote_exec('import Cloudless.examples.DPMB_helper_functions as hf')
+Cloudless.base.remote_exec('reload(hf)')
+Cloudless.base.remote_exec('import numpy as np')
+Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
+import Cloudless.examples.DPMB_plotutils as dp
+reload(dp)
+import Cloudless.examples.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB_helper_functions as hf
+reload(hf)
 import numpy as np
 import matplotlib.pylab as pylab
 
@@ -64,13 +94,6 @@ print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"
 print "Running inference on " + str(len(ALL_RUN_SPECS)) + " problems..."
 
 # now request the inference
-import sys
-sys.path.append("c://")
-import Cloudless
-reload(Cloudless)
-import Cloudless.memo
-reload(Cloudless.memo)
-
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, override=True) #FIXME once we've debugged, we can eliminate this override
 
 print "Created memoizer"
