@@ -92,7 +92,7 @@ def extract_measurement(which_measurement, one_runs_data):
 
 # FIXME: do generate_from_prior test (to make Ryan happy)
 
-def plot_measurement(memoized_infer, which_measurement, target_problem):
+def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=None):
     matching_runs = []
     matching_summaries = []
     
@@ -151,12 +151,17 @@ def plot_measurement(memoized_infer, which_measurement, target_problem):
     pylab.subplot(211)
     for measurement,linespec in zip(matching_measurements,matching_linespecs):
         pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
+        pylab.xlabel("iter")
 
     pylab.subplot(212)
     for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
         xs = extract_time_elapsed_vs_iterations(summary)
         pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
-        
+        pylab.xlabel("time")
+
+    if save_str is not None:
+        pylab.savefig(save_str)
+    
     # FIXME FOR DAN TO IMPLEMENT PLOTTING THINGS VERSUS ITERATION
     ##measurements are actual values
     
