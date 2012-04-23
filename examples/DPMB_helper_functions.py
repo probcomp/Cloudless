@@ -121,28 +121,28 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
         # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
         if run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
             linespec["color"] = "red"
-            legendstr += "infer_alpha=T,infer_beta=T"
+            legendstr += "inf_a=T,inf_b=T"
         elif run["infer_do_alpha_inference"] and not run["infer_do_betas_inference"]:
             linespec["color"] = "green"
-            legendstr += "infer_alpha=T,infer_beta=F"
+            legendstr += "inf_a=T,inf_b=F"
         elif not run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
             linespec["color"] = "magenta"
-            legendstr += "infer_alpha=F,infer_beta=T"
+            legendstr += "inf_a=F,inf_b=T"
         else:
             linespec["color"] = "black"
-            legendstr += "infer_alpha=F,infer_beta=F"
+            legendstr += "inf_a=F,inf_b=F"
 
         # linestyle for initialization
         init_z = run["infer_init_z"]
         if init_z == 1:
             linespec["linestyle"] = "-."
-            legendstr += ";init=all_together"
+            legendstr += ";init=1"
         elif init_z == "N":
             linespec["linestyle"] = "--"
-            legendstr += ";init=all_apart"
+            legendstr += ";init=N"
         elif init_z == None:
             linespec["linestyle"] = "-"
-            legendstr += ";init=according_to_prior"
+            legendstr += ";init=P"
         else:
             raise Exception("invalid init_z" + str(init_z))
         
@@ -183,7 +183,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,save_str=
         pylab.ylabel(ylabel_str)
 
     pylab.subplot(313)
-    pylab.legend(line_list,matching_legendstrs)
+    pylab.legend(line_list,matching_legendstrs,ncol=3)
     
     pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
