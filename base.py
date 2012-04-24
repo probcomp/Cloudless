@@ -1,4 +1,6 @@
-from IPython.parallel import *
+import sys
+if sys.platform != "win32":
+    from IPython.parallel import *
 
 global remote_client
 remote_client = None

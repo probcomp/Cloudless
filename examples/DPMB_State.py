@@ -47,7 +47,8 @@ class DPMB_State():
                 cluster = self.generate_cluster_assignment(force_new=True)
             elif isinstance(init_z, tuple) and init_z[0] == "balanced":
                 num_clusters = init_z[1]
-                if R % num_clusters == 0:
+                mod_val = num_rows / num_clusters
+                if R % mod_val == 0:
                     # create a new cluster
                     cluster = self.generate_cluster_assignment(force_new=True)
                 else:

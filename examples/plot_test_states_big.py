@@ -10,6 +10,9 @@ import numpy as np
 import matplotlib.pylab as pylab
 ##
 import sys
+if sys.platform == "win32":
+    sys.path.append("c:/")
+    
 import Cloudless
 reload(Cloudless)
 import Cloudless.memo
@@ -19,15 +22,17 @@ reload(Cloudless.memo)
 # block 2
 # configure remote nodes
 # TODO: Clean up naming of load balanced vs direct views
-Cloudless.base.remote_mode()
-Cloudless.base.remote_exec('import Cloudless.examples.DPMB_plotutils as dp')
-Cloudless.base.remote_exec('reload(dp)')
-Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
-Cloudless.base.remote_exec('reload(ds)')
-Cloudless.base.remote_exec('import Cloudless.examples.DPMB_helper_functions as hf')
-Cloudless.base.remote_exec('reload(hf)')
-Cloudless.base.remote_exec('import numpy as np')
-Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
+if sys.platform != "win32":
+    Cloudless.base.remote_mode()
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB_plotutils as dp')
+    Cloudless.base.remote_exec('reload(dp)')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB_State as ds')
+    Cloudless.base.remote_exec('reload(ds)')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB_helper_functions as hf')
+    Cloudless.base.remote_exec('reload(hf)')
+    Cloudless.base.remote_exec('import numpy as np')
+    Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
+    
 import Cloudless.examples.DPMB_plotutils as dp
 reload(dp)
 import Cloudless.examples.DPMB_State as ds
@@ -40,11 +45,11 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2,8,32]:##[2**(j+1) for j in [2]]:
+for num_clusters in [2,8]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 128
-    dataset_spec["num_rows"] = 256
+    dataset_spec["num_cols"] = 8
+    dataset_spec["num_rows"] = 64
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", num_clusters)
@@ -67,7 +72,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 200
+num_iters = 3
 count = 0
 for problem in ALL_PROBLEMS:
     for infer_seed in range(1):
@@ -101,20 +106,15 @@ print "Created memoizer"
 for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
-run_spec_filter = lambda x: x["infer_init_z"]==1
+run_spec_filter = None ## lambda x: x["infer_init_z"] is None ## 
 
 # now you can interactively call
 for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    # FIXME : temporary workaround for gen_z bug
-    ##cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
-    ##Must override for now till generation issue is fixed
-    gen_num_clusters = target_problem["dataset_spec"]["gen_z"][1]
-    gen_num_rows = len(target_problem["zs"])
-    workaround_num_clusters = gen_num_rows/gen_num_clusters
-    ##
+    # FIXME : verify that the new gen_z works and the cluster_str below is correct
+    cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
     col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
     row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
-    cluster_str = "clusters" + str(workaround_num_clusters) ## 
+    cluster_str = "clusters" + str(cluster_str) ## 
     config_str = "_".join([col_str,row_str,cluster_str])    
     # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
     #                     ,title_str="num_clusters",ylabel_str="num_clusters")
