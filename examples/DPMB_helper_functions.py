@@ -74,7 +74,7 @@ def infer(run_spec):
         if "ari_seatbelt" in run_spec and run_spec["ari_seatbelt"] < calc_ari(summaries[-1]["state"]["zs"],problem["zs"]):
             summaries[-1]["break"] = "ari"
             break
-        
+            
     return summaries
 
 def extract_measurement(which_measurement, one_runs_data):
@@ -92,8 +92,6 @@ def extract_measurement(which_measurement, one_runs_data):
         true_zs = which_measurement[1]
         return [calc_ari(summary["state"]["zs"],true_zs) for summary in one_runs_data]
     else:
-        import pdb
-        pdb.set_trace()
         raise Exception("not implemented yet: " + str(which_measurement))
 
 # FIXME: do generate_from_prior test (to make Ryan happy)
@@ -101,7 +99,7 @@ def extract_measurement(which_measurement, one_runs_data):
 def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
     matching_runs = []
     matching_summaries = []
-    
+
     for (args, summaries) in memoized_infer.iter():
         run_spec = args[0]
         if run_spec_filter is not None and not run_spec_filter(run_spec):

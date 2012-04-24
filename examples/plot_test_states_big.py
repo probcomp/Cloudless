@@ -85,15 +85,15 @@ for problem in ALL_PROBLEMS[:3]:
                             run_spec["num_iters"] = num_iters
                             run_spec["infer_seed"] = infer_seed
                             run_spec["infer_init_alpha"] = infer_init_alpha
-                            run_spec["infer_init_betas"] = infer_init_betas
+                            run_spec["infer_init_betas"] = infer_init_betas.copy()
                             run_spec["infer_do_alpha_inference"] = infer_do_alpha_inference
                             run_spec["infer_do_betas_inference"] = infer_do_betas_inference
                             run_spec["infer_init_z"] = infer_init_z
                             run_spec["problem"] = problem
                             ##
                             run_spec["time_seatbelt"] = 5.0
-                            run_spec["ari_seatbelt"] = .2
-                            ALL_RUN_SPECS.append(run_spec)
+                            run_spec["ari_seatbelt"] = .9
+                            ALL_RUN_SPECS.append(run_spec) ## this seems to make the comparison fail copy.deepcopy(run_spec))
 
 print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"
 # until success:
