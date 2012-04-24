@@ -29,6 +29,7 @@ class DPMB():
             self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
             self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["run_sum"] += self.state.timing["alpha"]
 
     def transition_beta_discrete_gibbs(self):
         start_dt = datetime.datetime.now()
@@ -43,6 +44,7 @@ class DPMB():
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["run_sum"] += self.state.timing["betas"]
 
     def transition_alpha(self):
         if self.state.verbose:
@@ -95,6 +97,7 @@ class DPMB():
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["run_sum"] += self.state.timing["zs"]
 
     def transition_x():
         # regenerate new vector values, preserving the exact same clustering

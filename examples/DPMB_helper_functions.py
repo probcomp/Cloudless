@@ -68,7 +68,13 @@ def infer(run_spec):
         print "finished doing iteration" + str(i)
         summaries.append(transitioner.extract_state_summary())
         print "finished saving iteration" + str(i)
-
+        if "time_seatbelt" in run_spec and run_spec["time_seatbelt"] < summaries[-1]["timing"]["run_sum"]:
+            summaries[-1]["break"] = "time"
+            break
+        if "ari_seatbelt" in run_spec and run_spec["ari_seatbelt"] < calc_ari(summaries[-1]["state"]["zs"],problem["zs"]):
+            summaries[-1]["break"] = "ari"
+            break
+        
     return summaries
 
 def extract_measurement(which_measurement, one_runs_data):

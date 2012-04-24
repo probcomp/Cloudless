@@ -20,7 +20,7 @@ class DPMB_State():
         self.beta_max = beta_max
         self.grid_N = grid_N
         ##
-        self.timing = {"alpha":0,"betas":0,"zs":0}
+        self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         nr.seed(int(np.clip(gen_seed,0,np.inf)))

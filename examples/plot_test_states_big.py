@@ -72,9 +72,9 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 3
+num_iters = 30
 count = 0
-for problem in ALL_PROBLEMS:
+for problem in ALL_PROBLEMS[:3]:
     for infer_seed in range(1):
         for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
             for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
@@ -90,6 +90,9 @@ for problem in ALL_PROBLEMS:
                             run_spec["infer_do_betas_inference"] = infer_do_betas_inference
                             run_spec["infer_init_z"] = infer_init_z
                             run_spec["problem"] = problem
+                            ##
+                            run_spec["time_seatbelt"] = 5.0
+                            run_spec["ari_seatbelt"] = .2
                             ALL_RUN_SPECS.append(run_spec)
 
 print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"
