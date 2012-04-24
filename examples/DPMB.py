@@ -67,8 +67,7 @@ class DPMB():
         start_dt = datetime.datetime.now()
         ##
         # for each vector
-        for vector in self.state.get_all_vectors():
-            # FIXME: randomize order?
+        for vector in nr.permutation(self.state.get_all_vectors()):
             
             # deassign it
             vector.cluster.deassign_vector(vector)
