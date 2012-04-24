@@ -74,7 +74,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 ALL_RUN_SPECS = []
 num_iters = 30
 count = 0
-for problem in ALL_PROBLEMS[:3]:
+for problem in ALL_PROBLEMS:
     for infer_seed in range(1):
         for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
             for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
@@ -130,5 +130,6 @@ for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
         
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
-# with open("pickled_jobs.pkl","wb") as fh:
-#     cPickle.dump({"memo":memoized_infer.memo,"ALL_RUN_SPECS":ALL_RUN_SPECS},fh)
+import cPickle
+with open("pickled_jobs.pkl","wb") as fh:
+    cPickle.dump(memoized_infer.memo,fh)
