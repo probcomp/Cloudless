@@ -1,7 +1,7 @@
 import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
 import DPMB as dm
-import pylab,matplotlib
+import pylab,matplotlib,cPickle
 ##
 import pdb
 
@@ -12,6 +12,24 @@ import pdb
 # out["xs"] --- list of raw vectors for the training data
 # out["test_xs"] --- list of raw vectors for the test data
 # out["test_lls_under_gen"] --- list of the log predictive probabilities of the test vectors under the generating model
+
+def pickle_asyncmemoize(asyncmemo,file_str):
+    with open(file_str,"wb") as fh:
+        cPickle.dump(asyncmemo.memo,fh)
+
+def unpickle_asyncmemoize(asyncmemo,file_str):
+    from numpy import array
+    with open(file_str,"rb") as fh:
+        pickled_memo = cPickle.load(fh)
+
+    ALL_RUN_SPECS = [eval(run_spec)[0] for run_spec in pickled_memo.keys()]
+    new_memo = dict(zip([str((run_spec,)) for run_spec in ALL_RUN_SPECS],pickled_memo.values()))
+    new_args = dict(zip([str((run_spec,)) for run_spec in ALL_RUN_SPECS],[(run_spec,) for run_spec in ALL_RUN_SPECS]))
+
+    asyncmemo.memo = new_memo
+    asyncmemo.args = new_args
+
+    return ALL_RUN_SPECS
 
 def gen_problem(dataset_spec):
     # generate a state, initialized according to the generation parameters from dataset spec,
@@ -104,10 +122,11 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_
         run_spec = args[0]
         if run_spec_filter is not None and not run_spec_filter(run_spec):
             continue
-        if run_spec["problem"] == target_problem:
+
+        if str(run_spec["problem"]) == str(target_problem): ##FIXME: This is a hack, it should work without making str
             matching_runs.append(run_spec)
             matching_summaries.append(summaries)
-
+            
     if len(matching_summaries) == 0:
         res = memoized_infer.report_status()
         if len(res["failures"]) > 0:
