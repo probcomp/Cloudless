@@ -151,7 +151,7 @@ class DPMB():
 
         return None
             
-    def extract_state_summary(self):
+    def extract_state_summary(self,true_zs=None):
         
         state_dict = {
             "alpha":self.state.alpha
@@ -162,8 +162,8 @@ class DPMB():
             ,"state":self.state.get_flat_dictionary()
             }
 
-        if self.calc_ari_func is not None:
-            state_dict["ari"] = self.calc_ari_func(self.state.getZIndices())
+        if true_zs is not None:
+            state_dict["ari"] = hf.calc_ari(true_zs,self.state.getZIndices())
         else:
             state_dict["ari"] = None
 
