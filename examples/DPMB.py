@@ -41,7 +41,7 @@ class DPMB():
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
-            delta_t = datetime.datetime.now() - start_dt
+            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
                 break 
 
@@ -94,7 +94,7 @@ class DPMB():
             # assign it
             cluster.assign_vector(vector)
 
-            delta_t = datetime.datetime.now() - start_dt
+            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
                 break  ## let logic below proceed
 
