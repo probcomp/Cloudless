@@ -236,13 +236,11 @@ def calc_ari(group_idx_list_1,group_idx_list_2):
 
 def extract_time_elapsed_vs_iterations(summary_seq):
     out = []
-    cumsum = 0
 
     for summary in summary_seq:
         timing = summary["timing"]
-        iter_sum = sum(timing.values())
-        cumsum += iter_sum
-        out.append(cumsum)
+        run_sum = timing["run_sum"]
+        out.append(run_sum)
     
     return out
 
