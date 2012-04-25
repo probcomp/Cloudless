@@ -47,7 +47,7 @@ ALL_DATASET_SPECS = []
 for num_clusters in [10]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 32
+    dataset_spec["num_cols"] = 16
     dataset_spec["num_rows"] = 1000
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
