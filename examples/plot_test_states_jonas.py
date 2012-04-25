@@ -74,12 +74,12 @@ ALL_RUN_SPECS = []
 num_iters = 30
 count = 0
 for problem in ALL_PROBLEMS:
-    for infer_seed in range(1):
+    for infer_seed in range(5):
         for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
             for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
-                for infer_do_alpha_inference in [True, False]:
-                    for infer_do_betas_inference in [True, False]:
-                        for infer_init_z in [1, "N", None]:
+                for infer_do_alpha_inference in False: ## [True, False]:
+                    for infer_do_betas_inference in False: ## [True, False]:
+                        for infer_init_z in [1]: ## [1, "N", None]:
                             run_spec = {}
                             run_spec["num_iters"] = num_iters
                             run_spec["infer_seed"] = infer_seed

@@ -120,7 +120,8 @@ def extract_measurement(which_measurement, one_runs_data):
 
 # FIXME: do generate_from_prior test (to make Ryan happy)
 
-def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
+def plot_measurement(memoized_infer, which_measurement, target_problem, by_time = True
+                     ,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
     matching_runs = []
     matching_summaries = []
 
@@ -186,11 +187,18 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_
 
     pylab.subplot(211)
     line_list = []
-    for measurement,linespec in zip(matching_measurements,matching_linespecs):
-        fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
-        pylab.xlabel("iter")
-        line_list.append(fh[0])
-    ##
+    if by_time:
+        for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+            xs = extract_time_elapsed_vs_iterations(summary)
+            fh = pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
+            pylab.xlabel("time (seconds)")
+            line_list.append(fh[0])
+    else:
+        for measurement,linespec in zip(matching_measurements,matching_linespecs):
+            fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
+            pylab.xlabel("iter")
+            line_list.append(fh[0])
+        
     if title_str is not None:
         if type(title_str) is str:
             pylab.title(title_str)
@@ -198,24 +206,10 @@ def plot_measurement(memoized_infer, which_measurement, target_problem,run_spec_
             pylab.title(title_str[0])
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
-        
-    # pylab.subplot(312)
-    # for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
-    #     xs = extract_time_elapsed_vs_iterations(summary)
-    #     pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
-    #     pylab.xlabel("time (seconds)")
-    # ##
-    # if title_str is not None:
-    #     if type(title_str) is str:
-    #         pylab.title(title_str)
-    #     else:
-    #         pylab.title(title_str[1])
-    # if ylabel_str is not None:
-    #     pylab.ylabel(ylabel_str)
 
     pylab.subplot(212)
     if legend_args is None:
-        legend_args = {"ncol":3,"prop":{"size":"small"}}
+        legend_args = {"ncol":2,"prop":{"size":"medium"}}
     pylab.legend(line_list,matching_legendstrs,**legend_args)
     
     ##pylab.subplots_adjust(hspace=.4)
