@@ -90,7 +90,7 @@ def infer(run_spec):
         ari_seatbelt = run_spec["ari_seatbelt"]
 
     for i in range(run_spec["num_iters"]):
-        ari_func = lambda state_zs : calc_ari(state_zs,problem["zs"]))
+        ari_func = lambda state_zs : calc_ari(state_zs,problem["zs"])
         transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,ari_func=ari_func)
         print "finished doing iteration" + str(i)
         summaries.append(transitioner.extract_state_summary())
