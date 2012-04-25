@@ -44,7 +44,7 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [4,32,128]: ## [2**(j+1) for j in [1,2,3,4,5]]:
+for num_clusters in [4]: ##,32,128]: ## [2**(j+1) for j in [1,2,3,4,5]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = 32
