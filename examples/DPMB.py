@@ -9,12 +9,11 @@ import pdb
 
 
 class DPMB():
-    def __init__(self,inf_seed,state,infer_alpha,infer_beta,calc_ari_func=None):
+    def __init__(self,inf_seed,state,infer_alpha,infer_beta):
         nr.seed(int(np.clip(inf_seed,0,np.inf))) ##who's random seed is used where?  And does it even matter (consider true inf_seed to be f(inf_seed,gen_seed))?
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
-        self.calc_ari_func = calc_ari_func
         ##
         self.transition_z_count = 0
     
@@ -118,12 +117,12 @@ class DPMB():
         
         pass
     
-    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None):
+    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,ari_func=None):
 
         time_seatbelt_hit = False
         ari_seatbelt_hit = False
         time_seatbelt_func = (lambda x: False) if time_seatbelt is None else (lambda run_sum: run_sum > time_seatbelt)
-        ari_seatbelt_func = (lambda x: False) if ari_seatbelt is None or self.calc_ari_func is None else (lambda state_zs: self.calc_ari_func(state_zs)> ari_seatbelt)
+        ari_seatbelt_func = (lambda x: False) if ari_seatbelt is None or ari_func is None else (lambda state_zs: ari_func(state_zs)> ari_seatbelt)
         
         for counter in range(numSteps):
 
