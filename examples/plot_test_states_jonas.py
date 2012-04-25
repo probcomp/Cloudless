@@ -47,7 +47,7 @@ ALL_DATASET_SPECS = []
 for num_clusters in [10]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 64
+    dataset_spec["num_cols"] = 32
     dataset_spec["num_rows"] = 1000
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
@@ -110,28 +110,29 @@ for run_spec in ALL_RUN_SPECS:
 
 run_spec_filter = None ## lambda x: x["infer_init_z"] is None ## 
 
-# now you can interactively call
-for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    # FIXME : verify that the new gen_z works and the cluster_str below is correct
-    cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
-    col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
-    row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
-    cluster_str = "clusters" + str(cluster_str) ## 
-    config_str = "_".join([col_str,row_str,cluster_str])    
-    # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
-    #                     ,title_str="num_clusters",ylabel_str="num_clusters")
-    try:
-        hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
-                            ,save_str="ari_" + config_str + "_time.png",title_str=[config_str,"ari"],ylabel_str="ari"
-                            ,legend_args={"ncol":2,"markerscale":2})
-        hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter, by_time=False
-                            ,save_str="ari_" + config_str + "_iter.png",title_str=[config_str,"ari"],ylabel_str="ari"
-                            ,legend_args={"ncol":2,"markerscale":2})
-    except Exception, e:
-        print e
-        
-#hf.plot_measurement(memoized_infer, "predictive", target_problem)
-
-if memoized_infer.report_status()["waiting"] == 0:
+def try_plots():
+    status = memoized_infer.report_status()
+    if status["waiting"] != 0:
+        return "Not done"
+    # now you can interactively call
+    for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
+        # FIXME : verify that the new gen_z works and the cluster_str below is correct
+        cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
+        col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
+        row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
+        cluster_str = "clusters" + str(cluster_str) ## 
+        config_str = "_".join([col_str,row_str,cluster_str])    
+        # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
+        #                     ,title_str="num_clusters",ylabel_str="num_clusters")
+        try:
+            hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
+                                ,save_str="ari_" + config_str + "_time.png",title_str=[config_str,"ari"],ylabel_str="ari"
+                                ,legend_args={"ncol":2,"markerscale":2})
+            hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter, by_time=False
+                                ,save_str="ari_" + config_str + "_iter.png",title_str=[config_str,"ari"],ylabel_str="ari"
+                                ,legend_args={"ncol":2,"markerscale":2})
+        except Exception, e:
+            print e
+    #hf.plot_measurement(memoized_infer, "predictive", target_problem)
     with open("pickled_jobs.pkl","wb") as fh:
         cPickle.dump(memoized_infer.memo,fh)
