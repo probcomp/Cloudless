@@ -208,6 +208,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
         pylab.savefig(save_str)
 
 def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None):
+    temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
 
     for problem_idx,target_problem in enumerate(extract_problems_from_memo(memoized_infer)):
@@ -242,6 +243,7 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
         print "Not done, not pickling"
         return False
     else:
+        temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
         with open(file_str,"wb") as fh:
             cPickle.dump(memoized_infer.memo,fh)
         print "Done all jobs, memo pickled"
