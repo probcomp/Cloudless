@@ -74,7 +74,7 @@ def infer(run_spec):
                            state = initial_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
                            infer_beta = run_spec["infer_do_betas_inference"],
-                           calc_ari_func = lambda state_zs : calc_ari(state_zs,problem["zs"]))
+                           )##calc_ari_func = lambda state_zs : calc_ari(state_zs,problem["zs"]))
 
     summaries = []
 

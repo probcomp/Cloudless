@@ -32,7 +32,7 @@ class DPMB():
             self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
         self.state.timing["run_sum"] += self.state.timing["alpha"]
 
-    def transition_beta_discrete_gibbs(self):
+    def transition_beta_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
         ##
         for col_idx in range(self.state.num_cols):
@@ -40,7 +40,11 @@ class DPMB():
             beta_idx = hf.renormalize_and_sample(logp_list)
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
-        ##
+
+            delta_t = datetime.datetime.now() - start_dt
+            if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
+                break 
+
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
         except Exception, e:
@@ -55,15 +59,15 @@ class DPMB():
         elif self.infer_alpha:
             self.state.timing["alpha"] = 0 ##ensure last value not carried forward
 
-    def transition_beta(self):
+    def transition_beta(self,time_seatbelt=None):
         if self.state.verbose:
             print "PRE transition_beta score: ",self.state.score
         if self.infer_beta:
-            self.transition_beta_discrete_gibbs()
+            self.transition_beta_discrete_gibbs(time_seatbelt)
         elif self.infer_beta:
             self.state.timing["betas"] = 0 ##ensure last value not carried forward
             
-    def transition_z(self):
+    def transition_z(self,time_seatbelt=None):
         self.transition_z_count += 1
         if self.state.verbose:
             print "PRE transition_z score: ",self.state.score
@@ -89,6 +93,10 @@ class DPMB():
 
             # assign it
             cluster.assign_vector(vector)
+
+            delta_t = datetime.datetime.now() - start_dt
+            if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
+                break  ## let logic below proceed
 
         # debug print out states:
         print " --- " + str(self.state.getZIndices())
@@ -119,9 +127,9 @@ class DPMB():
         
         for counter in range(numSteps):
 
-            self.transition_beta() ##may do nothing if infer_beta == "FIXED"
+            self.transition_beta(time_seatbelt=time_seatbelt) ##may do nothing if infer_beta == "FIXED"
             
-            self.transition_z()
+            self.transition_z(time_seatbelt=time_seatbelt)
 
             self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
 

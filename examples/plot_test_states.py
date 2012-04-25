@@ -129,6 +129,6 @@ for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
         
 #hf.plot_measurement(memoized_infer, "predictive", target_problem)
 
-if memoized_infer.report_status["waiting"] == 0:
+if memoized_infer.report_status()["waiting"] == 0:
     with open("pickled_jobs.pkl","wb") as fh:
         cPickle.dump(memoized_infer.memo,fh)
