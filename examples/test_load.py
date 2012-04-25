@@ -20,5 +20,7 @@ if "memoized_infer" not in locals():
 
 run_spec = ALL_RUN_SPECS[0]
 target_problem = run_spec["problem"]
-hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem)
-hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem,by_time=False)
+hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem
+                    ,save_str="1.png")
+hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem,by_time=False
+                    ,save_str="2.png")                    

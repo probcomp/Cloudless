@@ -71,7 +71,7 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 30
+num_iters = 1000
 count = 0
 for problem in ALL_PROBLEMS:
     for infer_seed in range(5):
@@ -90,7 +90,7 @@ for problem in ALL_PROBLEMS:
                             run_spec["infer_init_z"] = infer_init_z
                             run_spec["problem"] = problem
                             ##
-                            run_spec["time_seatbelt"] = 60
+                            run_spec["time_seatbelt"] = 600
                             run_spec["ari_seatbelt"] = .9
                             ALL_RUN_SPECS.append(run_spec) ## this seems to make the comparison fail copy.deepcopy(run_spec))
 
