@@ -70,14 +70,11 @@ def infer(run_spec):
 
     print "...initialized"
 
-    def calc_ari_local(state_zs):
-        return calc_ari(state_zs,problem["zs"])
-
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
                            state = initial_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
-                           infer_beta = run_spec["infer_do_betas_inference"],
-                           ari_func = calc_ari_local)
+                           infer_beta = run_spec["infer_do_betas_inference"])
+
 
     summaries = []
 
@@ -93,7 +90,7 @@ def infer(run_spec):
         ari_seatbelt = run_spec["ari_seatbelt"]
 
     for i in range(run_spec["num_iters"]):
-        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt)
+        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=problem["zs"])
         print "finished doing iteration" + str(i)
         summaries.append(transitioner.extract_state_summary())
         print "finished saving iteration" + str(i)
