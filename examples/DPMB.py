@@ -9,11 +9,12 @@ import pdb
 
 
 class DPMB():
-    def __init__(self,inf_seed,state,infer_alpha,infer_beta):
+    def __init__(self,inf_seed,state,infer_alpha,infer_beta,calc_ari_func=None):
         nr.seed(int(np.clip(inf_seed,0,np.inf))) ##who's random seed is used where?  And does it even matter (consider true inf_seed to be f(inf_seed,gen_seed))?
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
+        self.calc_ari_func = calc_ari_func
         ##
         self.transition_z_count = 0
     
@@ -109,39 +110,54 @@ class DPMB():
         
         pass
     
-    def transition(self,numSteps=1, regen_data=False):
+    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None):
+
+        time_seatbelt_hit = False
+        ari_seatbelt_hit = False
+        time_seatbelt_func = (lambda x: False) if time_seatbelt is None else (lambda run_sum: run_sum > time_seatbelt)
+        ari_seatbelt_func = (lambda x: False) if ari_seatbelt is None or self.calc_ari_func is None else (lambda state_zs: self.calc_ari_func(state_zs)> ari_seatbelt)
+        
         for counter in range(numSteps):
 
             self.transition_beta() ##may do nothing if infer_beta == "FIXED"
-            # self.state.plot(which_plots=["beta"],title_append="post")
             
             self.transition_z()
-            # self.state.plot(which_plots=["data"],title_append="post")
-            # self.state.plot(which_plots=["cluster"],title_append="post")
 
             self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
-            # self.state.plot(which_plots=["alpha"],title_append="post")
 
             if regen_data:
                 self.transition_x()
-            ##
+
+            if time_seatbelt_func(self.state.timing["run_sum"]):
+                time_seatbelt_hit = True
+            if ari_seatbelt_func(self.state.getZIndices()):
+                ari_seatbelt_hit = True
+
             if self.state.verbose:
-                hf.printTS("Starting iteration: ", self.infer_z_count)
+                hf.printTS("Done iteration: ", self.infer_z_count)
                 print "Cycle end score: ",self.state.score
                 print "alpha: ",self.state.alpha
                 print "mean beta: ",self.state.betas.mean()
-                print "empirical phis: ",self.reconstitute_phis()
-                print
+
+            if ari_seatbelt_hit or time_seatbelt_hit:
+                return {"ari_seatbelt_hit":ari_seatbelt_hit,"time_seatbelt_hit":time_seatbelt_hit}
+
+        return None
             
     def extract_state_summary(self):
-        print "Z: " + str(self.state.getZIndices())
-        print "score: " + str(self.state.score)
-        print "num_clusters: " + str(len(self.state.cluster_list))
         
-        return {
-            "hypers":{"alpha":self.state.alpha,"betas":self.state.betas}
+        state_dict = {
+            "alpha":self.state.alpha
+            ,"betas":self.state.betas
             ,"score":self.state.score
             ,"numClusters":len(self.state.cluster_list)
             ,"timing":self.state.timing
             ,"state":self.state.get_flat_dictionary()
             }
+
+        if self.calc_ari_func is not None:
+            state_dict["ari"] = self.calc_ari_func(self.state.getZIndices())
+        else:
+            state_dict["ari"] = None
+
+        return state_dict

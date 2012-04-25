@@ -69,30 +69,35 @@ def infer(run_spec):
                                   init_x = problem["xs"])
 
     print "...initialized"
-    
+
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
                            state = initial_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
-                           infer_beta = run_spec["infer_do_betas_inference"])
+                           infer_beta = run_spec["infer_do_betas_inference"],
+                           calc_ari_func = lambda state_zs : calc_ari(state_zs,problem["zs"]))
 
     summaries = []
 
     summaries.append(transitioner.extract_state_summary())
 
     print "saved initialization"
-    
+
+    time_seatbelt = None
+    ari_seatbelt = None
+    if "time_seatbelt" in run_spec:
+        time_seatbelt = run_spec["time_seatbelt"]
+    if "ari_seatbelt" in run_spec:
+        ari_seatbelt = run_spec["ari_seatbelt"]
+
     for i in range(run_spec["num_iters"]):
-        transitioner.transition()
+        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt)
         print "finished doing iteration" + str(i)
         summaries.append(transitioner.extract_state_summary())
         print "finished saving iteration" + str(i)
-        if "time_seatbelt" in run_spec and run_spec["time_seatbelt"] < summaries[-1]["timing"]["run_sum"]:
-            summaries[-1]["break"] = "time"
+        if transition_return is not None:
+            summaries[-1]["break"] = transition_return
             break
-        if "ari_seatbelt" in run_spec and run_spec["ari_seatbelt"] < calc_ari(summaries[-1]["state"]["zs"],problem["zs"]):
-            summaries[-1]["break"] = "ari"
-            break
-            
+        
     return summaries
 
 def extract_measurement(which_measurement, one_runs_data):
@@ -105,8 +110,9 @@ def extract_measurement(which_measurement, one_runs_data):
     # "score" FIXME
     if which_measurement == "num_clusters":
         return [summary["numClusters"] for summary in one_runs_data]
-    elif type(which_measurement)==tuple and  which_measurement[0]== "ari":
-        ##true_zs = one_runs_data["problem"]["dataset_spec"]["gen_z"]
+    elif which_measurement == "ari":
+        return [summary["ari"] for summary in one_runs_data]
+    elif type(which_measurement)==tuple and  which_measurement[0]== "ari": ##FIXME : remove this once new ari path is tested
         true_zs = which_measurement[1]
         return [calc_ari(summary["state"]["zs"],true_zs) for summary in one_runs_data]
     else:

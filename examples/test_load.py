@@ -20,5 +20,4 @@ ALL_RUN_SPECS = hf.unpickle_asyncmemoize(memoized_infer,"pickled_jobs.pkl")
 
 run_spec = ALL_RUN_SPECS[0]
 target_problem = run_spec["problem"]
-hf.plot_measurement(memoized_infer, "num_clusters", target_problem)
-
+hf.plot_measurement(memoized_infer, ("ari",target_problem["zs"]), target_problem)
