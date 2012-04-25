@@ -44,15 +44,15 @@ import matplotlib.pylab as pylab
 
 ALL_DATASET_SPECS = []
 
-for num_clusters in [2,8,32,]:##[2**(j+1) for j in [2]]:
+for num_clusters in [10]:##[2**(j+1) for j in [2]]:
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 64
-    dataset_spec["num_rows"] = 256
+    dataset_spec["num_cols"] = 16
+    dataset_spec["num_rows"] = 1000
     dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", num_clusters)
-    dataset_spec["N_test"] = 5
+    dataset_spec["N_test"] = 10
     ALL_DATASET_SPECS.append(dataset_spec)
 
 print "Generated " + str(len(ALL_DATASET_SPECS)) + " dataset specs!"
@@ -71,15 +71,15 @@ print "Generated " + str(len(ALL_PROBLEMS)) + " problems!"
 # NOTE: Can clean up using itertools.product()
 # http://docs.python.org/library/itertools.html#itertools.product
 ALL_RUN_SPECS = []
-num_iters = 30
+num_iters = 1000
 count = 0
 for problem in ALL_PROBLEMS:
-    for infer_seed in range(1):
+    for infer_seed in range(5):
         for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
             for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
-                for infer_do_alpha_inference in [True, False]:
-                    for infer_do_betas_inference in [True, False]:
-                        for infer_init_z in [1, "N", None]:
+                for infer_do_alpha_inference in [False]: ## [True, False]:
+                    for infer_do_betas_inference in [False]: ## [True, False]:
+                        for infer_init_z in [1]: ## [1, "N", None]:
                             run_spec = {}
                             run_spec["num_iters"] = num_iters
                             run_spec["infer_seed"] = infer_seed
@@ -90,7 +90,7 @@ for problem in ALL_PROBLEMS:
                             run_spec["infer_init_z"] = infer_init_z
                             run_spec["problem"] = problem
                             ##
-                            run_spec["time_seatbelt"] = 5.0
+                            run_spec["time_seatbelt"] = 600
                             run_spec["ari_seatbelt"] = .9
                             ALL_RUN_SPECS.append(run_spec) ## this seems to make the comparison fail copy.deepcopy(run_spec))
 
@@ -110,25 +110,5 @@ for run_spec in ALL_RUN_SPECS:
 
 run_spec_filter = None ## lambda x: x["infer_init_z"] is None ## 
 
-# now you can interactively call
-for problem_idx,target_problem in enumerate(ALL_PROBLEMS):
-    # FIXME : verify that the new gen_z works and the cluster_str below is correct
-    cluster_str = "_clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
-    col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
-    row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
-    cluster_str = "clusters" + str(cluster_str) ## 
-    config_str = "_".join([col_str,row_str,cluster_str])    
-    # hf.plot_measurement(memoized_infer, "num_clusters", target_problem,save_str="num_clusters_" + config_str + ".png"
-    #                     ,title_str="num_clusters",ylabel_str="num_clusters")
-    try:
-        hf.plot_measurement(memoized_infer, ("ari", target_problem["zs"]), target_problem, run_spec_filter=run_spec_filter
-                            ,save_str="ari_" + config_str + ".png",title_str=[config_str,"ari"],ylabel_str="ari"
-                            ,legend_args={"ncol":2,"markerscale":2})
-    except Exception, e:
-        print e
-        
-#hf.plot_measurement(memoized_infer, "predictive", target_problem)
-
-if memoized_infer.report_status()["waiting"] == 0:
-    with open("pickled_jobs.pkl","wb") as fh:
-        cPickle.dump(memoized_infer.memo,fh)
+hf.try_plots(memoized_infer)
+hf.pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl")

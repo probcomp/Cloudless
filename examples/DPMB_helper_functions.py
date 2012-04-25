@@ -102,19 +102,10 @@ def infer(run_spec):
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
-    # "num_clusters"
-    # "alpha" FIXME
     # "beta" FIXME
-    # ("ari", z_indices_vec) FIXME checking that z_indices is in the right form, etc etc
     # "predictive" FIXME
-    # "score" FIXME
-    if which_measurement == "num_clusters":
-        return [summary["numClusters"] for summary in one_runs_data]
-    elif which_measurement == "ari":
-        return [summary["ari"] for summary in one_runs_data]
-    elif type(which_measurement)==tuple and  which_measurement[0]== "ari": ##FIXME : remove this once new ari path is tested
-        true_zs = which_measurement[1]
-        return [calc_ari(summary["state"]["zs"],true_zs) for summary in one_runs_data]
+    if np.in1d(which_measurement,["num_clusters","ari","alpha","score"])[0]:
+        return [summary[which_measurement] for summary in one_runs_data]
     else:
         raise Exception("not implemented yet: " + str(which_measurement))
 
@@ -215,12 +206,46 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
     ##pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
-    
-    # FIXME FOR DAN TO IMPLEMENT PLOTTING THINGS VERSUS ITERATION
-    ##measurements are actual values
-    
-    # FIXME: add something which creates a second plot that calculates wallclock as a function of iter
-    #        and replots with that, below
+
+def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None):
+    which_measurements = ["ari"] if which_measurements is None else which_measurements
+
+    for problem_idx,target_problem in enumerate(extract_problems_from_memo(memoized_infer)):
+
+        cluster_str = "clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
+        col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
+        row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
+        config_str = "_".join([col_str,row_str,cluster_str])    
+
+        for which_measurement in which_measurements:
+            try:
+                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter
+                                    ,save_str="_".join([which_measurement,config_str,"time.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
+                                    ,legend_args={"ncol":2,"markerscale":2})
+                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter, by_time=False
+                                    ,save_str="_".join([which_measurement,config_str,"iter.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
+                                    ,legend_args={"ncol":2,"markerscale":2})
+            except Exception, e:
+                print e
+    #plot_measurement(memoized_infer, "predictive", target_problem)
+
+def extract_problems_from_memo(asyncmemo):
+    from numpy import array
+    ALL_RUN_SPECS = [eval(key)[0] for key in asyncmemo.memo.keys()]
+    ALL_PROBLEM_STRS = dict(zip([str(run_spec["problem"]) for run_spec in ALL_RUN_SPECS],np.repeat(None,len(ALL_RUN_SPECS)))).keys()
+    ALL_PROBLEMS = [eval(problem_str) for problem_str in ALL_PROBLEM_STRS]
+    return ALL_PROBLEMS
+
+def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
+    status = memoized_infer.report_status()
+    if status["waiting"] != 0:
+        print "Not done, not pickling"
+        return False
+    else:
+        with open(file_str,"wb") as fh:
+            cPickle.dump(memoized_infer.memo,fh)
+        print "Done all jobs, memo pickled"
+        return True
 
 def calc_ari(group_idx_list_1,group_idx_list_2):
     # FIXME: be sure that the canonicalized vectors coming out of the above code go into ARI correctly
