@@ -157,7 +157,7 @@ class DPMB():
             "alpha":self.state.alpha
             ,"betas":self.state.betas.copy()
             ,"score":self.state.score
-            ,"numClusters":len(self.state.cluster_list)
+            ,"num_clusters":len(self.state.cluster_list)
             ,"timing":self.state.timing
             ##,"state":self.state.get_flat_dictionary() 
             }
