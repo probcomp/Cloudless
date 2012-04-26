@@ -14,10 +14,13 @@ reload(Cloudless)
 import Cloudless.memo
 reload(Cloudless.memo)
 
-if "memoized_infer" not in locals():
+import os
+dir_str = "c:/Cloudless/examples/PklFiles/"
+pkl_file_list = reversed(filter(lambda x:x[-4:]==".pkl",os.listdir(dir_str)))
+##pkl_file_list = filter(lambda x:x.find("16")!=-1,pkl_file_list)
+for pkl_file in pkl_file_list:
+    print "Trying ",pkl_file
     memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, override=True) #FIXME once we've debugged, we can eliminate this override
-    ALL_RUN_SPECS = hf.unpickle_asyncmemoize(memoized_infer,"pickled_jobs.pkl")
-
-run_spec_filter = lambda x: x["infer_init_z"] == 1 
-##hf.try_plots(memoized_infer,which_measurements=["mean_beta","ari","alpha"],run_spec_filter=run_spec_filter)
-hf.try_plots(memoized_infer,which_measurements=["mean_beta"],run_spec_filter=run_spec_filter)
+    hf.unpickle_asyncmemoize(memoized_infer,os.path.join(dir_str,pkl_file))
+    ##
+    hf.try_plots(memoized_infer,which_measurements=["ari"],do_legend=False)

@@ -113,7 +113,8 @@ def extract_measurement(which_measurement, one_runs_data):
 # FIXME: do generate_from_prior test (to make Ryan happy)
 
 def plot_measurement(memoized_infer, which_measurement, target_problem, by_time = True
-                     ,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None):
+                     ,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None
+                     ,do_legend=True):
     matching_runs = []
     matching_summaries = []
 
@@ -157,20 +158,20 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
             linespec["color"] = "magenta"
             legendstr += "inf_a=F,inf_b=T"
         else:
-            linespec["color"] = "black"
+            linespec["color"] = "blue"
             legendstr += "inf_a=F,inf_b=F"
 
         # linestyle for initialization
         init_z = run["infer_init_z"]
         if init_z == 1:
-            linespec["linestyle"] = "-."
-            legendstr += ";init=1"
+            linespec["linestyle"] = "-"
+            legendstr += ";init=P"
         elif init_z == "N":
             linespec["linestyle"] = "--"
             legendstr += ";init=N"
         elif init_z == None:
-            linespec["linestyle"] = "-"
-            legendstr += ";init=P"
+            linespec["linestyle"] = "-."
+            legendstr += ";init=1"
         else:
             raise Exception("invalid init_z" + str(init_z))
         
@@ -180,8 +181,8 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
     # FIXME: enable plots. still need to debug timing ***urgent***
 
     pylab.figure()
-
-    pylab.subplot(211)
+    if do_legend:
+        pylab.subplot(211)
     line_list = []
     if by_time:
         for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
@@ -203,16 +204,17 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
     if ylabel_str is not None:
         pylab.ylabel(ylabel_str)
 
-    pylab.subplot(212)
-    if legend_args is None:
-        legend_args = {"ncol":2,"prop":{"size":"medium"}}
-    pylab.legend(line_list,matching_legendstrs,**legend_args)
+    if do_legend:
+        pylab.subplot(212)
+        if legend_args is None:
+            legend_args = {"ncol":2,"prop":{"size":"medium"}}
+        pylab.legend(line_list,matching_legendstrs,**legend_args)
     
     ##pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
 
-def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None):
+def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True):
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
 
@@ -227,10 +229,10 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None):
             try:
                 plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter
                                     ,save_str="_".join([which_measurement,config_str,"time.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2})
+                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
                 plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter, by_time=False
                                     ,save_str="_".join([which_measurement,config_str,"iter.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2})
+                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
             except Exception, e:
                 print e
     #plot_measurement(memoized_infer, "predictive", target_problem)
