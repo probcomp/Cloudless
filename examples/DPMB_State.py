@@ -150,7 +150,7 @@ class DPMB_State():
         ##makes sense when needed for state creation
         ##but otherwise only if you want to resume inference
         return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows": len(self.vector_list), "alpha":self.alpha
-                , "betas":self.betas, "zs":self.getZIndices(), "xs":self.getXValues()
+                , "betas":self.betas.copy(), "zs":self.getZIndices(), "xs":self.getXValues()
                 , "alpha_min":self.alpha_min, "alpha_max":self.alpha_max, "beta_min":self.beta_min, "beta_max":self.beta_max
                 , "grid_N":self.grid_N} ## , "N_test":self.N_test} ## N_test isn't save, should it be?
             

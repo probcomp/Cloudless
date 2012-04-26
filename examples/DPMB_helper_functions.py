@@ -102,10 +102,11 @@ def infer(run_spec):
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
-    # "beta" FIXME
     # "predictive" FIXME
     if np.in1d(which_measurement,["num_clusters","ari","alpha","score"])[0]:
         return [summary[which_measurement] for summary in one_runs_data]
+    elif which_measurement == "mean_beta":
+        return [np.mean(summary["betas"]) for summary in one_runs_data]
     else:
         raise Exception("not implemented yet: " + str(which_measurement))
 
@@ -138,7 +139,11 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
     matching_linespecs = []
     matching_legendstrs = []
     for (run, summary) in zip(matching_runs, matching_summaries):
-        matching_measurements.append(extract_measurement(which_measurement, summary))
+        try:
+            matching_measurements.append(extract_measurement(which_measurement, summary))
+        except Exception, e:
+            print e
+            
         linespec = {}
         legendstr = ""
         # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options

@@ -16,6 +16,8 @@ reload(Cloudless.memo)
 
 if "memoized_infer" not in locals():
     memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, override=True) #FIXME once we've debugged, we can eliminate this override
-    ALL_RUN_SPECS = hf.unpickle_asyncmemoize(memoized_infer,"pickled_jobs.pkl")
+    ALL_RUN_SPECS = hf.unpickle_asyncmemoize(memoized_infer,"ProductionRun/pickled_jobs_32_clusters.pkl")
 
-hf.try_plots(memoized_infer)
+run_spec_filter = lambda x: x["infer_init_z"] == 1 
+##hf.try_plots(memoized_infer,which_measurements=["mean_beta","ari","alpha"],run_spec_filter=run_spec_filter)
+hf.try_plots(memoized_infer,which_measurements=["mean_beta"],run_spec_filter=run_spec_filter)

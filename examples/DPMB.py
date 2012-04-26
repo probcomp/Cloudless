@@ -55,7 +55,7 @@ class DPMB():
             print "PRE transition_alpha score: ",self.state.score
         if self.infer_alpha:
             self.transition_alpha_discrete_gibbs()
-        elif self.infer_alpha:
+        else:
             self.state.timing["alpha"] = 0 ##ensure last value not carried forward
 
     def transition_beta(self,time_seatbelt=None):
@@ -63,7 +63,7 @@ class DPMB():
             print "PRE transition_beta score: ",self.state.score
         if self.infer_beta:
             self.transition_beta_discrete_gibbs(time_seatbelt)
-        elif self.infer_beta:
+        else:
             self.state.timing["betas"] = 0 ##ensure last value not carried forward
             
     def transition_z(self,time_seatbelt=None):
@@ -155,11 +155,11 @@ class DPMB():
         
         state_dict = {
             "alpha":self.state.alpha
-            ,"betas":self.state.betas
+            ,"betas":self.state.betas.copy()
             ,"score":self.state.score
             ,"numClusters":len(self.state.cluster_list)
             ,"timing":self.state.timing
-            ,"state":self.state.get_flat_dictionary()
+            ##,"state":self.state.get_flat_dictionary() 
             }
 
         if true_zs is not None:
