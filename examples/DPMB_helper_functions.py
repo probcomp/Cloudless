@@ -180,6 +180,11 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
         matching_legendstrs.append(legendstr)
     # FIXME: enable plots. still need to debug timing ***urgent***
 
+    # unique_legendstrs = np.unique(matching_legendstrs)
+    # unique_linespecs = []
+    # for unique_legendstr in unique_legendstrs:
+    #     unique_linespecs.append(matching_linespecs.index(
+
     pylab.figure()
     if do_legend:
         pylab.subplot(211)
