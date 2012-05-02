@@ -23,7 +23,7 @@ class DPMB_State():
         self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
-        nr.seed(int(np.clip(gen_seed,0,np.inf)))
+        hf.set_seed(gen_seed)
         ##
         # note: no score modification here, because of uniform hyperpriors
         self.alpha = init_alpha if init_alpha is not None else 10.0**nr.uniform(np.log10(alpha_min),np.log10(alpha_max))

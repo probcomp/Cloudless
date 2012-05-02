@@ -473,3 +473,15 @@ def printTS(printStr):
 
 def listCount(listIn):
     return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
+
+def set_seed(seed):
+    if type(seed) == tuple:
+        nr.set_state(seed)
+    elif type(seed) == int:
+        nr.seed(seed)
+    else:
+        raise Exception("Bad argument to set_seed: " + str(seed)) 
+
+def get_seed():
+    return nr.get_state()
+

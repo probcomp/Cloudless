@@ -10,7 +10,7 @@ import pdb
 
 class DPMB():
     def __init__(self,inf_seed,state,infer_alpha,infer_beta):
-        nr.seed(int(np.clip(inf_seed,0,np.inf))) ##who's random seed is used where?  And does it even matter (consider true inf_seed to be f(inf_seed,gen_seed))?
+        hf.set_seed(inf_seed)
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
