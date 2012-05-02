@@ -159,7 +159,7 @@ class DPMB():
             ,"score":self.state.score
             ,"num_clusters":len(self.state.cluster_list)
             ,"timing":self.state.timing
-            ##,"state":self.state.get_flat_dictionary() 
+            ,"inf_seed":hf.get_seed()
             }
 
         if true_zs is not None:
