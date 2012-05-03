@@ -4,11 +4,11 @@ matplotlib.use('Agg')
 import matplotlib.pylab as pylab
 import numpy as np
 ##
-import DPMB_State as ds
+import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
-import DPMB as dm
+import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
-import helper_functions as hf
+import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 ##
 import Cloudless
@@ -19,19 +19,17 @@ reload(Cloudless.memo)
 if sys.platform == "win32":
     sys.path.append("c:/")
 
-
-
 ##create a dataset_spec->problem->run_spec
 ##infer with xs returned
 ##compare xs
 
 dataset_spec = {}
 dataset_spec["gen_seed"] = 0
-dataset_spec["num_cols"] = 32
-dataset_spec["num_rows"] = 1000
+dataset_spec["num_cols"] = 16
+dataset_spec["num_rows"] = 256
 dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
 dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
-dataset_spec["gen_z"] = ("balanced", num_clusters)
+dataset_spec["gen_z"] = ("balanced", 4)
 dataset_spec["N_test"] = 10
 
 problem = hf.gen_problem(dataset_spec)
@@ -54,8 +52,7 @@ memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, ov
 
 print "Created memoizer"
 
-for run_spec in ALL_RUN_SPECS:
-    memoized_infer(run_spec)
+memoized_infer(run_spec)
 
 run_spec_filter = None ## lambda x: x["infer_init_z"] is None ## 
 

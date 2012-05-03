@@ -53,6 +53,7 @@ def gen_problem(dataset_spec):
 def infer(run_spec):
     problem = run_spec["problem"]
     dataset_spec = problem["dataset_spec"]
+    verbose_state = "verbose_state" in run_spec and run_spec["verbose_state"]
 
     print "doing run: "
     for (k, v) in run_spec.items():
@@ -78,7 +79,9 @@ def infer(run_spec):
 
     summaries = []
 
-    summaries.append(transitioner.extract_state_summary(true_zs=problem["zs"]))
+    summaries.append(
+        transitioner.extract_state_summary(
+            true_zs=problem["zs"],verbose_state=verbose_state))
 
     print "saved initialization"
 
