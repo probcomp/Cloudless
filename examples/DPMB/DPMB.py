@@ -15,10 +15,14 @@ class DPMB():
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
         ##
-        self.transition_z_count = 0
+        self.transition_count = 0
+        self.time_seatbelt_hit = False
+        self.ari_seatbelt_hit = False
     
-    def transition_alpha_discrete_gibbs(self):
+    def transition_alpha_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
+        if self.check_time_seatbelt(time_seatbelt):
+            return # don't transition
         ##
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
         alpha_idx = hf.renormalize_and_sample(logp_list,self.state.verbose)
@@ -35,14 +39,15 @@ class DPMB():
         start_dt = datetime.datetime.now()
         ##
         for col_idx in range(self.state.num_cols):
+
+            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
+            if self.check_time_seatbelt(time_seatbelt,delta_t):
+                break
+
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
             beta_idx = hf.renormalize_and_sample(logp_list)
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
-
-            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
-            if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
-                break 
 
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
@@ -50,11 +55,11 @@ class DPMB():
             self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
         self.state.timing["run_sum"] += self.state.timing["betas"]
 
-    def transition_alpha(self):
+    def transition_alpha(self,time_seatbelt=None):
         if self.state.verbose:
             print "PRE transition_alpha score: ",self.state.score
         if self.infer_alpha:
-            self.transition_alpha_discrete_gibbs()
+            self.transition_alpha_discrete_gibbs(time_seatbelt=None)
         else:
             self.state.timing["alpha"] = 0 ##ensure last value not carried forward
 
@@ -67,7 +72,6 @@ class DPMB():
             self.state.timing["betas"] = 0 ##ensure last value not carried forward
             
     def transition_z(self,time_seatbelt=None):
-        self.transition_z_count += 1
         if self.state.verbose:
             print "PRE transition_z score: ",self.state.score
         start_dt = datetime.datetime.now()
@@ -75,6 +79,10 @@ class DPMB():
         # for each vector
         for vector in nr.permutation(self.state.get_all_vectors()):
             
+            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
+            if self.check_time_seatbelt(time_seatbelt,delta_t):
+                break
+
             # deassign it
             vector.cluster.deassign_vector(vector)
             
@@ -93,12 +101,8 @@ class DPMB():
             # assign it
             cluster.assign_vector(vector)
 
-            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
-            if time_seatbelt is not None and self.state.timing["run_sum"] + delta_t > time_seatbelt:
-                break  ## let logic below proceed
-
         # debug print out states:
-        print " --- " + str(self.state.getZIndices())
+        # print " --- " + str(self.state.getZIndices())
         print "     " + str([cluster.count() for cluster in self.state.cluster_list])
         ##
         try: ##older datetime modules don't have .total_seconds()
@@ -114,43 +118,50 @@ class DPMB():
         # then you replace your state's vector's data fields with these values
         # then you manually or otherwise recalculate the counts and the score --- write a full_score_and_count refresh
         # or do the state-swapping thing, where you switch points
-        
+
         pass
     
     def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None):
 
-        time_seatbelt_hit = False
-        ari_seatbelt_hit = False
-        time_seatbelt_func = (lambda x: False) if time_seatbelt is None else (lambda run_sum: run_sum > time_seatbelt)
-        ari_seatbelt_func = (lambda x: False) if ari_seatbelt is None or true_zs is None else (lambda state_zs: hf.calc_ari(state_zs,true_zs)> ari_seatbelt)
-        
         for counter in range(numSteps):
 
             self.transition_beta(time_seatbelt=time_seatbelt) ##may do nothing if infer_beta == "FIXED"
             
             self.transition_z(time_seatbelt=time_seatbelt)
 
-            self.transition_alpha() ##may do nothing if infer_alpha == "FIXED"
+            self.transition_alpha(time_seatbelt=time_seatbelt) ##may do nothing if infer_alpha == "FIXED"
 
             if regen_data:
                 self.transition_x()
-
-            if time_seatbelt_func(self.state.timing["run_sum"]):
-                time_seatbelt_hit = True
-            if ari_seatbelt_func(self.state.getZIndices()):
-                ari_seatbelt_hit = True
+                
+            self.check_time_seatbelt(time_seatbelt)
+            self.check_ari_seatbelt(ari_seatbelt,true_zs)
 
             if self.state.verbose:
-                hf.printTS("Done iteration: ", self.infer_z_count)
+                hf.printTS("Done iteration: ", self.transition_count)
                 print "Cycle end score: ",self.state.score
                 print "alpha: ",self.state.alpha
                 print "mean beta: ",self.state.betas.mean()
 
-            if ari_seatbelt_hit or time_seatbelt_hit:
-                return {"ari_seatbelt_hit":ari_seatbelt_hit,"time_seatbelt_hit":time_seatbelt_hit}
+            if self.ari_seatbelt_hit or self.time_seatbelt_hit:
+                return {"ari_seatbelt_hit":self.ari_seatbelt_hit,"time_seatbelt_hit":self.time_seatbelt_hit}
+
+            self.transition_count += 1
 
         return None
-            
+
+    def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):
+        if time_seatbelt is None:
+            return self.time_seatbelt_hit
+        self.time_seatbelt_hit = self.state.timing["run_sum"] + delta_t > time_seatbelt
+        return self.time_seatbelt_hit
+
+    def check_ari_seatbelt(self,ari_seatbelt=None,true_zs=None):
+        if ari_seatbelt is None or true_zs is None:
+            return self.ari_seatbelt_hit
+        self.ari_seatbelt_hit = hf.calc_ari(self.state.getZIndices(),true_zs) > ari_seatbelt
+        return self.ari_seatbelt_hit
+
     def extract_state_summary(self,true_zs=None,send_zs=True,verbose_state=False):
         
         state_dict = {

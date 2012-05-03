@@ -104,17 +104,20 @@ def infer(run_spec):
     if "ari_seatbelt" in run_spec:
         ari_seatbelt = run_spec["ari_seatbelt"]
 
+    last_valid_zs = None
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=gen_zs) # true_zs necessary for seatbelt 
         print "finished doing iteration" + str(i)
         summaries.append(
             transitioner.extract_state_summary(
-            true_zs=problem["zs"],verbose_state=verbose_state))
+            true_zs=gen_zs,verbose_state=verbose_state))
         print "finished saving iteration" + str(i)
         if transition_return is not None:
             summaries[-1]["break"] = transition_return
             break
-        
+        last_valid_zs = transitioner.state.getZIndices()
+
+    summaries[-1]["last_valid_zs"] = last_valid_zs
     return summaries
 
 def extract_measurement(which_measurement, one_runs_data):

@@ -26,8 +26,8 @@ class DPMB_State():
         hf.set_seed(gen_seed)
         ##
         # note: no score modification here, because of uniform hyperpriors
-        self.alpha = self.initialize_alpha(init_alpha)
-        self.betas = self.initialize_betas(init_betas)
+        self.initialize_alpha(init_alpha)
+        self.initialize_betas(init_betas)
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
