@@ -151,7 +151,7 @@ class DPMB():
 
         return None
             
-    def extract_state_summary(self,true_zs=None):
+    def extract_state_summary(self,true_zs=None,send_zs=True,verbose_state=False):
         
         state_dict = {
             "alpha":self.state.alpha
@@ -167,4 +167,9 @@ class DPMB():
         else:
             state_dict["ari"] = None
 
+        if verbose_state or send_zs:
+            state_dict["zs"] = self.state.getZIndices()
+        if verbose_state:
+            state_dict["xs"] = self.state.getXValues()
+            
         return state_dict
