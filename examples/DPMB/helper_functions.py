@@ -51,8 +51,8 @@ def gen_problem(dataset_spec):
     return problem
 
 def infer(run_spec):
-    problem = run_spec["problem"]
-    dataset_spec = problem["dataset_spec"]
+    ##problem = run_spec["problem"]
+    dataset_spec = run_spec["dataset_spec"] ## problem["dataset_spec"]
     verbose_state = "verbose_state" in run_spec and run_spec["verbose_state"]
 
     print "doing run: "
@@ -60,28 +60,40 @@ def infer(run_spec):
         print "   " + str(k) + " ---- " + str(v)
         
     print "initializing"
-    
-    initial_state = ds.DPMB_State(run_spec["infer_seed"],
+
+    # generate state exactly as gen_problem would have
+    initial_state = ds.DPMB_State(dataset_spec["gen_seed"],
                                   dataset_spec["num_cols"],
                                   dataset_spec["num_rows"],
-                                  init_alpha = run_spec["infer_init_alpha"],
-                                  init_betas = run_spec["infer_init_betas"],
-                                  init_z = run_spec["infer_init_z"],
-                                  init_x = problem["xs"])
+                                  init_alpha=dataset_spec["gen_alpha"],
+                                  init_betas=dataset_spec["gen_betas"],
+                                  init_z=dataset_spec["gen_z"],
+                                  init_x = None)
+    # all you need are the xs
+    gen_xs = initial_state.getXValues()
+    gen_zs = initial_state.getZIndices()
+    inference_state = ds.DPMB_State(dataset_spec["gen_seed"],
+                              dataset_spec["num_cols"],
+                              dataset_spec["num_rows"],
+                              # these could be the state at the end of an inference run
+                              init_alpha=run_spec["infer_init_alpha"],
+                              init_betas=run_spec["infer_init_betas"],
+                              init_z=run_spec["infer_init_z"],
+                              # 
+                              init_x = gen_xs)
 
     print "...initialized"
 
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
-                           state = initial_state,
+                           state = inference_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
                            infer_beta = run_spec["infer_do_betas_inference"])
-
 
     summaries = []
 
     summaries.append(
         transitioner.extract_state_summary(
-            true_zs=problem["zs"],verbose_state=verbose_state))
+            true_zs=gen_zs,verbose_state=verbose_state))
 
     print "saved initialization"
 
@@ -93,7 +105,7 @@ def infer(run_spec):
         ari_seatbelt = run_spec["ari_seatbelt"]
 
     for i in range(run_spec["num_iters"]):
-        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=problem["zs"])
+        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=gen_zs) # true_zs necessary for seatbelt 
         print "finished doing iteration" + str(i)
         summaries.append(
             transitioner.extract_state_summary(

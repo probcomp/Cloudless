@@ -26,8 +26,8 @@ class DPMB_State():
         hf.set_seed(gen_seed)
         ##
         # note: no score modification here, because of uniform hyperpriors
-        self.alpha = init_alpha if init_alpha is not None else 10.0**nr.uniform(np.log10(alpha_min),np.log10(alpha_max))
-        self.betas = init_betas if init_betas is not None else 10.0**nr.uniform(np.log10(beta_min),np.log10(beta_max),self.num_cols)
+        self.alpha = self.initialize_alpha(init_alpha)
+        self.betas = self.initialize_betas(init_betas)
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
@@ -76,6 +76,21 @@ class DPMB_State():
     # initializing all apart requires repeated calling with force_new=True
     # initializing all together requires repeated calling with force_last = True
     # initializing from the prior requires no arguments
+    def initialize_alpha(self,init_alpha):
+        if init_alpha is not None:
+            self.alpha = init_alpha
+        else:
+            self.alpha = 10.0**nr.uniform(
+                np.log10(alpha_min),np.log10(alpha_max))
+            
+    def initialize_betas(self,beta):
+        if init_betas is not None:
+            self.betas = init_betas
+        else:
+            self.betas = 10.0**nr.uniform(
+                np.log10(beta_min),np.log10(beta_max),self.num_cols)
+        pass
+    
     def generate_cluster_assignment(self, force_last=False, force_new=False):
         if force_new:
             draw = len(self.cluster_list)
