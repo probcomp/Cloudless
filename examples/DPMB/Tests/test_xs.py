@@ -4,13 +4,11 @@ matplotlib.use('Agg')
 import matplotlib.pylab as pylab
 import numpy as np
 ##
-import DPMB_plotutils as dp
-reload(dp)
 import DPMB_State as ds
 reload(ds)
 import DPMB as dm
 reload(dm)
-import DPMB_helper_functions as hf
+import helper_functions as hf
 reload(hf)
 ##
 import Cloudless

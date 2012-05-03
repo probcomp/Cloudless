@@ -2,7 +2,7 @@
 import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
 import DPMB_State as ds
 reload(ds)
-import DPMB_helper_functions as hf
+import helper_functions as hf
 reload(hf)
 ##
 import pdb

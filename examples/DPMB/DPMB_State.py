@@ -2,7 +2,7 @@
 import numpy as np, numpy.random as nr,pylab,sys
 import DPMB as dm
 reload(dm)
-import DPMB_helper_functions as hf
+import helper_functions as hf
 reload(hf)
 ##
 import pdb
