@@ -46,7 +46,8 @@ run_spec["problem"] = problem
 ##
 run_spec["time_seatbelt"] = 600
 run_spec["ari_seatbelt"] = .9
-
+##
+run_spec["verbose_state"] = True
 
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], hf.infer, override=True) #FIXME once we've debugged, we can eliminate this override
 
@@ -54,11 +55,14 @@ print "Created memoizer"
 
 memoized_infer(run_spec)
 
-run_spec_filter = None ## lambda x: x["infer_init_z"] is None ## 
 
-hf.try_plots(memoized_infer)
-hf.pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl")
+job_key,job_value = [(k,v) for k,v in memoized_infer.iter()][0]
+gen_xs = job_key[0]["problem"]["xs"]
+inf_xs_list = [inf["xs"] for inf in job_value if "xs" in inf]
+gen_matches_inf = [(gen_xs==inf_xs).all() for inf_xs in inf_xs_list]
+assert all(gen_matches_inf), "inference not run on correct xs!"
 
+print "Inference XS match generated XS"
 
 ##create a dataset_spec->problem->run_spec
 ##infer 20 with xs returned

@@ -95,7 +95,9 @@ def infer(run_spec):
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=problem["zs"])
         print "finished doing iteration" + str(i)
-        summaries.append(transitioner.extract_state_summary(true_zs=problem["zs"]))
+        summaries.append(
+            transitioner.extract_state_summary(
+            true_zs=problem["zs"],verbose_state=verbose_state))
         print "finished saving iteration" + str(i)
         if transition_return is not None:
             summaries[-1]["break"] = transition_return
