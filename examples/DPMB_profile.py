@@ -13,4 +13,4 @@ if not os.path.isfile(prof_file):
     sys_out = os.system(cmd_str)
 
 p = pstats.Stats(prof_file)
-p.sort_stats('cumulative').print_stats(num_lines)
+p.sort_stats('total').print_stats(num_lines)
