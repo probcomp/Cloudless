@@ -83,7 +83,7 @@ class DPMB_State():
             self.alpha = 10.0**nr.uniform(
                 np.log10(alpha_min),np.log10(alpha_max))
             
-    def initialize_betas(self,beta):
+    def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = init_betas
         else:
