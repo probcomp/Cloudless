@@ -78,7 +78,9 @@ class DPMB():
         ##
         # for each vector
         for vector in nr.permutation(self.state.get_all_vectors()):
-            
+
+            print " - transitioning vector idx " + str(self.state.vector_list.index(vector))
+
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
@@ -90,7 +92,8 @@ class DPMB():
             score_vec = hf.calculate_cluster_conditional(self.state,vector)
 
             # sample an assignment
-            draw = hf.renormalize_and_sample(score_vec)
+
+            draw = hf.renormalize_and_sample(score_vec,verbose=True)
 
             cluster = None
             if draw == len(self.state.cluster_list):

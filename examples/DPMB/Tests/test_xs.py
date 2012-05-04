@@ -92,9 +92,9 @@ print "\n".join(map(str,[summary[parameter] for summary in job_1]))
 ##alpha,beta match, but zs don't
 ##could it be reinstantiation of the zs that messes things up?
 
-[hash(str(summary["inf_seed"])) for summary in job_value]
-[hash(str(summary["inf_seed"])) for summary in job_0]
-[hash(str(summary["inf_seed"])) for summary in job_1]
+print [hash(str(summary["inf_seed"])) for summary in job_value]
+print [hash(str(summary["inf_seed"])) for summary in job_0]
+print [hash(str(summary["inf_seed"])) for summary in job_1]
 
 # state = ds.DPMB_State(gen_seed=1,num_cols=32,num_rows=1000,init_alpha=1,init_betas=np.repeat(.01,32),init_z=("balanced",100),init_x=None)
 # score_before_addition = state.score

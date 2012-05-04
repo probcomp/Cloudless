@@ -67,7 +67,10 @@ def infer(run_spec):
 
     print "doing run: "
     for (k, v) in run_spec.items():
-        print "   " + str(k) + " ---- " + str(v)
+        if k.find("seed") != -1:
+            print "   " + "hash(" + str(k) + ")" + " ---- " + str(hash(str(v)))
+        else:
+            print "   " + str(k) + " ---- " + str(v)
         
     print "initializing"
 
@@ -354,7 +357,8 @@ def renormalize_and_sample(logpstar_vec,verbose=False):
     for (i, p) in enumerate(p_vec):
         if randv < p:
             if verbose:
-                print i,np.array(np.log(p_vec)).round(2)
+                print " - hash of seed is " + str(hash(str(nr.get_state())))
+                print " - draw,probs: ",i,np.array(np.log(p_vec)).round(2)
             return i
         else:
             randv = randv - p
