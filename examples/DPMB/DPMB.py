@@ -105,8 +105,9 @@ class DPMB():
             cluster.assign_vector(vector)
 
         # debug print out states:
-        # print " --- " + str(self.state.getZIndices())
-        print "     " + str([cluster.count() for cluster in self.state.cluster_list])
+        if self.state.verbose:
+            print " --- " + str(self.state.getZIndices())
+            print "     " + str([cluster.count() for cluster in self.state.cluster_list])
         ##
         try: ##older datetime modules don't have .total_seconds()
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()

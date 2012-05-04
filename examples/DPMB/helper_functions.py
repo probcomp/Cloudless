@@ -64,13 +64,15 @@ def infer(run_spec):
     ##problem = run_spec["problem"]
     dataset_spec = run_spec["dataset_spec"] ## problem["dataset_spec"]
     verbose_state = "verbose_state" in run_spec and run_spec["verbose_state"]
+    decanon_indices = run_spec.get("decanon_indices",None)
 
-    print "doing run: "
-    for (k, v) in run_spec.items():
-        if k.find("seed") != -1:
-            print "   " + "hash(" + str(k) + ")" + " ---- " + str(hash(str(v)))
-        else:
-            print "   " + str(k) + " ---- " + str(v)
+    if verbose_state:
+        print "doing run: "
+        for (k, v) in run_spec.items():
+            if k.find("seed") != -1:
+                print "   " + "hash(" + str(k) + ")" + " ---- " + str(hash(str(v)))
+            else:
+                print "   " + str(k) + " ---- " + str(v)
         
     print "initializing"
 
@@ -93,7 +95,7 @@ def infer(run_spec):
                               init_betas=run_spec["infer_init_betas"],
                               init_z=run_spec["infer_init_z"],
                               # 
-                              init_x = gen_xs)
+                              init_x = gen_xs,decanon_indices=decanon_indices)
 
     print "...initialized"
 

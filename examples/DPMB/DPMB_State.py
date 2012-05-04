@@ -69,11 +69,11 @@ class DPMB_State():
             else:
                 vector = self.generate_vector(data = init_x[R], cluster = cluster)
 
-            if decanon_indices is not None:
-                new_cluster_list = []
-                for index in decanon_indices:
-                    new_cluster_list.append(self.cluster_list[index])
-                self.cluster_list = new_cluster_list
+        if decanon_indices is not None:
+            new_cluster_list = []
+            for index in decanon_indices:
+                new_cluster_list.append(self.cluster_list[index])
+            self.cluster_list = new_cluster_list
             
 
     # sample a cluster from the CRP, possibly resulting in a new one being generated
