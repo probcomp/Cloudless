@@ -9,7 +9,8 @@ import pdb
 
 
 class DPMB_State():
-    def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None,init_z=None,init_x=None
+    def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
+                 ,init_z=None,init_x=None,decanon_indices=None
                  ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
 
         self.gen_seed = gen_seed
@@ -67,6 +68,13 @@ class DPMB_State():
                 vector = self.generate_vector(cluster = cluster)
             else:
                 vector = self.generate_vector(data = init_x[R], cluster = cluster)
+
+            if decanon_indices is not None:
+                new_cluster_list = []
+                for index in decanon_indices:
+                    new_cluster_list.append(self.cluster_list[index])
+                self.cluster_list = new_cluster_list
+            
 
     # sample a cluster from the CRP, possibly resulting in a new one being generated
     # if force_last is True, always returns the last generated cluster in the model
@@ -194,6 +202,23 @@ class DPMB_State():
 
             z_indices.append(cluster_ids[v.cluster])
         return z_indices
+
+    def get_decanonicalizing_indices(self):
+        ##CANONICAL zs
+        z_indices = []
+        next_id = 0
+        cluster_ids = {}
+        for v in self.get_all_vectors():
+            if v.cluster not in cluster_ids:
+                cluster_ids[v.cluster] = next_id
+                next_id += 1
+
+            z_indices.append(cluster_ids[v.cluster])
+
+        decanon_indices = []
+        for cluster in self.cluster_list:
+            decanon_indices.append(cluster_ids[cluster])
+        return decanon_indices
 
     def getXValues(self):
         data = []
