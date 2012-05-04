@@ -230,9 +230,7 @@ class DPMB_State():
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))
         handle_lookup = dict(zip(which_plots,which_handles))
-        ## orientation argument to histogram
-        # FIXMEs FOR DAN TO IMPLEMENT:
-        # - make all part of one figure, with subplots (state view on left, three bar charts on right)
+        ## try orientation argument to histogram
         if show:
             pylab.ion()
         else:
@@ -344,7 +342,7 @@ class Vector():
             N_cluster = cluster.count()
             betas_vec = self.cluster.state.betas
             thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
-            self.data = [np.random.binomial(1, theta) for theta in thetas]
+            self.data = [nr.binomial(1, theta) for theta in thetas]
         else:
             self.data = data
 

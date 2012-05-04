@@ -50,6 +50,16 @@ def gen_problem(dataset_spec):
     problem["test_lls_under_gen"] = test_lls
     return problem
 
+global counts
+counts = {}
+def plot_helper(name, state):
+    global counts
+    if state not in counts:
+        counts[state] = 0
+    count = counts[state]
+    state.plot(show=False,save_str = name + "-" + "%3d" % count + ".png")
+    counts[state] += 1
+
 def infer(run_spec):
     ##problem = run_spec["problem"]
     dataset_spec = run_spec["dataset_spec"] ## problem["dataset_spec"]
@@ -84,6 +94,9 @@ def infer(run_spec):
 
     print "...initialized"
 
+    # FIXME : remove when done debugging resuming inference
+    plot_helper("ground_truth", inference_state)
+
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
                            state = inference_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
@@ -107,6 +120,10 @@ def infer(run_spec):
     last_valid_zs = None
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=gen_zs) # true_zs necessary for seatbelt 
+
+        # FIXME : remove when done debugging resuming inference
+        plot_helper("infer", inference_state)
+
         print "finished doing iteration" + str(i)
         summaries.append(
             transitioner.extract_state_summary(
