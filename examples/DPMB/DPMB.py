@@ -79,7 +79,8 @@ class DPMB():
         # for each vector
         for vector in nr.permutation(self.state.get_all_vectors()):
 
-            print " - transitioning vector idx " + str(self.state.vector_list.index(vector))
+            if self.state.verbose:
+                print " - transitioning vector idx " + str(self.state.vector_list.index(vector))
 
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if self.check_time_seatbelt(time_seatbelt,delta_t):
@@ -93,7 +94,7 @@ class DPMB():
 
             # sample an assignment
 
-            draw = hf.renormalize_and_sample(score_vec,verbose=True)
+            draw = hf.renormalize_and_sample(score_vec,verbose=self.state.verbose)
 
             cluster = None
             if draw == len(self.state.cluster_list):
@@ -105,8 +106,8 @@ class DPMB():
             cluster.assign_vector(vector)
 
         # debug print out states:
-        if self.state.verbose:
-            print " --- " + str(self.state.getZIndices())
+        if self.state.verbose or True:
+            # print " --- " + str(self.state.getZIndices())
             print "     " + str([cluster.count() for cluster in self.state.cluster_list])
         ##
         try: ##older datetime modules don't have .total_seconds()

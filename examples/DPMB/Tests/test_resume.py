@@ -45,14 +45,14 @@ def gen_run_spec():
     run_spec["dataset_spec"] = dataset_spec
     run_spec["time_seatbelt"] = 600
     run_spec["ari_seatbelt"] = None
-    run_spec["verbose_state"] = True
+    run_spec["verbose_state"] = False
 
     return run_spec
 
 run_spec = gen_run_spec()
 one_job_value = hf.infer(run_spec)
 
-problem = hf.gen_problem(dataset_spec)
+problem = hf.gen_problem(run_spec["dataset_spec"])
 inf_xs_list = [inf["xs"] for inf in one_job_value if "xs" in inf]
 gen_matches_inf = [(np.array(problem["xs"])==np.array(inf_xs)).all()
                    for inf_xs in inf_xs_list]
