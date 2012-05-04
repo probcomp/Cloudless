@@ -121,6 +121,7 @@ def infer(run_spec):
         ari_seatbelt = run_spec["ari_seatbelt"]
 
     last_valid_zs = None
+    decanon_indices = None
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=gen_zs) # true_zs necessary for seatbelt 
 
@@ -136,8 +137,9 @@ def infer(run_spec):
             summaries[-1]["break"] = transition_return
             break
         last_valid_zs = transitioner.state.getZIndices()
-
+        decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs
+    summaries[-1]["decanon_indices"] = decanon_indices
     return summaries
 
 def extract_measurement(which_measurement, one_runs_data):
