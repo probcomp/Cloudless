@@ -93,7 +93,7 @@ class DPMB_State():
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
-            self.betas = init_betas
+            self.betas = np.array(init_betas).copy()
         else:
             self.betas = 10.0**nr.uniform(
                 np.log10(beta_min),np.log10(beta_max),self.num_cols)
@@ -127,7 +127,7 @@ class DPMB_State():
         if cluster is None:
             cluster = self.generate_cluster_assignment()
 
-        vector = Vector(cluster, data)
+        vector = Vector(cluster, np.array(data).copy())
         self.vector_list.append(vector)
         cluster.assign_vector(vector)
         return vector

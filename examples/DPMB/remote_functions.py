@@ -1,4 +1,5 @@
 import cPickle
+import copy
 ##
 import numpy as np
 import pylab
@@ -14,6 +15,131 @@ import DPMB as dm
 # out["test_xs"] --- list of raw vectors for the test data
 # out["test_lls_under_gen"] --- list of the log predictive probabilities of the test vectors under the generating model
 
+def arr_copy(arr_or_other):
+    if arr_or_other is None or type(arr_or_other) is int:
+        return None
+    else:
+        return np.array(arr_or_other).copy()
+
+def copy_jobspec(jobspec): #my own deepcopy
+    copyspec = copy.deepcopy(jobspec)
+    copyspec["dataset_spec"]["gen_betas"] = arr_copy(jobspec["dataset_spec"]["gen_betas"])
+    copyspec["gen_betas"] = arr_copy(dataset_spec["gen_betas"])
+    copyspec["infer_init_z"] = arr_copy(run_spec["infer_init_z"])
+    copyspec["infer_seed"] = arr_copy(run_spec["infer_seed"])
+    copyspec["infer_init_betas"] = arr_copy(run_spec["infer_init_betas"])
+    #
+    return copyspec
+
+def modify_jobspec_to_results(jobspec,job_value):
+    last_summary = job_value[-1]
+    jobspec["infer_seed"] = arr_copy(last_summary["inf_seed"])
+    jobspec["infer_init_alpha"] = last_summary["alpha"]
+    jobspec["infer_init_betas"] = arr_copy(last_summary["betas"])
+    jobspec["infer_init_z"] = arr_copy(last_summary["zs"])
+    jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
+                                        
+class Chunked_Job():
+    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100):
+        self.parent_jobspec = parent_jobspec
+        self.asyncmemo = asyncmemo
+        self.chunk_iter = chunk_iter
+        #
+        self.child_jobspec_list = []
+        self.child_job_list = []
+        self.consolidated_data = {"num_iters":0}
+        self.current_jobspec = None
+        self.done = False
+        self.failed = False
+        #
+        self.problem = gen_problem(self.parent_jobspec)
+        #
+        # submit a job immediately
+
+    def next_chunk_size(self):
+        remaining_iters = self.total_num_iters-self.consolidated_data["num_iters"]
+        return min(self.chunk_iter,remaining_iters)
+    
+    def get_current_jobspec(self):
+        if len(child_jobspec_list) == 0:
+            return None
+        else:
+            return child_jobspec_list[-1]
+
+    def get_next_jobspec(self):
+        assert len(self.child_jobspec_list) == len(self.child_job_list), "Chunked_Job.get_next_jobspec called when len(jobspec_list) != len(job_list)"
+        if self.check_done():
+            return None
+        #
+        child_jobspec = copy_jobspec(self.parent_jobspec)
+        if len(self.child_job_list) > 0:
+            modify_jobspec_to_results(child_jobspec,self.child_job_list[-1])
+        else: # create a brand new one
+            child_jobspec["num_iters"] = self.next_chunk_size()
+        #
+        return child_jobspec
+    
+    def evolve_chain(self):
+        self.consolidate_jobs()
+        if self.done:
+            return # nothing to submit
+        current_jobspec = self.get_current_jobspec()
+        if current_jobspec is not None:
+            return # still working
+        # determine next jobspec
+        ##if failed, done=True, consolidate what you have
+        ##num_iters must be a return element of returned job
+
+    def check_done(self):
+        if self.failed or self.done:
+            return true
+        #
+        if len(self.child_jobspec_list) > len(self.child_job_list):
+            current_jobspec = self.get_current_jobspec()
+            job_value = self.asyncmemo(current_jobspec)
+            if job_value is None: # still working
+                return False
+            
+        self.check_failure(job_value)
+        if self.failed:
+            return True
+        else:
+            self.child_job_list.append(job_value)
+            self.consolidate_jobs_helper()
+            self.check_done()
+            return self.consolidated_data
+    
+    def consolidate_jobs(self):
+        if self.done:
+            return sefl.consolidated_data
+        
+            current_jobspec = self.get_current_jobspec()
+            job_value = self.asyncmemo(current_jobspec)
+            if job_value is None: # still working
+                return self.consolidated_data
+            self.check_failure(job_value)
+            if self.failed:
+                # don't include the last one?  Or will I never get there?
+                pass
+            else:
+                self.child_job_list.append(job_value)
+                self.consolidate_jobs_helper()
+                self.check_done()
+                return self.consolidated_data
+
+    def consolidate_jobs_helper(self):
+        pass
+
+    def check_failure(self,jobspec):
+        # this is dependent on arguments to infer
+        arg_str = str((jobspec,))
+        if arg_str in self.asyncmemo.jobs and not self.asyncmemo.jobs[arg_str]["remote"]:
+            self.done = True
+            self.failed = True
+            return True
+        else:
+            return False
+        
 def gen_problem(dataset_spec):
     # generate a state, initialized according to the generation parameters from dataset spec,
     # containing all the training data only
