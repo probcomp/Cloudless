@@ -61,13 +61,13 @@ class Chunked_Job():
         return min(self.chunk_iter,remaining_iters)
     
     def get_current_jobspec(self):
-        if len(child_jobspec_list) == 0:
+        if len(self.child_jobspec_list) == len(self.child_job_list):
             return None
         else:
-            return child_jobspec_list[-1]
+            return self.child_jobspec_list[-1]
 
     def get_next_jobspec(self):
-        assert len(self.child_jobspec_list) == len(self.child_job_list), "Chunked_Job.get_next_jobspec called when len(jobspec_list) != len(job_list)"
+        self.pull_down_jobs()
         if self.check_done():
             return None
         #
@@ -90,45 +90,35 @@ class Chunked_Job():
         ##if failed, done=True, consolidate what you have
         ##num_iters must be a return element of returned job
 
-    def check_done(self):
-        if self.failed or self.done:
-            return true
-        #
-        if len(self.child_jobspec_list) > len(self.child_job_list):
+    def pull_down_jobs(self):
+        list_len_delta = len(self.child_jobspec_list) > len(self.child_job_list)
+        assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
+        if list_len_delta == 1:
             current_jobspec = self.get_current_jobspec()
             job_value = self.asyncmemo(current_jobspec)
             if job_value is None: # still working
                 return False
-            
+            else:
+                self.child_job_list.append(job_value)
+    
+    def check_done(self):
+        if self.failed or self.done:
+            return true
+        #
         self.check_failure(job_value)
         if self.failed:
             return True
-        else:
-            self.child_job_list.append(job_value)
-            self.consolidate_jobs_helper()
-            self.check_done()
-            return self.consolidated_data
+        self.pull_down_jobs()
+        self.consolidate_jobs()
+        if self.next_chunk_size() == 0:
+            self.done = True
+        return self.done
     
     def consolidate_jobs(self):
-        if self.done:
-            return sefl.consolidated_data
-        
-            current_jobspec = self.get_current_jobspec()
-            job_value = self.asyncmemo(current_jobspec)
-            if job_value is None: # still working
-                return self.consolidated_data
-            self.check_failure(job_value)
-            if self.failed:
-                # don't include the last one?  Or will I never get there?
-                pass
-            else:
-                self.child_job_list.append(job_value)
-                self.consolidate_jobs_helper()
-                self.check_done()
-                return self.consolidated_data
-
-    def consolidate_jobs_helper(self):
-        pass
+        ret_list = self.child_job_list[0]
+        # FIXME : this isn't correct.  Need to detrmine num_iters contained in all jobs
+        for child_job in self.child_job_list[1:]:
+            ret_list.extend(child_job[1:])
 
     def check_failure(self,jobspec):
         # this is dependent on arguments to infer
