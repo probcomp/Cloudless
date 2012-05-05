@@ -55,7 +55,7 @@ class DPMB_State():
                 else:
                     # use the last cluster
                     cluster = self.generate_cluster_assignment(force_last=True)
-            elif isinstance(init_z, list):
+            elif isinstance(init_z, list) or isinstance(init_z,np.ndarray):
                 if init_z[R] >= len(self.cluster_list):
                     cluster = self.generate_cluster_assignment(force_new=True)
                 else:
@@ -127,7 +127,7 @@ class DPMB_State():
         if cluster is None:
             cluster = self.generate_cluster_assignment()
 
-        vector = Vector(cluster, np.array(data).copy())
+        vector = Vector(cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
         self.vector_list.append(vector)
         cluster.assign_vector(vector)
         return vector
