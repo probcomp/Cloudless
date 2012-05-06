@@ -1,5 +1,7 @@
 import cPickle
 import copy
+import time
+from threading import Thread
 ##
 import numpy as np
 import pylab
@@ -43,8 +45,9 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["infer_init_z"] = arr_copy(last_summary["zs"])
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
                                         
-class Chunked_Job():
-    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100):
+class Chunked_Job(Thread):
+    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100,sleep_duration=5):
+        Thread.__init__(self)
         self.parent_jobspec = parent_jobspec
         self.asyncmemo = asyncmemo
         self.chunk_iter = chunk_iter
@@ -54,6 +57,8 @@ class Chunked_Job():
         self.consolidated_data = []
         self.done = False
         self.failed = False
+        self.pause = False
+        self.sleep_duration = sleep_duration
         #
         self.problem = gen_problem(self.parent_jobspec["dataset_spec"])
         #
@@ -93,6 +98,11 @@ class Chunked_Job():
         self.child_jobspec_list.append(next_jobspec)
         self.asyncmemo(next_jobspec)
 
+    def run(self):
+        while not self.done and not self.pause:
+            self.evolve_chain()
+            time.sleep(self.sleep_duration)
+            
     def pull_down_jobs(self):
         list_len_delta = len(self.child_jobspec_list) > len(self.child_job_list)
         assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"

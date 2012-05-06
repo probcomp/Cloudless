@@ -68,12 +68,21 @@ def gen_run_spec():
 run_spec = gen_run_spec()
 
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
-cj = rf.Chunked_Job(run_spec,memoized_infer,3)
+cj_0 = rf.Chunked_Job(run_spec,memoized_infer,3)
 
-while not cj.check_done():
-    cj.evolve_chain()
-    time.sleep(5)
-    "Done sleeping"
+run_spec_1 = gen_run_spec()
+run_spec_1["infer_seed"] = 1
+cj_1 = rf.Chunked_Job(run_spec_1,memoized_infer,3)
+
+cj_0.start()
+cj_1.start()
+cj_0.join()
+cj_1.join()
+
+# while not cj.check_done():
+#     cj.evolve_chain()
+#     time.sleep(5)
+#     "Done sleeping"
 
 one_job_value = rf.infer(run_spec)
 
@@ -92,5 +101,5 @@ if False: # FIXME: need to get Chunked_Job to include xs
 ##compare all xs
 ##compare zs of second 10 and 20
     
-assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj.consolidated_data[-1]["zs"])), "Inference didn't match!"
+assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj_0.consolidated_data[-1]["zs"])), "Inference didn't match!"
 print "Inference resume matched!"
