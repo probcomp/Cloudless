@@ -35,6 +35,10 @@ if sys.platform != "win32":
     Cloudless.base.remote_exec('reload(hf)')
     Cloudless.base.remote_exec('import Cloudless.examples.DPMB.remote_functions as rf')
     Cloudless.base.remote_exec('reload(rf)')
+    Cloudless.base.remote_exec('import Cloudless')
+    Cloudless.base.remote_exec('reload(Cloudless)')
+    Cloudless.base.remote_exec('import Cloudless.memo')
+    Cloudless.base.remote_exec('reload(Cloudless.memo)')    
 
 ##create a dataset_spec->problem->run_spec
 ##infer with xs returned
@@ -69,26 +73,27 @@ def gen_run_spec():
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
 lock = thread.allocate_lock()
 
+num_threads = 1
 run_spec_list = []
 run_spec_list.append(gen_run_spec())
-for run_spec_infer_seed in range(1,2):
+for run_spec_infer_seed in range(1,1+num_threads):
     run_spec = gen_run_spec()
     run_spec["infer_seed"] = run_spec_infer_seed
     run_spec_list.append(run_spec)
 
 cj_list = []
 for run_spec in run_spec_list:
-    cj = rf.Chunked_Job(run_spec,memoized_infer,chunk_iter=3,lock=lock)
+    cj = rf.Chunked_Job(run_spec,asyncmemo=None,chunk_iter=3,lock=lock)
     cj_list.append(cj)
-cj_0 = cj_list[0]
 
 for cj in cj_list:
+    # time.sleep(1)
     cj.start()
 
 for cj in cj_list:
     cj.join()
 
-one_job_value = rf.infer(run_spec)
+one_job_value = rf.infer(run_spec_list[0]) # make it look like cj_list[0]
 
 if False: # FIXME: need to get Chunked_Job to include xs
     problem = hf.gen_problem(run_spec["dataset_spec"])
@@ -98,6 +103,9 @@ if False: # FIXME: need to get Chunked_Job to include xs
 
     assert all(gen_matches_inf), "inference not run on correct xs!"
     print "Inference XS match generated XS"
-    
-assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj_0.consolidated_data[-1]["zs"])), "Inference didn't match!"
+
+# for cj in cj_list:
+#     print [x["score"] for x in cj.consolidated_data]
+
+assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj_list[0].consolidated_data[-1]["zs"])), "Inference didn't match!"
 print "Inference resume matched!"

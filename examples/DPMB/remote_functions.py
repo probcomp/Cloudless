@@ -10,6 +10,10 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
+import Cloudless
+reload(Cloudless)
+import Cloudless.memo
+reload(Cloudless.memo)
 
 # takes in a dataset spec
 # returns a dictionary describing the problem, containing:
@@ -46,10 +50,15 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
                                         
 class Chunked_Job(Thread):
-    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100,sleep_duration=5,lock=None):
+    def __init__(self,parent_jobspec,asyncmemo=None,chunk_iter=100,sleep_duration=5,lock=None):
         Thread.__init__(self)
         self.parent_jobspec = parent_jobspec
-        self.asyncmemo = asyncmemo
+        if asyncmemo is None:
+            register_str = str(self.parent_jobspec)
+            self.asyncmemo = Cloudless.memo.AsyncMemoize(
+                register_str, ["run_spec"], infer, override=False)
+        else:
+            self.asyncmemo = asyncmemo
         self.chunk_iter = chunk_iter
         #
         self.child_jobspec_list = []
