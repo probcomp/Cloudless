@@ -1,5 +1,6 @@
 import sys
 import matplotlib
+import thread
 matplotlib.use('Agg')
 import matplotlib.pylab as pylab
 import numpy as np
@@ -65,24 +66,27 @@ def gen_run_spec():
     #
     return run_spec
 
-run_spec = gen_run_spec()
-
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
-cj_0 = rf.Chunked_Job(run_spec,memoized_infer,3)
+lock = thread.allocate_lock()
 
-run_spec_1 = gen_run_spec()
-run_spec_1["infer_seed"] = 1
-cj_1 = rf.Chunked_Job(run_spec_1,memoized_infer,3)
+run_spec_list = []
+run_spec_list.append(gen_run_spec())
+for run_spec_infer_seed in range(1,2):
+    run_spec = gen_run_spec()
+    run_spec["infer_seed"] = run_spec_infer_seed
+    run_spec_list.append(run_spec)
 
-cj_0.start()
-cj_1.start()
-cj_0.join()
-cj_1.join()
+cj_list = []
+for run_spec in run_spec_list:
+    cj = rf.Chunked_Job(run_spec,memoized_infer,chunk_iter=3,lock=lock)
+    cj_list.append(cj)
+cj_0 = cj_list[0]
 
-# while not cj.check_done():
-#     cj.evolve_chain()
-#     time.sleep(5)
-#     "Done sleeping"
+for cj in cj_list:
+    cj.start()
+
+for cj in cj_list:
+    cj.join()
 
 one_job_value = rf.infer(run_spec)
 
@@ -94,12 +98,6 @@ if False: # FIXME: need to get Chunked_Job to include xs
 
     assert all(gen_matches_inf), "inference not run on correct xs!"
     print "Inference XS match generated XS"
-
-##create a dataset_spec->problem->run_spec
-##infer 20 with xs returned
-##infer 10 with xs returned -> infer 10 with xs returned
-##compare all xs
-##compare zs of second 10 and 20
     
 assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj_0.consolidated_data[-1]["zs"])), "Inference didn't match!"
 print "Inference resume matched!"

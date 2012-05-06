@@ -46,7 +46,7 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
                                         
 class Chunked_Job(Thread):
-    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100,sleep_duration=5):
+    def __init__(self,parent_jobspec,asyncmemo,chunk_iter=100,sleep_duration=5,lock=None):
         Thread.__init__(self)
         self.parent_jobspec = parent_jobspec
         self.asyncmemo = asyncmemo
@@ -59,6 +59,7 @@ class Chunked_Job(Thread):
         self.failed = False
         self.pause = False
         self.sleep_duration = sleep_duration
+        self.lock = lock
         #
         self.problem = gen_problem(self.parent_jobspec["dataset_spec"])
         #
@@ -85,7 +86,15 @@ class Chunked_Job(Thread):
         child_jobspec["num_iters"] = self.next_chunk_size()
         #
         return child_jobspec
-    
+
+    def acquire_lock(self):
+        if self.lock is not None:
+            self.lock.acquire()
+
+    def release_lock(self):
+        if self.lock is not None:
+            self.lock.release()
+        
     def evolve_chain(self):
         self.check_done()
         if self.done:
@@ -107,7 +116,9 @@ class Chunked_Job(Thread):
         list_len_delta = len(self.child_jobspec_list) > len(self.child_job_list)
         assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
         if list_len_delta == 1:
+            self.acquire_lock()
             self.asyncmemo.advance()
+            self.release_lock()
             current_jobspec = self.get_current_jobspec()
             job_value = self.asyncmemo(current_jobspec)
             if job_value is None: # still working
@@ -140,16 +151,15 @@ class Chunked_Job(Thread):
             return False
         # this is dependent on arguments to infer
         arg_str = str((jobspec,))
+        self.acquire_lock()
         job = self.asyncmemo.jobs[arg_str]
-        if job["remote"]:
-            return False
-        async_res = job['async_res']
-        if async_res.ready() and not async_res.successful():
-            self.done = True
-            self.failed = True
-            return True
-        else:
-            return False
+        if not job["remote"]:
+            async_res = job['async_res']
+            if async_res.ready() and not async_res.successful():
+                self.done = True
+                self.failed = True
+        self.release_lock()
+        return self.failed
         
 def gen_problem(dataset_spec):
     # generate a state, initialized according to the generation parameters from dataset spec,
