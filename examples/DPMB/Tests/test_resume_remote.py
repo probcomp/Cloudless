@@ -3,6 +3,7 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pylab as pylab
 import numpy as np
+import time
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
@@ -20,6 +21,19 @@ reload(Cloudless.memo)
 ##
 if sys.platform == "win32":
     sys.path.append("c:/")
+
+if sys.platform != "win32":
+    Cloudless.base.remote_mode()
+    Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
+    Cloudless.base.remote_exec('import numpy as np')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB.DPMB_State as ds')
+    Cloudless.base.remote_exec('reload(ds)')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB.DPMB as dm')
+    Cloudless.base.remote_exec('reload(dm)')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB.helper_functions as hf')
+    Cloudless.base.remote_exec('reload(hf)')
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB.remote_functions as rf')
+    Cloudless.base.remote_exec('reload(rf)')
 
 ##create a dataset_spec->problem->run_spec
 ##infer with xs returned
@@ -56,9 +70,12 @@ run_spec = gen_run_spec()
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
 cj = rf.Chunked_Job(run_spec,memoized_infer,3)
 
-one_job_value = rf.infer(run_spec)
 while not cj.check_done():
     cj.evolve_chain()
+    time.sleep(5)
+    "Done sleeping"
+
+one_job_value = rf.infer(run_spec)
 
 if False: # FIXME: need to get Chunked_Job to include xs
     problem = hf.gen_problem(run_spec["dataset_spec"])

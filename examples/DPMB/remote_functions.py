@@ -4,8 +4,10 @@ import copy
 import numpy as np
 import pylab
 ##
-import DPMB_State as ds
-import DPMB as dm
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
 
 # takes in a dataset spec
 # returns a dictionary describing the problem, containing:
@@ -87,6 +89,7 @@ class Chunked_Job():
         if current_jobspec is not None:
             return # still working
         next_jobspec = self.get_next_jobspec()
+        print "Submitting a jobspec"
         self.child_jobspec_list.append(next_jobspec)
         self.asyncmemo(next_jobspec)
 
@@ -94,6 +97,7 @@ class Chunked_Job():
         list_len_delta = len(self.child_jobspec_list) > len(self.child_job_list)
         assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
         if list_len_delta == 1:
+            self.asyncmemo.advance()
             current_jobspec = self.get_current_jobspec()
             job_value = self.asyncmemo(current_jobspec)
             if job_value is None: # still working
@@ -124,7 +128,11 @@ class Chunked_Job():
             return False
         # this is dependent on arguments to infer
         arg_str = str((jobspec,))
-        if arg_str in self.asyncmemo.jobs and not self.asyncmemo.jobs[arg_str]["remote"]:
+        job = self.asyncmemo.jobs[arg_str]
+        if job["remote"]:
+            return False
+        async_res = job['async_res']
+        if async_res.ready() and not async_res.successful():
             self.done = True
             self.failed = True
             return True
