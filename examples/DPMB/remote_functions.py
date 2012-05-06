@@ -106,6 +106,8 @@ class Chunked_Job():
                 self.child_job_list.append(job_value)
     
     def check_done(self):
+        if self.done:
+            return self.done
         self.pull_down_jobs()
         self.consolidate_jobs()
         self.check_failure(self.get_current_jobspec())
