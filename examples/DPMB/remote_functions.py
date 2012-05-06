@@ -16,7 +16,6 @@ import DPMB as dm
 # out["test_lls_under_gen"] --- list of the log predictive probabilities of the test vectors under the generating model
 
 def arr_copy(arr_or_other):
-    print arr_or_other
     if arr_or_other is None or type(arr_or_other) is int:
         return arr_or_other
     elif type(arr_or_other) == tuple: # only inf_seed
@@ -59,7 +58,8 @@ class Chunked_Job():
         # submit a job immediately
 
     def next_chunk_size(self):
-        remaining_iters = self.parent_jobspec["num_iters"] - len(self.consolidated_data)
+        self.consolidate_jobs()
+        remaining_iters = self.parent_jobspec["num_iters"] - (len(self.consolidated_data)-1) # subtract 1 for initial state
         return min(self.chunk_iter,remaining_iters)
     
     def get_current_jobspec(self):
@@ -113,7 +113,7 @@ class Chunked_Job():
         if len(self.child_job_list) == 0:
             self.consolidated_data = []
             return
-        ret_list = self.child_job_list[0]
+        ret_list = self.child_job_list[0][:]
         # FIXME : this isn't correct.  Need to detrmine num_iters contained in all jobs
         for child_job in self.child_job_list[1:]:
             ret_list.extend(child_job[1:])
