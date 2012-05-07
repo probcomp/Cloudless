@@ -164,7 +164,7 @@ class Chunked_Job(Thread):
         arg_str = str((jobspec,))
         self.acquire_lock()
         job = self.asyncmemo.jobs[arg_str]
-        if not job["remote"]:
+        if not job["remote"] and "async_res" in job:
             async_res = job['async_res']
             if async_res.ready() and not async_res.successful():
                 self.done = True
@@ -202,9 +202,9 @@ def plot_helper(name, state):
     counts[state] += 1
 
 def infer(run_spec):
-    ##problem = run_spec["problem"]
-    dataset_spec = run_spec["dataset_spec"] ## problem["dataset_spec"]
-    verbose_state = "verbose_state" in run_spec and run_spec["verbose_state"]
+    dataset_spec = run_spec["dataset_spec"]
+    problem = gen_problem(dataset_spec)
+    verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
     #
     if verbose_state:
@@ -216,28 +216,18 @@ def infer(run_spec):
                 print "   " + str(k) + " ---- " + str(v)
     #
     print "initializing"
-    initial_state = ds.DPMB_State(dataset_spec["gen_seed"],
-                                  dataset_spec["num_cols"],
-                                  dataset_spec["num_rows"],
-                                  init_alpha=dataset_spec["gen_alpha"],
-                                  init_betas=dataset_spec["gen_betas"],
-                                  init_z=dataset_spec["gen_z"],
-                                  init_x = None)
-    # all you need are the xs
-    gen_xs = initial_state.getXValues()
-    gen_zs = initial_state.getZIndices()
     inference_state = ds.DPMB_State(dataset_spec["gen_seed"],
-                              dataset_spec["num_cols"],
-                              dataset_spec["num_rows"],
-                              # these could be the state at the end of an inference run
-                              init_alpha=run_spec["infer_init_alpha"],
-                              init_betas=run_spec["infer_init_betas"],
-                              init_z=run_spec["infer_init_z"],
-                              # 
-                              init_x = gen_xs,decanon_indices=decanon_indices)
+                                    dataset_spec["num_cols"],
+                                    dataset_spec["num_rows"],
+                                    # these could be the state at the end of an inference run
+                                    init_alpha=run_spec["infer_init_alpha"],
+                                    init_betas=run_spec["infer_init_betas"],
+                                    init_z=run_spec["infer_init_z"],
+                                    # 
+                                    init_x = problem["xs"],
+                                    decanon_indices=decanon_indices)
     #
     print "...initialized"
-    #
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
                            state = inference_state,
                            infer_alpha = run_spec["infer_do_alpha_inference"],
@@ -246,7 +236,9 @@ def infer(run_spec):
     summaries = []
     summaries.append(
         transitioner.extract_state_summary(
-            true_zs=gen_zs,verbose_state=verbose_state))
+            true_zs=problem["zs"]
+            ,verbose_state=verbose_state
+            ,test_xs=problem["test_xs"]))
     #
     print "saved initialization"
     #
@@ -260,11 +252,16 @@ def infer(run_spec):
     last_valid_zs = None
     decanon_indices = None
     for i in range(run_spec["num_iters"]):
-        transition_return = transitioner.transition(time_seatbelt=time_seatbelt,ari_seatbelt=ari_seatbelt,true_zs=gen_zs) # true_zs necessary for seatbelt 
+        transition_return = transitioner.transition(
+            time_seatbelt=time_seatbelt
+            ,ari_seatbelt=ari_seatbelt
+            ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
         print "finished doing iteration" + str(i)
         summaries.append(
             transitioner.extract_state_summary(
-            true_zs=gen_zs,verbose_state=verbose_state))
+                true_zs=problem["zs"]
+                ,verbose_state=verbose_state
+                ,test_xs=problem["test_xs"]))
         print "finished saving iteration" + str(i)
         if transition_return is not None:
             summaries[-1]["break"] = transition_return

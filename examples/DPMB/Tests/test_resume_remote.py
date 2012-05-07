@@ -23,7 +23,7 @@ reload(Cloudless.memo)
 if sys.platform == "win32":
     sys.path.append("c:/")
 
-if sys.platform != "win32":
+if sys.platform != "win32" and False:
     Cloudless.base.remote_mode()
     Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
     Cloudless.base.remote_exec('import numpy as np')
@@ -39,10 +39,8 @@ if sys.platform != "win32":
     Cloudless.base.remote_exec('reload(Cloudless)')
     Cloudless.base.remote_exec('import Cloudless.memo')
     Cloudless.base.remote_exec('reload(Cloudless.memo)')    
-
-##create a dataset_spec->problem->run_spec
-##infer with xs returned
-##compare xs
+else:
+    print "!!!NOT REMOTE!!!"
 
 num_iters = 20
 def gen_run_spec():
@@ -66,14 +64,14 @@ def gen_run_spec():
     run_spec["dataset_spec"] = dataset_spec
     run_spec["time_seatbelt"] = 600
     run_spec["ari_seatbelt"] = None
-    run_spec["verbose_state"] = False
+    run_spec["verbose_state"] = True
     #
     return run_spec
 
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
 lock = thread.allocate_lock()
 
-num_threads = 1
+num_threads = 0
 run_spec_list = []
 run_spec_list.append(gen_run_spec())
 for run_spec_infer_seed in range(1,1+num_threads):
@@ -83,7 +81,7 @@ for run_spec_infer_seed in range(1,1+num_threads):
 
 cj_list = []
 for run_spec in run_spec_list:
-    cj = rf.Chunked_Job(run_spec,asyncmemo=None,chunk_iter=3,lock=lock)
+    cj = rf.Chunked_Job(run_spec,asyncmemo=None,chunk_iter=7,lock=lock)
     cj_list.append(cj)
 
 for cj in cj_list:
@@ -104,17 +102,24 @@ for cj in cj_list:
 
 one_job_value = rf.infer(run_spec_list[0]) # make it look like cj_list[0]
 
-if False: # FIXME: need to get Chunked_Job to include xs
-    problem = hf.gen_problem(run_spec["dataset_spec"])
-    inf_xs_list = [inf["xs"] for inf in one_job_value if "xs" in inf]
-    gen_matches_inf = [(np.array(problem["xs"])==np.array(inf_xs)).all()
-                       for inf_xs in inf_xs_list]
+# check that inference xs are same as generated xs
+problem = rf.gen_problem(run_spec_list[0]["dataset_spec"])
+inf_xs_list = [summary["xs"] for summary in 
+               cj_list[0].consolidated_data if "xs" in summary]
+gen_matches_inf = [(np.array(problem["xs"])==np.array(inf_xs)).all()
+                   for inf_xs in inf_xs_list]
+#
+assert all(gen_matches_inf), "inference not run on correct xs!"
+print "Inference XS match generated XS"
 
-    assert all(gen_matches_inf), "inference not run on correct xs!"
-    print "Inference XS match generated XS"
 
-# for cj in cj_list:
-#     print [x["score"] for x in cj.consolidated_data]
-
+# check that one_job, chunked_job solutions match
 assert all(np.array(one_job_value[-1]["zs"]) == np.array(cj_list[0].consolidated_data[-1]["zs"])), "Inference didn't match!"
 print "Inference resume matched!"
+
+
+key = "test_lls"
+for cj in cj_list:
+    print [np.log(sum(np.exp(list(x[key])))) for x in cj.consolidated_data]
+
+print [np.log(sum(np.exp(list(x[key])))) for x in one_job_value]

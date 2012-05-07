@@ -141,26 +141,36 @@ class DPMB_State():
         self.vector_list.remove(vector)
 
     def calculate_log_predictive(self, vector):
-        if vector.cluster is not None:
-            raise Exception("Tried to do this for a vector already in some model. Not kosher!")
-
+        assert vector.cluster is None,("Tried calculate_log_predictive on a" +
+                                       " vector already in model. Not kosher!")
         clusters = list(self.cluster_list) + [None]
-        log_joints = [hf.cluster_vector_joint(vector, cluster, self) for cluster in clusters]
+        log_joints = [hf.cluster_vector_joint(vector, cluster, self)[0]
+                      for cluster in clusters]
         log_marginal_on_vector = reduce(np.logaddexp, log_joints)
         return log_marginal_on_vector
     
     def generate_and_score_test_set(self, N_test):
         xs = []
         lls = []
-
+        #
         for i in range(N_test):
             test_vec = self.generate_vector()
             xs.append(test_vec.data)
             self.remove_vector(test_vec)
             lls.append(self.calculate_log_predictive(test_vec))
-
+        #
         return xs,lls
-    
+
+    def score_test_set(self, test_xs):
+        lls = []
+        #
+        for data in test_xs:
+            test_vec = self.generate_vector(data=data)
+            self.remove_vector(test_vec)
+            lls.append(self.calculate_log_predictive(test_vec))
+        #
+        return lls
+                                                            
     def clone(self):
         # FIXME: can't rely on perfect random seed tracking right now. a future pass should make states modified by a journal of operations,
         #        and encapsulate a random source, so that we can control its precise state (and reduce all nondeterminism down to the underlying

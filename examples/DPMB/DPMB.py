@@ -167,7 +167,7 @@ class DPMB():
         self.ari_seatbelt_hit = hf.calc_ari(self.state.getZIndices(),true_zs) > ari_seatbelt
         return self.ari_seatbelt_hit
 
-    def extract_state_summary(self,true_zs=None,send_zs=True,verbose_state=False):
+    def extract_state_summary(self,true_zs=None,send_zs=True,verbose_state=False,test_xs=None):
         
         state_dict = {
             "alpha":self.state.alpha
@@ -187,5 +187,7 @@ class DPMB():
             state_dict["zs"] = self.state.getZIndices()
         if verbose_state:
             state_dict["xs"] = self.state.getXValues()
-            
+
+        if test_xs is not None:
+            state_dict["test_lls"] = self.state.score_test_set(test_xs)
         return state_dict
