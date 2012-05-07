@@ -105,6 +105,8 @@ class Chunked_Job(Thread):
             self.lock.release()
         
     def evolve_chain(self):
+        if self.pause:
+            return
         self.check_done()
         if self.done:
             return # nothing to submit
@@ -117,7 +119,7 @@ class Chunked_Job(Thread):
         self.asyncmemo(next_jobspec)
 
     def run(self):
-        while not self.done and not self.pause:
+        while not self.done:
             self.evolve_chain()
             time.sleep(self.sleep_duration)
             

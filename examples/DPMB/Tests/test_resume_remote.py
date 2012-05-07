@@ -87,8 +87,17 @@ for run_spec in run_spec_list:
     cj_list.append(cj)
 
 for cj in cj_list:
-    # time.sleep(1)
+    time.sleep(1)
     cj.start()
+
+time.sleep(10)
+for cj in cj_list:
+    cj.pause = True
+
+temp = raw_input("Jobs should be paused.  Waiting for input to resume")
+for cj in cj_list:
+    cj.pause = False
+    time.sleep(1)
 
 for cj in cj_list:
     cj.join()
