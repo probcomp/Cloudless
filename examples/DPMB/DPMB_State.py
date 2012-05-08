@@ -200,6 +200,9 @@ class DPMB_State():
     def get_all_vectors(self):
         return self.vector_list
             
+    def get_timing(self):
+        return self.timing.copy()
+
     def getZIndices(self):
         ##CANONICAL zs
         z_indices = []

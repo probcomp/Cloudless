@@ -50,7 +50,7 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
                                         
 class Chunked_Job(Thread):
-    def __init__(self,parent_jobspec,asyncmemo=None,chunk_iter=100,sleep_duration=5,lock=None):
+    def __init__(self,parent_jobspec,asyncmemo=None,chunk_iter=100,sleep_duration=20,lock=None):
         Thread.__init__(self)
         self.parent_jobspec = parent_jobspec
         if asyncmemo is None:
@@ -69,16 +69,12 @@ class Chunked_Job(Thread):
         self.pause = False
         self.sleep_duration = sleep_duration
         self.lock = lock
+        self.verbose = False
         #
         self.problem = gen_problem(self.parent_jobspec["dataset_spec"])
         #
         # submit a job immediately
 
-    def next_chunk_size(self):
-        self.consolidate_jobs()
-        remaining_iters = self.parent_jobspec["num_iters"] - (len(self.consolidated_data)-1) # subtract 1 for initial state
-        return min(self.chunk_iter,remaining_iters)
-    
     def get_current_jobspec(self):
         if len(self.child_jobspec_list) == len(self.child_job_list):
             return None
@@ -86,13 +82,11 @@ class Chunked_Job(Thread):
             return self.child_jobspec_list[-1]
 
     def get_next_jobspec(self):
-        if self.check_done():
-            return None
-        #
+        # check_done() should have been called prior
         child_jobspec = copy_jobspec(self.parent_jobspec)
         if len(self.child_job_list) > 0:
             modify_jobspec_to_results(child_jobspec,self.child_job_list[-1])
-        child_jobspec["num_iters"] = self.next_chunk_size()
+        child_jobspec["num_iters"] = self.next_chunk_size
         #
         return child_jobspec
 
@@ -114,9 +108,11 @@ class Chunked_Job(Thread):
         if current_jobspec is not None:
             return # still working
         next_jobspec = self.get_next_jobspec()
-        print "Submitting a jobspec"
+        print "Submitting a jobspec from: " + str(self)
         self.child_jobspec_list.append(next_jobspec)
+        self.acquire_lock()
         self.asyncmemo(next_jobspec)
+        self.release_lock()
 
     def run(self):
         while not self.done:
@@ -124,14 +120,26 @@ class Chunked_Job(Thread):
             time.sleep(self.sleep_duration)
             
     def pull_down_jobs(self):
-        list_len_delta = len(self.child_jobspec_list) > len(self.child_job_list)
+        print "pull_down_jobs: " + str(self)
+        list_len_delta = len(self.child_jobspec_list) - len(self.child_job_list)
         assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
         if list_len_delta == 1:
+            print "pull_down_jobs: list_len_delta==1 : " + str(self)
             self.acquire_lock()
-            self.asyncmemo.advance()
-            self.release_lock()
             current_jobspec = self.get_current_jobspec()
+            # current_jobstr = str((current_jobspec,))
+            # job_value = None
+            # if self.asyncmemo.jobs.get(current_jobstr,False):
+            #     job = self.asyncmemo.jobs[current_jobstr]
+            #     if job["remote"]:
+            #         value = job['async_res']
+            #         if value.ready() and value.successful():
+            #             self.asyncmemo.advance()
+            #             job_value = self.asyncmemo(current_jobspec)
+            self.asyncmemo.advance()
             job_value = self.asyncmemo(current_jobspec)
+            self.release_lock()
+            print "pull_down_jobs: job_value : "  + str(job_value) + str(self)
             if job_value is None: # still working
                 return False
             else:
@@ -143,7 +151,12 @@ class Chunked_Job(Thread):
         self.pull_down_jobs()
         self.consolidate_jobs()
         self.check_failure(self.get_current_jobspec())
-        if self.next_chunk_size() == 0:
+        #
+        remaining_iters = (self.parent_jobspec["num_iters"]
+                           - (len(self.consolidated_data)-1)) # subtract 1 for initial state
+        self.next_chunk_size = min(self.chunk_iter,remaining_iters)
+        #
+        if self.next_chunk_size == 0:
             self.done = True
         return self.done
     

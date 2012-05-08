@@ -23,7 +23,7 @@ reload(Cloudless.memo)
 if sys.platform == "win32":
     sys.path.append("c:/")
 
-if sys.platform != "win32" and False:
+if sys.platform != "win32" and True:
     Cloudless.base.remote_mode()
     Cloudless.base.remote_exec('import matplotlib.pylab as pylab')
     Cloudless.base.remote_exec('import numpy as np')
@@ -42,7 +42,8 @@ if sys.platform != "win32" and False:
 else:
     print "!!!NOT REMOTE!!!"
 
-num_iters = 20
+num_iters = 50 # 10 
+chunk_iter = 27 # 3
 def gen_run_spec():
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
@@ -71,7 +72,7 @@ def gen_run_spec():
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=True)
 lock = thread.allocate_lock()
 
-num_threads = 0
+num_threads = 2
 run_spec_list = []
 run_spec_list.append(gen_run_spec())
 for run_spec_infer_seed in range(1,1+num_threads):
@@ -81,7 +82,8 @@ for run_spec_infer_seed in range(1,1+num_threads):
 
 cj_list = []
 for run_spec in run_spec_list:
-    cj = rf.Chunked_Job(run_spec,asyncmemo=None,chunk_iter=7,lock=lock)
+    cj = rf.Chunked_Job(run_spec,asyncmemo=memoized_infer
+                        ,chunk_iter=chunk_iter,lock=lock)
     cj_list.append(cj)
 
 for cj in cj_list:
@@ -93,6 +95,7 @@ for cj in cj_list:
     cj.pause = True
 
 temp = raw_input("Jobs should be paused.  Waiting for input to resume")
+
 for cj in cj_list:
     cj.pause = False
     time.sleep(1)
