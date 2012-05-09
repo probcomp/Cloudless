@@ -2,6 +2,7 @@ import cPickle
 import copy
 import time
 from threading import Thread
+import datetime
 ##
 import numpy as np
 import pylab
@@ -92,10 +93,12 @@ class Chunked_Job(Thread):
 
     def acquire_lock(self):
         if self.lock is not None:
+            print str(datetime.datetime.now()) + " :: acquiring lock :: " + str(self)
             self.lock.acquire()
 
     def release_lock(self):
         if self.lock is not None:
+            print str(datetime.datetime.now()) + " :: releasing lock :: " + str(self)
             self.lock.release()
         
     def evolve_chain(self):
@@ -120,7 +123,6 @@ class Chunked_Job(Thread):
             time.sleep(self.sleep_duration)
             
     def pull_down_jobs(self):
-        print "pull_down_jobs: " + str(self)
         list_len_delta = len(self.child_jobspec_list) - len(self.child_job_list)
         assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
         if list_len_delta == 1:
@@ -136,10 +138,10 @@ class Chunked_Job(Thread):
             #         if value.ready() and value.successful():
             #             self.asyncmemo.advance()
             #             job_value = self.asyncmemo(current_jobspec)
-            self.asyncmemo.advance()
+            # self.asyncmemo.advance()
             job_value = self.asyncmemo(current_jobspec)
             self.release_lock()
-            print "pull_down_jobs: job_value : "  + str(job_value) + str(self)
+            print "pull_down_jobs: job_value is None : "  + str(job_value is None) + str(self)
             if job_value is None: # still working
                 return False
             else:
@@ -171,6 +173,7 @@ class Chunked_Job(Thread):
         self.consolidated_data = ret_list
         
     def check_failure(self,jobspec):
+        return False # FIXME : this short circuits, should be removed after debugging
         if jobspec is None:
             return False
         # this is dependent on arguments to infer
@@ -219,6 +222,7 @@ def infer(run_spec):
     problem = gen_problem(dataset_spec)
     verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
+    data_subset_indices = run_spec.get("data_subset_indices",None)
     #
     if verbose_state:
         print "doing run: "
@@ -238,7 +242,8 @@ def infer(run_spec):
                                     init_z=run_spec["infer_init_z"],
                                     # 
                                     init_x = problem["xs"],
-                                    decanon_indices=decanon_indices)
+                                    decanon_indices=decanon_indices,
+                                    data_subset_indices=data_subset_indices)
     #
     print "...initialized"
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
@@ -270,15 +275,16 @@ def infer(run_spec):
             ,ari_seatbelt=ari_seatbelt
             ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
         print "finished doing iteration" + str(i)
-        summaries.append(
-            transitioner.extract_state_summary(
-                true_zs=problem["zs"]
-                ,verbose_state=verbose_state
-                ,test_xs=problem["test_xs"]))
-        print "finished saving iteration" + str(i)
+        next_summary = transitioner.extract_state_summary(
+            true_zs=problem["zs"]
+            ,verbose_state=verbose_state
+            ,test_xs=problem["test_xs"])
         if transition_return is not None:
             summaries[-1]["break"] = transition_return
+            summaries[-1]["failed_info"] = next_summary
             break
+        summaries.append(next_summary)
+        print "finished saving iteration" + str(i)
         last_valid_zs = transitioner.state.getZIndices()
         decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs

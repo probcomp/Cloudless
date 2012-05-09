@@ -65,7 +65,7 @@ def gen_run_spec():
     run_spec["dataset_spec"] = dataset_spec
     run_spec["time_seatbelt"] = 600
     run_spec["ari_seatbelt"] = None
-    run_spec["verbose_state"] = True
+    run_spec["verbose_state"] = False
     #
     return run_spec
 
@@ -86,22 +86,18 @@ for run_spec in run_spec_list:
                         ,chunk_iter=chunk_iter,lock=lock)
     cj_list.append(cj)
 
-for cj in cj_list:
-    time.sleep(1)
-    cj.start()
+# for cj in cj_list:
+#     time.sleep(1)
+#     cj.start()
 
-time.sleep(10)
-for cj in cj_list:
-    cj.pause = True
+while not all([cj.done for cj in cj_list]):
+    time.sleep(10)
+    memoized_infer.advance()
+    for cj in cj_list:
+        cj.evolve_chain()
 
-temp = raw_input("Jobs should be paused.  Waiting for input to resume")
-
-for cj in cj_list:
-    cj.pause = False
-    time.sleep(1)
-
-for cj in cj_list:
-    cj.join()
+# for cj in cj_list:
+#     cj.join()
 
 one_job_value = rf.infer(run_spec_list[0]) # make it look like cj_list[0]
 

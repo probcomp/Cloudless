@@ -174,6 +174,8 @@ class DPMB():
             ,"betas":self.state.betas.copy()
             ,"score":self.state.score
             ,"num_clusters":len(self.state.cluster_list)
+            ,"cluster_counts":[cluster.count() 
+                               for cluster in self.state.cluster_list]
             ,"timing":self.state.get_timing()
             ,"inf_seed":hf.get_seed()
             }
