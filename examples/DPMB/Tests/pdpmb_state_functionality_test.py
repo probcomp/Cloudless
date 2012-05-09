@@ -45,3 +45,4 @@ single_state = pds.create_single_state()
 print single_state.score
 print pds.gamma_score_component()
 print [state.score for state in pds.state_list]
+print sum([state.score for state in pds.state_list])

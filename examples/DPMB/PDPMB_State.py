@@ -60,8 +60,15 @@ class PDPMB_State():
             self.cluster_list_list.append(state.cluster_list)
 
     def gamma_score_component(self):
-        gamma_score = ss.gammaln(float(self.alpha)*self.num_nodes) - self.num_nodes*ss.gammaln(float(self.alpha)) + (self.alpha-1) * sum(np.log(self.gammas))
-        return gamma_score
+        counts = [len(state.vector_list) for state in self.state_list]
+        first_part = ss.gammaln(sum(counts)) - sum(ss.gammaln(counts))
+        second_part = sum(counts*np.log(self.gammas))
+        # alpha = self.alpha
+        # first_part = (ss.gammaln(float(self.alpha)*self.num_nodes)
+        #               - self.num_nodes*ss.gammaln(float(self.alpha)))
+        # second_part = (self.alpha-1) * sum(np.log(self.gammas))
+        gamma_score = first_part + second_part
+        return gamma_score,first_part,second_part
 
     def create_single_state(self):
         single_state = None
