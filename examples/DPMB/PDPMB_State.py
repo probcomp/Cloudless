@@ -1,8 +1,14 @@
 #!python
-import numpy as np, numpy.random as nr,pylab,sys
-import PDPMB as pdm
-reload(dm)
-import helper_functions as hf
+import numpy as np
+import numpy.random as nr
+import scipy.special as ss
+import pylab,sys
+#
+import Cloudless.examples.DPMB.PDPMB as pdm
+reload(pdm)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 ##
 import pdb
@@ -16,6 +22,7 @@ class PDPMB_State():
         self.init_x = init_x
         self.num_cols = len(init_gammas)
         self.num_rows = len(init_x)
+        self.num_nodes = num_nodes
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
@@ -34,22 +41,44 @@ class PDPMB_State():
         self.score = 0.0 #initially empty score
 
         # deal out data to states
-        self.gammas = nr.dirichlet(np.repeat(self.alpha,num_nodes),1)
+        self.gammas = nr.dirichlet(np.repeat(self.alpha,num_nodes),1).tolist()[0]
         log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
-        for data_idx in range(num_rows):
+        for data_idx in range(self.num_rows):
             draw = hf.renormalize_and_sample(log_gammas)
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.cluster_list_list = [] #all the Cluster s in the model
         self.state_list = []
         for state_idx in range(num_nodes):
-            num_rows = len(node_data_indices[state_idx])
+            num_rows_i = len(node_data_indices[state_idx])
             alpha_i = self.alpha * self.gammas[state_idx]
             state = ds.DPMB_State(
-                gen_seed=0,num_cols=self.num_cols,num_rows=self.num_rows
+                gen_seed=0,num_cols=self.num_cols,num_rows=num_rows_i
                 ,init_alpha=alpha_i,init_betas=self.betas)
+            self.state_list.append(state)
             self.cluster_list_list.append(state.cluster_list)
+
+    def gamma_score_component(self):
+        gamma_score = ss.gammaln(float(self.alpha)*self.num_nodes) - self.num_nodes*ss.gammaln(float(self.alpha)) + (self.alpha-1) * sum(np.log(self.gammas))
+        return gamma_score
+
+    def create_single_state(self):
+        single_state = None
+        cluster_idx = 0
+        xs = []
+        zs = []
+        for state in self.state_list:
+            xs.extend(state.getXValues())
+            temp_zs = state.getZIndices()
+            max_zs = temp_zs[-1]
+            zs.extend(np.array(temp_zs) + cluster_idx)
+            cluster_idx += max_zs
+        single_state = ds.DPMB_State(
+            gen_seed=0,num_cols=self.num_cols,num_rows=self.num_rows
+            ,init_alpha=self.alpha,init_betas=self.betas
+            ,init_x=xs,init_z=zs)
+        return single_state
 
     def initialize_alpha(self,init_alpha):
         if init_alpha is not None:

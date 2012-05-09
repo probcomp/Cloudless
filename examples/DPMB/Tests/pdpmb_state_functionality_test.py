@@ -2,8 +2,8 @@
 
 import numpy as np
 #
-import remote_functions as rf
-import PDPMB_State as pds
+import Cloudless.examples.DPMB.remote_functions as rf
+import Cloudless.examples.DPMB.PDPMB_State as pds
 
 num_iters = 50 # 10 
 chunk_iter = 27 # 3
@@ -36,7 +36,12 @@ run_spec = gen_run_spec()
 problem = rf.gen_problem(run_spec["dataset_spec"])
 init_x = problem["xs"]
 num_cols = 10
-pds = pdf.PDPMB_State(
-    init_alpha=1,init_betas=np.repeat(1.0,num_cols)
+pds = pds.PDPMB_State(
+    init_alpha=3.0,init_betas=[1.0 for idx in range(num_cols)]
     ,init_gammas=np.repeat(1.0/num_cols,num_cols)
-    ,init_x=init_x,gen_seed=0,num_nodes=2)
+    ,init_x=init_x,gen_seed=0,num_nodes=3)
+
+single_state = pds.create_single_state()
+print single_state.score
+print pds.gamma_score_component()
+print [state.score for state in pds.state_list]
