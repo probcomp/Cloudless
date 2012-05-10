@@ -181,13 +181,13 @@ To distribute the data across compute nodes, we draw a multinomial distribution,
 
 The probability of a particular $\vec \gamma$ draw from the dirichlet process is
 \begin{equation}
-P(\vec \gamma|\alpha) = \frac{\Gamma(\sum_j \alpha_j)}{\prod_j \Gamma(\alpha_j)} \prod_j \gamma_j^{\alpha_j-1}
+P(\vec \gamma|\vec \alpha) = \frac{\Gamma(\sum_j \alpha_j)}{\prod_j \Gamma(\alpha_j)} \prod_j \gamma_j^{\alpha_j-1}
 \end{equation}
 
 for balanced prior $\alpha$ over K compute nodes, this is
 
 \begin{equation}
-P(\vec \gamma|\alpha) = \frac{\Gamma(K \alpha_j)}{\Gamma(\alpha_j)^K} \prod_j \gamma_j^{\alpha-1}
+P(\vec \gamma|\alpha) = \frac{\Gamma(K \alpha)}{\Gamma(\alpha)^K} \prod_j \gamma_j^{\alpha-1}
 \end{equation}
 
 $\vec \gamma$ only determines the probability of a data vector being allocated to a particular node.  To determine the actual data distribution, we draw from a multinomial $\#ROWS$ times.  The $i^{th}$ compute node is assigned ${N_i}$ of the rows
@@ -211,4 +211,3 @@ P( Y | \gamma ) = Dir(\gamma') \propto
 
 \end{document}
 
-%%Let $B' = B + f(\delta)$, where $\delta \sim Cat(2\|B\|+1,\frac{\vec{1}}{2\|B\|+1})$ and $f(\delta) = -1^{1+(\delta \text{ mod } 2)} \lfloor \delta/2 \rfloor$ allowing subtraction or addition from each only addition to the new cluster index.
