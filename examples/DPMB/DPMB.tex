@@ -174,6 +174,41 @@ P(\beta_d;X) & = & \prod_{b_c \in B} P(\beta_d;\{X_{i,d}\}_{i \in b_c}) \\
 
 When is an asymmetric proposal density appropriate?
 
+
+\section{PDPMB: Derivation for $P(\vec \gamma|\alpha)$ and $P(\vec N|\vec \gamma)$}
+
+To distribute the data across compute nodes, we draw a multinomial distribution, $\vec \gamma$ from a dirichlet distribution with balanced prior $\alpha$.  This $\alpha$ is the equivalent $\alpha$ for a single model's CRP prior.
+
+The probability of a particular $\vec \gamma$ draw from the dirichlet process is
+\begin{equation}
+P(\vec \gamma|\alpha) = \frac{\Gamma(\sum_j \alpha_j)}{\prod_j \Gamma(\alpha_j)} \prod_j \gamma_j^{\alpha_j-1}
+\end{equation}
+
+for balanced prior $\alpha$ over K compute nodes, this is
+
+\begin{equation}
+P(\vec \gamma|\alpha) = \frac{\Gamma(K \alpha_j)}{\Gamma(\alpha_j)^K} \prod_j \gamma_j^{\alpha-1}
+\end{equation}
+
+$\vec \gamma$ only determines the probability of a data vector being allocated to a particular node.  To determine the actual data distribution, we draw from a multinomial $\#ROWS$ times.  The $i^{th}$ compute node is assigned ${N_i}$ of the rows
+
+\begin{equation}
+\vec N \sim Multinomial(\vec \gamma,\#ROWS)
+\end{equation}
+
+Note that $\sum_i N_i = \#ROWS$.
+
+The probabilty of a particular $\vec N$ draw is
+\begin{equation}
+P(\vec N|\vec \gamma) = \frac{(\sum_i N_i)!}{\prod_i (N_i!)} \prod_i \gamma_i^{N_i}
+\end{equation}
+
+The math for shuffling clusters among nodes uses a multinomial distribution with a Dirichlet prior: the posterior distribution is also Dirichlet with modified counts for the prior
+
+\begin{equation}
+P( Y | \gamma ) = Dir(\gamma') \propto 
+\end{equation}
+
 \end{document}
 
 %%Let $B' = B + f(\delta)$, where $\delta \sim Cat(2\|B\|+1,\frac{\vec{1}}{2\|B\|+1})$ and $f(\delta) = -1^{1+(\delta \text{ mod } 2)} \lfloor \delta/2 \rfloor$ allowing subtraction or addition from each only addition to the new cluster index.
