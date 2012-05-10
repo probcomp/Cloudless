@@ -203,10 +203,10 @@ The probabilty of a particular $\vec N$ draw is
 P(\vec N|\vec \gamma) = \frac{(\sum_i N_i)!}{\prod_i (N_i!)} \prod_i \gamma_i^{N_i}
 \end{equation}
 
-The math for shuffling clusters among nodes uses a multinomial distribution with a Dirichlet prior: the posterior distribution is also Dirichlet with modified counts for the prior
+The math for shuffling clusters among nodes uses the multinomial distribution.  A cluster must be entirely moved, so the probability of its assignment to any given node is the probability of $\|b_i\|$ successive allocations to the target cluster where $\|b_i\|$ indicates the number of datavectors in the cluster.  Let $y_i$ indicate the node to which the $i^{th}$ cluster is proposed to be allocated.
 
 \begin{equation}
-P( Y | \gamma ) = Dir(\gamma') \propto 
+P(y_i=j|y_{-i}) = \prod_{i=0}^{\|b_i\|-1} \frac{((\sum_j N_j)+i)!}{(N_i + i)!} \gamma_i
 \end{equation}
 
 \end{document}
