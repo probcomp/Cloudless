@@ -128,6 +128,23 @@ def calculate_cluster_conditional(state,vector):
     ##
     return conditionals
 
+def calculate_node_conditional(pstate,cluster_size):
+    # this breaks with cluster_conditional in not actually 
+    # using the object
+    # the cluster being tested should already be popped from its node
+
+    node_sizes = [len(state.vector_list) for state in pstate.state_list]
+    model_size = sum(node_sizes)
+    conditionals = []
+    for gamma,node_size in zip(pstate.gammas,node_sizes):
+        conditional = 0
+        conditional += node_size*np.log(gamma)
+        for i in range(node_size):
+            conditional += np.log(model_size + i) 
+            conditional -= np.log(node_size + i)
+        conditionals.append(conditional)
+    return conditionals
+
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
     return mle
