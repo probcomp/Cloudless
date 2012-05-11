@@ -14,7 +14,7 @@ def gen_run_spec():
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = 16
     dataset_spec["num_rows"] = 256
-    dataset_spec["gen_alpha"] = 1.0 #FIXME: could make it MLE alpha later
+    dataset_spec["gen_alpha"] = 10.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     dataset_spec["gen_z"] = ("balanced", 10)
     dataset_spec["N_test"] = 10
@@ -22,11 +22,11 @@ def gen_run_spec():
     run_spec = {}
     run_spec["num_iters"] = num_iters
     run_spec["infer_seed"] = 0
-    run_spec["infer_init_alpha"] = 1.0
+    run_spec["infer_init_alpha"] = 10.0
     run_spec["infer_init_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
     run_spec["infer_do_alpha_inference"] = True
     run_spec["infer_do_betas_inference"] = True
-    run_spec["infer_init_z"] = None
+    run_spec["infer_init_z"] = 1
     run_spec["dataset_spec"] = dataset_spec
     run_spec["time_seatbelt"] = 600
     run_spec["ari_seatbelt"] = None
@@ -43,12 +43,15 @@ pds = pds.PDPMB_State(
     ,init_betas=[1.0 for idx in range(dataset_spec["num_cols"])]
     ,init_gammas=[1.0/dataset_spec["num_cols"]
                   for idx in range(dataset_spec["num_cols"])]
-    ,init_x=init_x,gen_seed=0,num_nodes=4)
+    ,init_x=init_x,gen_seed=0,num_nodes=8)
 
-single_state = pds.create_single_state()
-print "gamma_score: ",pds.gamma_score_component()[0]
-print "N_score: ",pds.N_score_component()[0]
-print "individual state scores: ",[state.score for state in pds.state_list]
-print "sum gamma,N: ",pds.N_score_component()[0]+pds.gamma_score_component()[0]
-print "single state: ",single_state.score
-print "sum individuals: ",sum([state.score for state in pds.state_list])
+pds.transition()
+
+if False:
+    single_state = pds.create_single_state()
+    print "gamma_score: ",pds.gamma_score_component()[0]
+    print "N_score: ",pds.N_score_component()[0]
+    print "individual state scores: ",[state.score for state in pds.state_list]
+    print "sum gamma,N: ",pds.N_score_component()[0]+pds.gamma_score_component()[0]
+    print "single state: ",single_state.score
+    print "sum individuals: ",sum([state.score for state in pds.state_list])

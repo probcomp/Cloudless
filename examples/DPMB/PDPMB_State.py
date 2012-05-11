@@ -6,6 +6,8 @@ import pylab,sys
 #
 import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.helper_functions as hf
@@ -48,19 +50,20 @@ class PDPMB_State():
             draw = hf.renormalize_and_sample(log_gammas)
             node_data_indices[draw].append(data_idx)
         # now create the child states
-        self.cluster_list_list = [] #all the Cluster s in the model
-        self.state_list = []
+        self.model_list = []
         for state_idx in range(num_nodes):
             num_rows_i = len(node_data_indices[state_idx])
             alpha_i = self.alpha * self.gammas[state_idx]
             state = ds.DPMB_State(
                 gen_seed=0,num_cols=self.num_cols,num_rows=num_rows_i
                 ,init_alpha=alpha_i,init_betas=self.betas)
-            self.state_list.append(state)
-            self.cluster_list_list.append(state.cluster_list)
+            model = dm.DPMB(state=state,inf_seed=0
+                            ,infer_alpha=False,infer_beta=False)
+            self.model_list.append(model)
 
     def N_score_component(self):
-        counts = np.array([len(state.vector_list) for state in self.state_list])
+        counts = np.array([len(model.state.vector_list) 
+                           for model in self.model_list])
         first_part = ss.gammaln(sum(counts)+1) - sum(ss.gammaln(counts+1))
         second_part = sum(counts*np.log(self.gammas))
         N_score = first_part + second_part
@@ -79,9 +82,12 @@ class PDPMB_State():
         cluster_idx = 0
         xs = []
         zs = []
-        for state in self.state_list:
+        for model in self.model_list:
+            state = model.state
             xs.extend(state.getXValues())
             temp_zs = state.getZIndices()
+            if len(temp_zs) == 0:
+                continue
             max_zs = temp_zs[-1]
             zs.extend(np.array(temp_zs) + cluster_idx)
             cluster_idx += max_zs
@@ -119,24 +125,43 @@ class PDPMB_State():
         for data in data_list:
             state.generate_vector(data=data,cluster=new_cluster)
 
+    def find_state_idx(self,state):
+        for state_idx,model in enumerate(self.model_list):
+            if state == model.state:
+                return state_idx
+        return None
+
     def move_cluster(self,cluster,to_state):
         if cluster.state is to_state:
-            return
-        data_list = pop_cluster(cluster)
-        add_cluster(to_state,data_list)
+            return # don't bother if from_state == to_state
+        from_idx = self.find_state_idx(cluster.state)
+        to_idx = self.find_state_idx(to_state)
+        print "movinng cluster from " + str(from_idx) + " to " + str(to_idx)
+        data_list = self.pop_cluster(cluster)
+        self.add_cluster(to_state,data_list)
 
-    def generate_node_assignment(self, cluster):
-        cluster_len = len(cluster.vector_list)
-        node_log_prob_list = []
-        for state in self.state_list:
-            node_size = len(state.vector_list)
-            node_log_prob = 0
-            for i in range(cluster_len):
-                node_log_prob += (log(cluster_len+self.alpha+i)
-                                  -log(node_size+self.num_nodes*self.alpha+i))
-            node_log_prob_list.append(node_log_prob)
+    def transition_single_node_assignment(self, cluster):
+        node_log_prob_list = hf.calculate_node_conditional(self,cluster)
         draw = hf.renormalize_and_sample(node_log_prob_list)
-        return self.state_list[draw]
+        to_state = self.model_list[draw].state
+        self.move_cluster(cluster,to_state)
+
+    def transition_node_assignments(self):
+        cluster_list_list = [] #all the clusters in the model
+        for model in self.model_list:
+            cluster_list_list.append(model.state.cluster_list)
+
+        for state_idx,cluster_list in enumerate(cluster_list_list):
+            print "state #" + str(state_idx) + " has " + str(len(cluster_list)) + " clusters"
+            for cluster in cluster_list:
+                self.transition_single_node_assignment(cluster)
+
+    def transition(self):
+        for model in self.model_list:
+            model.transition()
+        self.transition_node_assignments()
+        # transition alpha
+        # transition betas
 
     def get_alpha_grid(self):
         ##endpoint should be set by MLE of all data in its own cluster?

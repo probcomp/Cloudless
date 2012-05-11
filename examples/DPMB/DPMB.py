@@ -93,7 +93,6 @@ class DPMB():
             score_vec = hf.calculate_cluster_conditional(self.state,vector)
 
             # sample an assignment
-
             draw = hf.renormalize_and_sample(score_vec,verbose=self.state.verbose)
 
             cluster = None
