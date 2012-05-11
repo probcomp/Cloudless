@@ -39,11 +39,15 @@ dataset_spec = run_spec["dataset_spec"]
 problem = rf.gen_problem(run_spec["dataset_spec"])
 init_x = problem["xs"]
 pds = pds.PDPMB_State(
-    init_alpha=dataset_spec["gen_alpha"]
-    ,init_betas=[1.0 for idx in range(dataset_spec["num_cols"])]
-    ,init_gammas=[1.0/dataset_spec["num_cols"]
-                  for idx in range(dataset_spec["num_cols"])]
-    ,init_x=init_x,gen_seed=0,num_nodes=8)
+    gen_seed = dataset_spec["gen_seed"],
+    num_cols = dataset_spec["num_cols"],
+    num_rows = dataset_spec["num_rows"],
+    num_nodes = 8,
+    init_gammas=[1.0/dataset_spec["num_cols"]
+                  for idx in range(dataset_spec["num_cols"])],
+    init_alpha=dataset_spec["gen_alpha"],
+    init_betas=dataset_spec["gen_betas"],
+    init_z = dataset_spec["gen_z"])
 
 pds.transition()
 

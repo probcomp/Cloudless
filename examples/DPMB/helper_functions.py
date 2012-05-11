@@ -201,7 +201,13 @@ def printTS(printStr):
 def listCount(listIn):
     return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
 
-
+def delta_since(start_dt):
+    try: ##older datetime modules don't have .total_seconds()
+        delta = (datetime.datetime.now()-start_dt).total_seconds()
+    except Exception, e:
+        delta = (datetime.datetime.now()-start_dt).seconds()
+    return delta
+    
 ####################
 # SEED FUNCTIONS
 def set_seed(seed):

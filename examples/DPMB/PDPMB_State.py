@@ -3,6 +3,7 @@ import numpy as np
 import numpy.random as nr
 import scipy.special as ss
 import pylab,sys
+import datetime
 #
 import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
@@ -17,24 +18,39 @@ import pdb
 
 
 class PDPMB_State():
-    def __init__(self,init_alpha,init_betas,init_gammas,init_x,gen_seed
-                 ,num_nodes
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4
+    def __init__(self,gen_seed,num_cols,num_rows
+                 ,num_nodes,init_gammas=None
+                 ,init_alpha=None,init_betas=None
+                 ,init_z=None,init_x=None
+                 ,alpha_min=.01,alpha_max=1E4
+                 ,beta_min=.01,beta_max=1E4
+                 ,gamma_min=.01,gamma_max=1E4
                  ,grid_N=100):
-        self.init_x = init_x
-        self.num_cols = len(init_gammas)
-        self.num_rows = len(init_x)
+        self.gen_seed = gen_seed
+        self.num_cols = num_cols
         self.num_nodes = num_nodes
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
         self.beta_max = beta_max
+        self.gamma_min = gamma_min
+        self.gamma_max = gamma_max
         self.grid_N = grid_N
         ##
-        self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
+        self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"gamma":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         hf.set_seed(gen_seed)
+
+        # generate the data from a DPMB_State
+        state = ds.DPMB_State(self.gen_seed,
+                              self.num_cols,
+                              num_rows,
+                              init_alpha = init_alpha,
+                              init_betas = init_betas,
+                              init_z = init_z,
+                              init_x = init_x)
+        self.vector_list = state.vector_list
         ##
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
@@ -46,20 +62,84 @@ class PDPMB_State():
         self.gammas = nr.dirichlet(np.repeat(self.alpha,num_nodes),1).tolist()[0]
         log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
-        for data_idx in range(self.num_rows):
+        for data_idx in range(len(self.vector_list)):
             draw = hf.renormalize_and_sample(log_gammas)
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
         for state_idx in range(num_nodes):
             num_rows_i = len(node_data_indices[state_idx])
+            node_data = []
+            for index in node_data_indices[state_idx]:
+                node_data.append(self.vector_list[index].data)
             alpha_i = self.alpha * self.gammas[state_idx]
             state = ds.DPMB_State(
                 gen_seed=0,num_cols=self.num_cols,num_rows=num_rows_i
-                ,init_alpha=alpha_i,init_betas=self.betas)
+                ,init_alpha=alpha_i,init_betas=self.betas
+                ,init_x=node_data)
             model = dm.DPMB(state=state,inf_seed=0
                             ,infer_alpha=False,infer_beta=False)
             self.model_list.append(model)
+
+    def removeAlpha(self,lnPdf):
+        self.alpha = None
+        self.score = None
+
+    def setAlpha(self,lnPdf,test_alpha):
+        self.alpha = test_alpha
+        self.score = lnPdf(test_alpha)
+
+    def removeBetaD(self,lnPdf,col_idx):
+        self.betas[col_idx] = None
+        self.score = None
+        
+    def setBetaD(self,lnPdf,col_idx,beta_val):
+        beta_val = np.clip(beta_val,self.clip_beta[0],self.clip_beta[1])
+        self.betas[col_idx] = beta_val
+        self.score = lnPdf(beta_val)
+
+    def transition_gamma(self):
+        start_dt = datetime.datetime.now()
+        #
+        node_sizes = [len(model.state.vector_list) for model in self.model_list]
+        modified_prior = np.array(node_sizes)+self.alpha
+        self.gammas = nr.dirichlet(modified_prior,1).tolist()[0]
+        #
+        self.timing["gamma"] = hf.delta_since(start_dt)
+        self.timing["run_sum"] += self.timing["gamma"]
+
+    def transition_alpha(self):
+        start_dt = datetime.datetime.now()
+        self.cluster_list = self.create_cluster_list()
+        #
+        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
+        alpha_idx = hf.renormalize_and_sample(logp_list)
+        self.removeAlpha(lnPdf)
+        self.setAlpha(lnPdf,grid[alpha_idx])
+        # empty everything that was just used to mimic DPMB_State
+        self.cluster_list = None
+        self.timing["alpha"] = hf.delta_since(start_dt)
+        self.timing["run_sum"] += self.timing["alpha"]
+
+    def transition_beta(self):
+        start_dt = datetime.datetime.now()
+        self.cluster_list = self.create_cluster_list()
+        #
+        for col_idx in range(self.num_cols):
+            logp_list, lnPdf, grid = hf.calc_beta_conditional(self,col_idx)
+            beta_idx = hf.renormalize_and_sample(logp_list)
+            self.removeBetaD(lnPdf,col_idx)
+            self.setBetaD(lnPdf,col_idx,grid[beta_idx])
+        # empty everything that was just used to mimic DPMB_State
+        self.cluster_list = None
+        self.timing["betas"] = hf.delta_since(start_dt)
+        self.timing["run_sum"] += self.timing["betas"]
+
+    def create_cluster_list(self):
+        cluster_list = []
+        for model in self.model_list:
+            cluster_list.extend(model.state.cluster_list)
+        return cluster_list
 
     def N_score_component(self):
         counts = np.array([len(model.state.vector_list) 
@@ -102,14 +182,22 @@ class PDPMB_State():
             self.alpha = init_alpha
         else:
             self.alpha = 10.0**nr.uniform(
-                np.log10(alpha_min),np.log10(alpha_max))
+                np.log10(self.alpha_min),np.log10(self.alpha_max))
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = np.array(init_betas).copy()
         else:
             self.betas = 10.0**nr.uniform(
-                np.log10(beta_min),np.log10(beta_max),self.num_cols)
+                np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
+        pass
+
+    def initialize_gammas(self,init_gammas):
+        if init_gammas is not None:
+            self.gammas = np.array(init_gammas).copy()
+        else:
+            self.gammas = 10.0**nr.uniform(
+                np.log10(self.gamma_min),np.log10(self.gamma_max),self.num_cols)
         pass
 
     def pop_cluster(self,cluster):
@@ -147,6 +235,7 @@ class PDPMB_State():
         self.move_cluster(cluster,to_state)
 
     def transition_node_assignments(self):
+        start_dt = datetime.datetime.now()
         cluster_list_list = [] #all the clusters in the model
         for model in self.model_list:
             cluster_list_list.append(model.state.cluster_list)
@@ -155,13 +244,23 @@ class PDPMB_State():
             print "state #" + str(state_idx) + " has " + str(len(cluster_list)) + " clusters"
             for cluster in cluster_list:
                 self.transition_single_node_assignment(cluster)
+        self.timing["nodes"] = hf.delta_since(start_dt)
+        self.timing["run_sum"] += self.timing["nodes"]
 
-    def transition(self):
+
+    def transition_z(self):
+        self.timing["zs"] = 0
         for model in self.model_list:
             model.transition()
+            self.timing["zs"] += model.state.timing["zs"]
+
+    def transition(self):
+        self.transition_z()
+        self.transition_alpha()
+        self.transition_beta()
+        #
+        self.transition_gamma()
         self.transition_node_assignments()
-        # transition alpha
-        # transition betas
 
     def get_alpha_grid(self):
         ##endpoint should be set by MLE of all data in its own cluster?

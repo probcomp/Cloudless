@@ -10,8 +10,9 @@ import pdb
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
-                 ,init_z=None,init_x=None,decanon_indices=None,data_subset_indices=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
+                 ,init_z=None,init_x=None,decanon_indices=None
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4
+                 ,grid_N=100):
 
         self.gen_seed = gen_seed
         self.num_cols = num_cols
@@ -89,14 +90,14 @@ class DPMB_State():
             self.alpha = init_alpha
         else:
             self.alpha = 10.0**nr.uniform(
-                np.log10(alpha_min),np.log10(alpha_max))
+                np.log10(self.alpha_min),np.log10(self.alpha_max))
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = np.array(init_betas).copy()
         else:
             self.betas = 10.0**nr.uniform(
-                np.log10(beta_min),np.log10(beta_max),self.num_cols)
+                np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
     
     def generate_cluster_assignment(self, force_last=False, force_new=False):
