@@ -12,7 +12,7 @@ chunk_iter = 27 # 3
 def gen_run_spec():
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 16
+    dataset_spec["num_cols"] = 8
     dataset_spec["num_rows"] = 256
     dataset_spec["gen_alpha"] = 10.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
