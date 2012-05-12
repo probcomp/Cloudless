@@ -92,7 +92,7 @@ if True:
         gen_seed=2
         ,num_cols=dataset_spec["num_cols"]
         ,num_rows=dataset_spec["num_rows"]
-        ,num_nodes=4
+        ,num_nodes=1
         ,init_gammas=[1.0/dataset_spec["num_cols"]
                      for idx in range(dataset_spec["num_cols"])]
         ,init_alpha=INIT_ALPHA

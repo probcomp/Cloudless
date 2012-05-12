@@ -81,12 +81,17 @@ class PDPMB():
             self.state.timing["zs"] += model.state.timing["zs"]
 
     def transition(self):
-        self.transition_z()
-        self.transition_alpha()
-        self.transition_beta()
-        #
-        self.transition_gamma()
-        self.transition_node_assignments()
+        for transition_type in [
+            self.transition_z,self.transition_alpha,self.transition_beta
+            ,self.transition_gamma,self.transition_node_assignments]:
+            transition_type()
+
+        # self.transition_z()
+        # self.transition_alpha()
+        # self.transition_beta()
+        # #
+        # self.transition_gamma()
+        # self.transition_node_assignments()
 
 
     
