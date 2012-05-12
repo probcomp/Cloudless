@@ -44,6 +44,7 @@ class PDPMB_State():
 
         # generate the data from a DPMB_State
         state = ds.DPMB_State(self.gen_seed,
+
                               self.num_cols,
                               num_rows,
                               init_alpha = init_alpha,
@@ -98,44 +99,7 @@ class PDPMB_State():
         self.betas[col_idx] = beta_val
         self.score = lnPdf(beta_val)
 
-    def transition_gamma(self):
-        start_dt = datetime.datetime.now()
-        #
-        node_sizes = [len(model.state.vector_list) for model in self.model_list]
-        modified_prior = np.array(node_sizes)+self.alpha
-        self.gammas = nr.dirichlet(modified_prior,1).tolist()[0]
-        #
-        self.timing["gamma"] = hf.delta_since(start_dt)
-        self.timing["run_sum"] += self.timing["gamma"]
-
-    def transition_alpha(self):
-        start_dt = datetime.datetime.now()
-        self.cluster_list = self.create_cluster_list()
-        #
-        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
-        alpha_idx = hf.renormalize_and_sample(logp_list)
-        self.removeAlpha(lnPdf)
-        self.setAlpha(lnPdf,grid[alpha_idx])
-        # empty everything that was just used to mimic DPMB_State
-        self.cluster_list = None
-        self.timing["alpha"] = hf.delta_since(start_dt)
-        self.timing["run_sum"] += self.timing["alpha"]
-
-    def transition_beta(self):
-        start_dt = datetime.datetime.now()
-        self.cluster_list = self.create_cluster_list()
-        #
-        for col_idx in range(self.num_cols):
-            logp_list, lnPdf, grid = hf.calc_beta_conditional(self,col_idx)
-            beta_idx = hf.renormalize_and_sample(logp_list)
-            self.removeBetaD(lnPdf,col_idx)
-            self.setBetaD(lnPdf,col_idx,grid[beta_idx])
-        # empty everything that was just used to mimic DPMB_State
-        self.cluster_list = None
-        self.timing["betas"] = hf.delta_since(start_dt)
-        self.timing["run_sum"] += self.timing["betas"]
-
-    def create_cluster_list(self):
+    def get_cluster_list(self):
         cluster_list = []
         for model in self.model_list:
             cluster_list.extend(model.state.cluster_list)
@@ -227,40 +191,6 @@ class PDPMB_State():
         print "movinng cluster from " + str(from_idx) + " to " + str(to_idx)
         data_list = self.pop_cluster(cluster)
         self.add_cluster(to_state,data_list)
-
-    def transition_single_node_assignment(self, cluster):
-        node_log_prob_list = hf.calculate_node_conditional(self,cluster)
-        draw = hf.renormalize_and_sample(node_log_prob_list)
-        to_state = self.model_list[draw].state
-        self.move_cluster(cluster,to_state)
-
-    def transition_node_assignments(self):
-        start_dt = datetime.datetime.now()
-        cluster_list_list = [] #all the clusters in the model
-        for model in self.model_list:
-            cluster_list_list.append(model.state.cluster_list)
-
-        for state_idx,cluster_list in enumerate(cluster_list_list):
-            print "state #" + str(state_idx) + " has " + str(len(cluster_list)) + " clusters"
-            for cluster in cluster_list:
-                self.transition_single_node_assignment(cluster)
-        self.timing["nodes"] = hf.delta_since(start_dt)
-        self.timing["run_sum"] += self.timing["nodes"]
-
-
-    def transition_z(self):
-        self.timing["zs"] = 0
-        for model in self.model_list:
-            model.transition()
-            self.timing["zs"] += model.state.timing["zs"]
-
-    def transition(self):
-        self.transition_z()
-        self.transition_alpha()
-        self.transition_beta()
-        #
-        self.transition_gamma()
-        self.transition_node_assignments()
 
     def get_alpha_grid(self):
         ##endpoint should be set by MLE of all data in its own cluster?

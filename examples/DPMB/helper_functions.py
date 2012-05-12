@@ -216,6 +216,8 @@ def set_seed(seed):
     elif type(seed) == int:
         nr.seed(seed)
     else:
+        pdb.set_trace()
+        print 1
         raise Exception("Bad argument to set_seed: " + str(seed)) 
 
 def get_seed():

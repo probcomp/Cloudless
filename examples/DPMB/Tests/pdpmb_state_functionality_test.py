@@ -7,7 +7,6 @@ reload(rf)
 import Cloudless.examples.DPMB.PDPMB_State as pds
 reload(pds)
 
-num_iters = 50 # 10 
 chunk_iter = 27 # 3
 def gen_run_spec():
     dataset_spec = {}
@@ -20,7 +19,7 @@ def gen_run_spec():
     dataset_spec["N_test"] = 10
     ##
     run_spec = {}
-    run_spec["num_iters"] = num_iters
+    run_spec["num_iters"] = 50
     run_spec["infer_seed"] = 0
     run_spec["infer_init_alpha"] = 10.0
     run_spec["infer_init_betas"] = np.repeat(0.1, dataset_spec["num_cols"])

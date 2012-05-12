@@ -1,5 +1,8 @@
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pylab as pylab
+import datetime
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
@@ -7,6 +10,10 @@ import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.PDPMB_State as pds
 reload(pds)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.PDPMB as pdm
+reload(pdm)
 
 # generate 1000 PDPMB_States
 # - make histograms of
@@ -15,36 +22,44 @@ reload(pds)
 #   number of datapoints in cluster 0 (how to determine vector 0?
 #   total number of clusters
 
-if True:
+run_spec = rf.gen_run_spec()
+dataset_spec = run_spec["dataset_spec"]
+
+if False:
     sample_alpha_list = []
     sample_beta_0_list = []
     sample_num_clusters_list = []
     for gen_seed in range(1000):
         pstate = pds.PDPMB_State(
             gen_seed=gen_seed
-            ,num_cols=8
-            ,num_rows=8
+            ,num_cols=dataset_spec["num_cols"]
+            ,num_rows=dataset_spec["num_rows"]
             ,num_nodes=4
-            init_gammas=[1.0/dataset_spec["num_cols"]
-                         for idx in range(dataset_spec["num_cols"])],
-            init_alpha=dataset_spec["gen_alpha"],
-            init_betas=dataset_spec["gen_betas"],
-            init_z = dataset_spec["gen_z"])
-        sample_alpha_list.append(state.alpha)
-        sample_beta_0_list.append(state.betas[0])
-        sample_num_clusters_list.append(len(state.get_cluster_list()))
+            ,init_gammas=[1.0/dataset_spec["num_cols"]
+                         for idx in range(dataset_spec["num_cols"])]
+#            ,init_alpha=dataset_spec["gen_alpha"]
+#            ,init_betas=dataset_spec["gen_betas"]
+            ,init_z = dataset_spec["gen_z"])
+        sample_alpha_list.append(pstate.alpha)
+        sample_beta_0_list.append(pstate.betas[0])
+        sample_num_clusters_list.append(len(pstate.get_cluster_list()))
+
 
     pylab.figure()
     pylab.subplot(411)
     pylab.hist(np.log(sample_alpha_list),normed=True)
     pylab.title("alpha (log10)")
+    pylab.savefig("sample_alpha_list.png")
+    #
     pylab.subplot(412)
-    hist(np.log(sample_beta_0_list),normed=True)
+    pylab.hist(np.log(sample_beta_0_list),normed=True)
     pylab.title("beta_0 (log10)")
+    pylab.savefig("sample_beta_0_list.png")
+    #
     pylab.subplot(414)
-    hist(sample_num_clusters_list,normed=True)
+    pylab.hist(sample_num_clusters_list,normed=True)
     pylab.title("num_clusters")
-
+    pylab.savefig("sample_num_clusters_list.png")
     
 #
 # initialize a state from the prior
@@ -60,18 +75,33 @@ if True:
 # can automate "are these two histograms similar enough?" by normalizing them into probability distribution estimates, and running a Kolmogorov-Smirnof test
 # but for starters, just eyeballing is enough
 
-if False:
+if True:
     start_ts = datetime.datetime.now()
-    GEN_SEED = 1
-    NUM_COLS = 8
-    NUM_ROWS = 8
-    INIT_ALPHA = None
-    INIT_BETAS = None
-    INIT_X = None
     EVERY_N = 1
-    NUM_ITERS = 3000
-    state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=None,init_x=INIT_X)
-    model = dm.DPMB(state=state,inf_seed=0,infer_alpha=True,infer_beta=True)
+    NUM_ITERS = 100
+    INIT_X = None
+    INIT_BETAS = None
+    INIT_ALPHA = None
+
+    pstate = pds.PDPMB_State(
+        gen_seed=0
+        ,num_cols=dataset_spec["num_cols"]
+        ,num_rows=dataset_spec["num_rows"]
+        ,num_nodes=4
+        ,init_gammas=[1.0/dataset_spec["num_cols"]
+                     for idx in range(dataset_spec["num_cols"])]
+        ,init_alpha=INIT_ALPHA
+        ,init_betas=INIT_BETAS
+        ,init_z = dataset_spec["gen_z"])
+    pmodel = pdm.PDPMB(
+        0
+        ,pstate
+        ,run_spec["infer_do_alpha_inference"]
+        ,run_spec["infer_do_betas_inference"])
+    sample_alpha_list.append(pstate.alpha)
+    sample_beta_0_list.append(pstate.betas[0])
+    sample_num_clusters_list.append(len(pstate.get_cluster_list()))
+
     ##
     chain_alpha_list = []
     chain_beta_0_list = []
@@ -79,19 +109,28 @@ if False:
     chain_num_clusters_list = []
     for iter_num in range(NUM_ITERS):
 
-        model.transition()
+        pmodel.transition()
         # temp = raw_input("blocking: ---- ")
         # pylab.close('all')
         
         if iter_num % EVERY_N == 0: ## must do this after inference
-            chain_alpha_list.append(state.alpha)
-            chain_beta_0_list.append(state.betas[0])
-            chain_cluster_0_count_list.append(state.cluster_list[0].count())
-            chain_num_clusters_list.append(len(state.cluster_list))
+            chain_alpha_list.append(pstate.alpha)
+            chain_beta_0_list.append(pstate.betas[0])
+            chain_num_clusters_list.append(len(pstate.get_cluster_list()))
 
-        prior_zs = np.sort(state.getZIndices()).tolist() ## could there be an issue with inference over canonical clustering? permuate the data?
-        state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
-        model.state = state
+        rand_state = nr.mtrand.RandomState(iter_num)
+        seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
+        for model,gen_seed in zip(pstate.model_list,seed_list):
+            prior_zs = model.state.getZIndices()
+            # FIXME : What to use for gen_seed here?
+            state = ds.DPMB_State(gen_seed=gen_seed
+                                    ,num_cols=dataset_spec["num_cols"]
+                                    ,num_rows=len(prior_zs)
+                                    ,init_alpha=INIT_ALPHA
+                                    ,init_betas=INIT_BETAS
+                                    ,init_z=prior_zs
+                                    ,init_x=INIT_X)
+            model.state = state
 
     print "Time delta: ",datetime.datetime.now()-start_ts
 
@@ -99,18 +138,19 @@ if False:
     pylab.subplot(411)
     pylab.hist(np.log(chain_alpha_list),normed=True)
     pylab.title("alpha (log10)")
+    pylab.savefig("chain_alpha_list.png")
+    #
     pylab.subplot(412)
     pylab.hist(np.log(chain_beta_0_list),normed=True)
     pylab.title("beta_0 (log10)")
-    pylab.subplot(413)
-    pylab.hist(chain_cluster_0_count_list,normed=True)
-    pylab.title("chain_cluster_0_count_list")
+    pylab.savefig("chain_beta_list.png")
+    #
+    # pylab.subplot(413)
+    # pylab.hist(chain_cluster_0_count_list,normed=True)
+    # pylab.title("chain_cluster_0_count_list")
+    # pylab.savefig("chain_cluster_0_count_list.png")
+    #
     pylab.subplot(414)
     pylab.hist(chain_num_clusters_list,normed=True)
     pylab.title("num_clusters")
-
-    import cPickle
-    var_names = ["chain_alpha_list","chain_beta_0_list","chain_cluster_0_count_list","chain_num_clusters_list"]
-    for var_name in var_names:
-        with open(var_name+".pkl","wb") as fh:
-            cPickle.dump(eval(var_name),fh)
+    pylab.savefig("chain_num_clusters_list.png")
