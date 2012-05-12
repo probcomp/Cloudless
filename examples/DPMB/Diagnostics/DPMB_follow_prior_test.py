@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import DPMB_plotutils as dp
 reload(dp)
 import DPMB_helper_functions as hf
@@ -28,7 +30,7 @@ import matplotlib.pylab as pylab
 #   number of datapoints in cluster 0
 #   total number of clusters
 
-if True:
+if False:
     sample_alpha_list = []
     sample_beta_0_list = []
     sample_cluster_0_count_list = []
@@ -107,21 +109,26 @@ if True:
         state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=prior_zs,init_x=INIT_X)
         model.state = state
 
-    print "Time delta: ",datetime.datetime.now()-start_ts
+        print "Time delta: ",datetime.datetime.now()-start_ts
 
-    pylab.figure()
-    pylab.subplot(411)
-    pylab.hist(np.log(chain_alpha_list),normed=True)
-    pylab.title("alpha (log10)")
-    pylab.subplot(412)
-    pylab.hist(np.log(chain_beta_0_list),normed=True)
-    pylab.title("beta_0 (log10)")
-    pylab.subplot(413)
-    pylab.hist(chain_cluster_0_count_list,normed=True)
-    pylab.title("chain_cluster_0_count_list")
-    pylab.subplot(414)
-    pylab.hist(chain_num_clusters_list,normed=True)
-    pylab.title("num_clusters")
+        pylab.figure()
+        pylab.subplot(411)
+        pylab.hist(np.log(chain_alpha_list),normed=True)
+        pylab.title("alpha (log10)")
+        pylab.subplot(412)
+        pylab.hist(np.log(chain_beta_0_list),normed=True)
+        pylab.title("beta_0 (log10)")
+        pylab.subplot(413)
+        pylab.hist(chain_cluster_0_count_list,normed=True)
+        pylab.title("chain_cluster_0_count_list")
+        pylab.subplot(414)
+        pylab.hist(chain_num_clusters_list,normed=True)
+        pylab.title("num_clusters")
+        #
+        pylab.subplots_adjust(hspace=.5)
+        pylab.savefig("dpmb_follow_prior.png")
+        pylab.close()
+        gc.collect()
 
     import cPickle
     var_names = ["chain_alpha_list","chain_beta_0_list","chain_cluster_0_count_list","chain_num_clusters_list"]
