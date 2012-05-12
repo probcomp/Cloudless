@@ -1,15 +1,16 @@
 import matplotlib
 matplotlib.use('Agg')
-import DPMB_plotutils as dp
-reload(dp)
-import DPMB_helper_functions as hf
-reload(hf)
-import DPMB_State as ds
-reload(ds)
-import DPMB as dm
-reload(dm)
 import numpy as np
 import matplotlib.pylab as pylab
+import datetime
+import gc
+#
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
 
 ##separted out form other tests beacuse it takes a while
 
@@ -95,7 +96,7 @@ if True:
     chain_num_clusters_list = []
     for iter_num in range(NUM_ITERS):
 
-        model.transition()
+        model.transition(random_order=False)
         # temp = raw_input("blocking: ---- ")
         # pylab.close('all')
         
@@ -113,10 +114,10 @@ if True:
 
         pylab.figure()
         pylab.subplot(411)
-        pylab.hist(np.log(chain_alpha_list),normed=True)
+        pylab.hist(np.log10(chain_alpha_list),normed=True)
         pylab.title("alpha (log10)")
         pylab.subplot(412)
-        pylab.hist(np.log(chain_beta_0_list),normed=True)
+        pylab.hist(np.log10(chain_beta_0_list),normed=True)
         pylab.title("beta_0 (log10)")
         pylab.subplot(413)
         pylab.hist(chain_cluster_0_count_list,normed=True)

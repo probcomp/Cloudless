@@ -125,18 +125,14 @@ class DPMB():
 
         pass
     
-    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None):
+    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None,random_order=True):
+
+        transition_func_list = [self.transition_beta,self.transition_z,self.transition_alpha]
+        if random_order : transition_func_list = nr.permutation(transition_func_list)
 
         for counter in range(numSteps):
-            for transition_func in nr.permutation([
-                self.transition_beta,self.transition_z,self.transition_alpha]):
+            for transition_func in transition_func_list:
                 transition_func(time_seatbelt=time_seatbelt)
-                
-            # self.transition_beta(time_seatbelt=time_seatbelt) ##may do nothing if infer_beta == "FIXED"
-            
-            # self.transition_z(time_seatbelt=time_seatbelt)
-
-            # self.transition_alpha(time_seatbelt=time_seatbelt) ##may do nothing if infer_alpha == "FIXED"
 
             if regen_data:
                 self.transition_x()
