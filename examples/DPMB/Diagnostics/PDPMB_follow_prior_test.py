@@ -1,8 +1,10 @@
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
+import numpy.random as nr
 import matplotlib.pylab as pylab
 import datetime
+import gc
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
@@ -76,6 +78,9 @@ if False:
 # but for starters, just eyeballing is enough
 
 if True:
+    sample_alpha_list = []
+    sample_beta_0_list = []
+    sample_num_clusters_list = []
     start_ts = datetime.datetime.now()
     EVERY_N = 1
     NUM_ITERS = 3000
@@ -124,16 +129,20 @@ if True:
 
         rand_state = nr.mtrand.RandomState(iter_num)
         seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
-        for model,gen_seed in zip(pstate.model_list,seed_list):
+        for gamma_i,model,gen_seed in zip(
+                pstate.gammas,pstate.model_list,seed_list):
             prior_zs = model.state.getZIndices()
             # FIXME : What to use for gen_seed here?
             state = ds.DPMB_State(gen_seed=gen_seed
-                                    ,num_cols=dataset_spec["num_cols"]
-                                    ,num_rows=len(prior_zs)
-                                    ,init_alpha=INIT_ALPHA
-                                    ,init_betas=INIT_BETAS
-                                    ,init_z=prior_zs
-                                    ,init_x=INIT_X)
+                                  ,num_cols=dataset_spec["num_cols"]
+                                  ,num_rows=len(prior_zs)
+                                  ,init_alpha=INIT_ALPHA
+                                  ,init_betas=INIT_BETAS
+                                  ,init_z=prior_zs
+                                  ,init_x=INIT_X
+                                  ,alpha_min=gamma_i*pstate.alpha_min
+                                  ,alpha_max=gamma_i*pstate.alpha_max
+                                  )
             model.state = state
 
         pylab.figure()
@@ -157,5 +166,7 @@ if True:
         #
         pylab.subplots_adjust(hspace=.5)
         pylab.savefig("pdpmb_follow_prior.png")
+        pylab.close()
+        gc.collect()
 
     print "Time delta: ",datetime.datetime.now()-start_ts
