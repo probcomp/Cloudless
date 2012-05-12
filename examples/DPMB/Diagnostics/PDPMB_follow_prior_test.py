@@ -49,17 +49,17 @@ if False:
     pylab.subplot(411)
     pylab.hist(np.log(sample_alpha_list),normed=True)
     pylab.title("alpha (log10)")
-    pylab.savefig("sample_alpha_list.png")
     #
     pylab.subplot(412)
     pylab.hist(np.log(sample_beta_0_list),normed=True)
     pylab.title("beta_0 (log10)")
-    pylab.savefig("sample_beta_0_list.png")
     #
     pylab.subplot(414)
     pylab.hist(sample_num_clusters_list,normed=True)
     pylab.title("num_clusters")
-    pylab.savefig("sample_num_clusters_list.png")
+    #
+    pylab.subplots_adjust(hspace=.4)
+    pylab.savefig("pdpmb_gen_prior.png")
     
 #
 # initialize a state from the prior
@@ -81,10 +81,10 @@ if True:
     NUM_ITERS = 100
     INIT_X = None
     INIT_BETAS = None
-    INIT_ALPHA = None
+    INIT_ALPHA = 10 # FIXME : should be None
 
     pstate = pds.PDPMB_State(
-        gen_seed=0
+        gen_seed=1
         ,num_cols=dataset_spec["num_cols"]
         ,num_rows=dataset_spec["num_rows"]
         ,num_nodes=4
@@ -108,7 +108,7 @@ if True:
     chain_cluster_0_count_list = []
     chain_num_clusters_list = []
     for iter_num in range(NUM_ITERS):
-
+        print "iter num : " + str(iter_num)
         pmodel.transition()
         # temp = raw_input("blocking: ---- ")
         # pylab.close('all')
@@ -132,25 +132,26 @@ if True:
                                     ,init_x=INIT_X)
             model.state = state
 
-    print "Time delta: ",datetime.datetime.now()-start_ts
+        pylab.figure()
+        pylab.subplot(411)
+        pylab.hist(np.log10(chain_alpha_list),normed=True)
+        pylab.title("alpha (log10)")
+        #
+        pylab.subplot(412)
+        pylab.hist(np.log10(chain_beta_0_list),normed=True)
+        pylab.title("beta_0 (log10)")
+        #
+        pylab.subplot(413)
+        pylab.title("num_iters: " + str(iter_num))
+        # pylab.hist(chain_cluster_0_count_list,normed=True)
+        # pylab.title("chain_cluster_0_count_list")
+        # pylab.savefig("chain_cluster_0_count_list.png")
+        #
+        pylab.subplot(414)
+        pylab.hist(chain_num_clusters_list,normed=True)
+        pylab.title("num_clusters")
+        #
+        pylab.subplots_adjust(hspace=.5)
+        pylab.savefig("pdpmb_follow_prior.png")
 
-    pylab.figure()
-    pylab.subplot(411)
-    pylab.hist(np.log(chain_alpha_list),normed=True)
-    pylab.title("alpha (log10)")
-    pylab.savefig("chain_alpha_list.png")
-    #
-    pylab.subplot(412)
-    pylab.hist(np.log(chain_beta_0_list),normed=True)
-    pylab.title("beta_0 (log10)")
-    pylab.savefig("chain_beta_list.png")
-    #
-    # pylab.subplot(413)
-    # pylab.hist(chain_cluster_0_count_list,normed=True)
-    # pylab.title("chain_cluster_0_count_list")
-    # pylab.savefig("chain_cluster_0_count_list.png")
-    #
-    pylab.subplot(414)
-    pylab.hist(chain_num_clusters_list,normed=True)
-    pylab.title("num_clusters")
-    pylab.savefig("chain_num_clusters_list.png")
+    print "Time delta: ",datetime.datetime.now()-start_ts

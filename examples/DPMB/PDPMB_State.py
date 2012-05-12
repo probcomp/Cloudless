@@ -40,7 +40,9 @@ class PDPMB_State():
         self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"gamma":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
-        hf.set_seed(gen_seed)
+        # FIXME : setting seed becomes complicated when child states 
+        #         will also do seed operations
+        hf.set_seed(gen_seed) 
 
         # generate the data from a DPMB_State
         state = ds.DPMB_State(self.gen_seed,
@@ -68,17 +70,19 @@ class PDPMB_State():
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
-        for state_idx in range(num_nodes):
-            num_rows_i = len(node_data_indices[state_idx])
+        rand_state = nr.mtrand.RandomState()
+        seed_list = [int(x) for x in rand_state.tomaxint(num_nodes)]
+        for state_idx,gen_seed in enumerate(seed_list):
             node_data = []
             for index in node_data_indices[state_idx]:
                 node_data.append(self.vector_list[index].data)
+
             alpha_i = self.alpha * self.gammas[state_idx]
             state = ds.DPMB_State(
-                gen_seed=0,num_cols=self.num_cols,num_rows=num_rows_i
+                gen_seed=gen_seed,num_cols=self.num_cols,num_rows=len(node_data)
                 ,init_alpha=alpha_i,init_betas=self.betas
                 ,init_x=node_data)
-            model = dm.DPMB(state=state,inf_seed=0
+            model = dm.DPMB(state=state,inf_seed=gen_seed
                             ,infer_alpha=False,infer_beta=False)
             self.model_list.append(model)
 
@@ -188,7 +192,6 @@ class PDPMB_State():
             return # don't bother if from_state == to_state
         from_idx = self.find_state_idx(cluster.state)
         to_idx = self.find_state_idx(to_state)
-        print "movinng cluster from " + str(from_idx) + " to " + str(to_idx)
         data_list = self.pop_cluster(cluster)
         self.add_cluster(to_state,data_list)
 
