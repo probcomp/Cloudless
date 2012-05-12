@@ -87,14 +87,14 @@ if True:
     INIT_X = None
     INIT_BETAS = None
     INIT_ALPHA = None # FIXME : should be None
-
+    NUM_NODES = 1
     pstate = pds.PDPMB_State(
-        gen_seed=2
+        gen_seed=0
         ,num_cols=dataset_spec["num_cols"]
-        ,num_rows=dataset_spec["num_rows"]
-        ,num_nodes=1
-        ,init_gammas=[1.0/dataset_spec["num_cols"]
-                     for idx in range(dataset_spec["num_cols"])]
+        ,num_rows=64
+        ,num_nodes=NUM_NODES
+        ,init_gammas=[1.0/NUM_NODES
+                     for idx in range(NUM_NODES)]
         ,init_alpha=INIT_ALPHA
         ,init_betas=INIT_BETAS
         ,init_z = dataset_spec["gen_z"])

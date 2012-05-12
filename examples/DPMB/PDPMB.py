@@ -92,7 +92,3 @@ class PDPMB():
         # #
         # self.transition_gamma()
         # self.transition_node_assignments()
-
-
-    
-
