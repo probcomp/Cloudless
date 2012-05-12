@@ -78,13 +78,13 @@ if False:
 if True:
     start_ts = datetime.datetime.now()
     EVERY_N = 1
-    NUM_ITERS = 100
+    NUM_ITERS = 3000
     INIT_X = None
     INIT_BETAS = None
-    INIT_ALPHA = 10 # FIXME : should be None
+    INIT_ALPHA = None # FIXME : should be None
 
     pstate = pds.PDPMB_State(
-        gen_seed=1
+        gen_seed=2
         ,num_cols=dataset_spec["num_cols"]
         ,num_rows=dataset_spec["num_rows"]
         ,num_nodes=4
@@ -114,9 +114,13 @@ if True:
         # pylab.close('all')
         
         if iter_num % EVERY_N == 0: ## must do this after inference
+            cluster_list_len = len(pstate.get_cluster_list())
             chain_alpha_list.append(pstate.alpha)
             chain_beta_0_list.append(pstate.betas[0])
-            chain_num_clusters_list.append(len(pstate.get_cluster_list()))
+            chain_num_clusters_list.append(cluster_list_len)
+            print "alpha: " + str(pstate.alpha)
+            print "betas[0]: " + str(pstate.betas[0])
+            print "num clusters: " + str(cluster_list_len)
 
         rand_state = nr.mtrand.RandomState(iter_num)
         seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
