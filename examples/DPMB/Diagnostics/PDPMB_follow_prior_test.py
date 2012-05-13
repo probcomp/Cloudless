@@ -91,13 +91,13 @@ if True:
     pstate = pds.PDPMB_State(
         gen_seed=0
         ,num_cols=dataset_spec["num_cols"]
-        ,num_rows=64
+        ,num_rows=8
         ,num_nodes=NUM_NODES
         ,init_gammas=[1.0/NUM_NODES
                      for idx in range(NUM_NODES)]
         ,init_alpha=INIT_ALPHA
         ,init_betas=INIT_BETAS
-        ,init_z = dataset_spec["gen_z"])
+        ,init_z = ("balanced",2))
     pmodel = pdm.PDPMB(
         0
         ,pstate
