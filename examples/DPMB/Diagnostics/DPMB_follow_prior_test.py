@@ -80,7 +80,7 @@ if False:
 # but for starters, just eyeballing is enough
 
 pylab.show()
-if True:
+if True and "model" not in locals():
     start_ts = datetime.datetime.now()
     GEN_SEED = 1
     NUM_COLS = 8
@@ -89,23 +89,37 @@ if True:
     INIT_BETAS = None
     INIT_X = None
     EVERY_N = 1
-    NUM_ITERS = 100
-    state = ds.DPMB_State(gen_seed=GEN_SEED,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=INIT_ALPHA,init_betas=INIT_BETAS,init_z=None,init_x=INIT_X)
+    NUM_ITERS = 7000
+    ALPHA_MIN = 1E-2
+    ALPHA_MAX = 1E4
+    state = ds.DPMB_State(
+        gen_seed=GEN_SEED
+        ,num_cols=NUM_COLS
+        ,num_rows=NUM_ROWS
+        ,init_alpha=INIT_ALPHA
+        ,init_betas=INIT_BETAS
+        ,init_z=None
+        ,init_x=INIT_X
+        ,alpha_min = ALPHA_MIN
+        ,alpha_max = ALPHA_MAX
+        )
     model = dm.DPMB(state=state,inf_seed=1,infer_alpha=True,infer_beta=True)
     ##
     chain_alpha_list = []
     chain_beta_0_list = []
     chain_cluster_0_count_list = []
     chain_num_clusters_list = []
-    for iter_num in range(NUM_ITERS):
 
+if True:
+    for iter_num in range(NUM_ITERS):
+        true_iter_num = len(chain_alpha_list)
         transition_func_list = [model.transition_beta,model.transition_z,model.transition_alpha]
         transition_func_list = nr.permutation(transition_func_list)
         for func_idx,transition_func_handle in enumerate(transition_func_list):
             func_str = re.findall("method DPMB.(\w+)",str(transition_func_handle))[0]
             print func_str
             transition_func_handle()
-            save_str = "state_"+str(iter_num)+"_"+str(func_idx)+"_"+str(func_str)
+            save_str = "state_"+str(true_iter_num)+"_"+str(func_idx)+"_"+str(func_str)
             model.state.plot(show=False,save_str=save_str,title_append=func_str)
 
         # model.transition(random_order=True)
@@ -113,7 +127,7 @@ if True:
 
         # pylab.close('all')
         
-        if iter_num % EVERY_N == 0: ## must do this after inference
+        if true_iter_num % EVERY_N == 0: ## must do this after inference
             chain_alpha_list.append(state.alpha)
             chain_beta_0_list.append(state.betas[0])
             chain_cluster_0_count_list.append(state.cluster_list[0].count())
@@ -123,7 +137,17 @@ if True:
         prior_alpha = state.alpha
         prior_betas = state.betas
         #
-        state = ds.DPMB_State(gen_seed=iter_num,num_cols=NUM_COLS,num_rows=NUM_ROWS,init_alpha=prior_alpha,init_betas=prior_betas,init_z=prior_zs,init_x=INIT_X)
+        state = ds.DPMB_State(
+            gen_seed=true_iter_num
+            ,num_cols=NUM_COLS
+            ,num_rows=NUM_ROWS
+            ,init_alpha=prior_alpha
+            ,init_betas=prior_betas
+            ,init_z=prior_zs
+            ,init_x=INIT_X
+            ,alpha_min = ALPHA_MIN
+            ,alpha_max = ALPHA_MAX
+            )
         model.state = state
 
         print "Time delta: ",datetime.datetime.now()-start_ts
@@ -143,7 +167,7 @@ if True:
         pylab.title("num_clusters")
         #
         pylab.subplots_adjust(hspace=.5)
-        pylab.savefig("hist_" + str(iter_num))
+        pylab.savefig("hist_" + str(true_iter_num))
         # temp = raw_input("blocking: ---- ")
         pylab.close('all')
         gc.collect()
