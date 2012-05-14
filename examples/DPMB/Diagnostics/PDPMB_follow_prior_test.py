@@ -84,17 +84,18 @@ if True and "pmodel" not in locals():
     NUM_ITERS = 1000
     INIT_X = None
     NUM_COLS = 8
-    NUM_ROWS = 8
-    NUM_NODES = 1
+    NUM_ROWS = 16
+    NUM_NODES = 2
     ALPHA_MAX = 1E2
     ALPHA_MIN = 1E-1
+    # INIT_GAMMAS = [1.0/NUM_NODES for idx in range(NUM_NODES)]
+    INIT_GAMMAS = [1.0] + [0.0 for idx in range(NUM_NODES-1)] # FIXME : remove when done testing
     pstate = pds.PDPMB_State(
         gen_seed=0
         ,num_cols=NUM_COLS
         ,num_rows=NUM_ROWS
         ,num_nodes=NUM_NODES
-        ,init_gammas=[1.0/NUM_NODES
-                     for idx in range(NUM_NODES)]
+        ,init_gammas=INIT_GAMMAS
         ,init_alpha=None
         ,init_betas=None
         ,init_z = ("balanced",2)
@@ -112,15 +113,15 @@ if True and "pmodel" not in locals():
     chain_beta_0_list = []
     chain_cluster_0_count_list = []
     chain_num_clusters_list = []
+    gammas_list = []
+    data_size_list = []
 
 if True:
 
     for iter_num in range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
         print "iter num : " + str(true_iter_num)
-        pmodel.transition()
-        # temp = raw_input("blocking: ---- ")
-        # pylab.close('all')
+        pmodel.transition(exclude_list=[pmodel.transition_gamma])
         
         if true_iter_num % EVERY_N == 0: ## must do this after inference
             cluster_list_len = len(pstate.get_cluster_list())
@@ -130,6 +131,9 @@ if True:
             print "alpha: " + str(pstate.alpha)
             print "betas[0]: " + str(pstate.betas[0])
             print "num clusters: " + str(cluster_list_len)
+
+        gammas_list.append(pmodel.state.gammas[:])
+        data_size_list.append([len(model.state.vector_list) for model in pmodel.state.model_list])
 
         rand_state = RandomState(true_iter_num)
         seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
@@ -152,8 +156,8 @@ if True:
                                   )
             model.state = state
 
-            save_str = "state_"+str(true_iter_num)+"_0"
-            model.state.plot(show=False,save_str=save_str)
+        save_str = "state_"+str(true_iter_num)+"_0"
+        pmodel.state.model_list[0].state.plot(show=False,save_str=save_str)
 
         pylab.figure()
         pylab.subplot(411)

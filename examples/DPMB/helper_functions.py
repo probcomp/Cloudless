@@ -213,6 +213,8 @@ def generate_random_state(seed):
         random_state.set_state(seed)
     elif type(seed) == int:
         random_state.seed(seed)
+    elif type(seed) == RandomState:
+        random_state = seed
     else:
         raise Exception("Bad argument to generate_random_state: " + str(seed)) 
     return random_state

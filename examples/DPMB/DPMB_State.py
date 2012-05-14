@@ -271,7 +271,9 @@ class DPMB_State():
 
     def modifyScore(self,scoreDelta):
         if not np.isfinite(scoreDelta):
-            pdb.set_trace()
+            # pdb.set_trace()
+            pass # FIXME : for testing gamma = [1,0,0...]
+                 #          remove when done
         self.score += scoreDelta
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
@@ -328,7 +330,7 @@ class DPMB_State():
             
         fh4 = None
         pylab.subplot(414)
-        if "cluster" in which_plots or True:
+        if ("cluster" in which_plots or True) and len(self.vector_list)>1:
             vector = self.vector_list[0]
             cluster = vector.cluster
             cluster_idx = self.getZIndices()[self.vector_list.index(vector)] ##ALWAYS GO THROUGH getZIndices
@@ -371,7 +373,12 @@ class DPMB_State():
             
             title_str  = "Cluster cond" if title_append is None else "Cluster cond" + ": " + title_append
             ##fh = handle_lookup["cluster"]
-            fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+            try:
+                fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+            except Exception, e:
+                pdb.set_trace()
+                print 1
+                
 
         if save_str is not None:
             pylab.savefig(save_str)

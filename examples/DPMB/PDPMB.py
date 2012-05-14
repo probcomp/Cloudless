@@ -101,11 +101,16 @@ class PDPMB():
         model.state = state
 
 
-    def transition(self):
+    def transition(self,exclude_list=None):
+        import sets
+        exclude_set = sets.Set(exclude_list)
         transition_type_list = [self.transition_z,self.transition_alpha
                                 ,self.transition_beta,self.transition_gamma
                                 ,self.transition_node_assignments]
         for transition_type in self.random_state.permutation(
             transition_type_list):
-            
+
+            if transition_type in exclude_set:
+                continue
+
             transition_type()

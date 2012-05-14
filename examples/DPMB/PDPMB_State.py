@@ -23,7 +23,6 @@ class PDPMB_State():
                  ,init_z=None,init_x=None
                  ,alpha_min=.01,alpha_max=1E4
                  ,beta_min=.01,beta_max=1E4
-                 ,gamma_min=.01,gamma_max=1E4
                  ,grid_N=100):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
@@ -32,8 +31,6 @@ class PDPMB_State():
         self.alpha_max = alpha_max
         self.beta_min = beta_min
         self.beta_max = beta_max
-        self.gamma_min = gamma_min
-        self.gamma_max = gamma_max
         self.grid_N = grid_N
         ##
         self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"gamma":0,"run_sum":0}
@@ -55,12 +52,11 @@ class PDPMB_State():
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
         self.initialize_betas(init_betas)
+        self.initialize_gammas(init_gammas)
         ##
         self.score = 0.0 #initially empty score
 
         # deal out data to states
-        self.gammas = self.random_state.dirichlet(
-            np.repeat(self.alpha,num_nodes),1).tolist()[0]
         log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
         for data_idx in range(len(self.vector_list)):
@@ -169,8 +165,8 @@ class PDPMB_State():
         if init_gammas is not None:
             self.gammas = np.array(init_gammas).copy()
         else:
-            self.gammas = 10.0**self.random_state.uniform(
-                np.log10(self.gamma_min),np.log10(self.gamma_max),self.num_cols)
+            self.gammas = self.random_state.dirichlet(
+                np.repeat(self.alpha,num_nodes),1).tolist()[0]
         pass
 
     def pop_cluster(self,cluster):
