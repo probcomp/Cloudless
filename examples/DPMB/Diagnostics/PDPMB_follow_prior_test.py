@@ -1,7 +1,7 @@
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
-import numpy.random as nr
+from numpy.random import RandomState
 import matplotlib.pylab as pylab
 import datetime
 import gc
@@ -81,7 +81,7 @@ if True and "pmodel" not in locals():
 
     start_ts = datetime.datetime.now()
     EVERY_N = 1
-    NUM_ITERS = 100
+    NUM_ITERS = 1000
     INIT_X = None
     NUM_COLS = 8
     NUM_ROWS = 8
@@ -112,13 +112,17 @@ if True and "pmodel" not in locals():
     chain_beta_0_list = []
     chain_cluster_0_count_list = []
     chain_num_clusters_list = []
+
+if True:
+
     for iter_num in range(NUM_ITERS):
-        print "iter num : " + str(iter_num)
+        true_iter_num = len(chain_alpha_list)
+        print "iter num : " + str(true_iter_num)
         pmodel.transition()
         # temp = raw_input("blocking: ---- ")
         # pylab.close('all')
         
-        if iter_num % EVERY_N == 0: ## must do this after inference
+        if true_iter_num % EVERY_N == 0: ## must do this after inference
             cluster_list_len = len(pstate.get_cluster_list())
             chain_alpha_list.append(pstate.alpha)
             chain_beta_0_list.append(pstate.betas[0])
@@ -127,7 +131,7 @@ if True and "pmodel" not in locals():
             print "betas[0]: " + str(pstate.betas[0])
             print "num clusters: " + str(cluster_list_len)
 
-        rand_state = nr.mtrand.RandomState(iter_num)
+        rand_state = RandomState(true_iter_num)
         seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
         for gamma_i,model,gen_seed_i in zip(
                 pstate.gammas,pstate.model_list,seed_list):
@@ -142,11 +146,14 @@ if True and "pmodel" not in locals():
                                   ,init_alpha=prior_alpha
                                   ,init_betas=prior_betas
                                   ,init_z=prior_zs
-                                  ,init_x=INIT_X
+                                  ,init_x=None
                                   ,alpha_min=gamma_i*pstate.alpha_min
                                   ,alpha_max=gamma_i*pstate.alpha_max
                                   )
             model.state = state
+
+            save_str = "state_"+str(true_iter_num)+"_0"
+            model.state.plot(show=False,save_str=save_str)
 
         pylab.figure()
         pylab.subplot(411)
@@ -158,7 +165,7 @@ if True and "pmodel" not in locals():
         pylab.title("beta_0 (log10)")
         #
         pylab.subplot(413)
-        pylab.title("num_iters: " + str(iter_num))
+        pylab.title("num_iters: " + str(true_iter_num))
         # pylab.hist(chain_cluster_0_count_list,normed=True)
         # pylab.title("chain_cluster_0_count_list")
         # pylab.savefig("chain_cluster_0_count_list.png")
@@ -168,8 +175,8 @@ if True and "pmodel" not in locals():
         pylab.title("num_clusters")
         #
         pylab.subplots_adjust(hspace=.5)
-        pylab.savefig("pdpmb_hist_" + str(iter_num))
-        pylab.close()
+        pylab.savefig("pdpmb_hist_" + str(true_iter_num))
+        pylab.close('all')
         gc.collect()
 
         print "Time delta: ",datetime.datetime.now()-start_ts

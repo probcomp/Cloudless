@@ -1,5 +1,5 @@
 import matplotlib
-##matplotlib.use('Agg')
+matplotlib.use('Agg')
 import numpy as np
 import numpy.random as nr
 import matplotlib.pylab as pylab
@@ -113,13 +113,17 @@ if True and "model" not in locals():
 if True:
     for iter_num in range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
+
+        save_str = "state_"+str(true_iter_num)+"_0"
+        model.state.plot(show=False,save_str=save_str)
+
         transition_func_list = [model.transition_beta,model.transition_z,model.transition_alpha]
         transition_func_list = nr.permutation(transition_func_list)
         for func_idx,transition_func_handle in enumerate(transition_func_list):
             func_str = re.findall("method DPMB.(\w+)",str(transition_func_handle))[0]
             print func_str
             transition_func_handle()
-            save_str = "state_"+str(true_iter_num)+"_"+str(func_idx)+"_"+str(func_str)
+            save_str = "state_"+str(true_iter_num)+"_"+str(func_idx+1)+"_"+str(func_str)
             model.state.plot(show=False,save_str=save_str,title_append=func_str)
 
         # model.transition(random_order=True)
@@ -133,7 +137,7 @@ if True:
             chain_cluster_0_count_list.append(state.cluster_list[0].count())
             chain_num_clusters_list.append(len(state.cluster_list))
 
-        prior_zs = np.sort(state.getZIndices()).tolist() ## could there be an issue with inference over canonical clustering? permuate the data?
+        prior_zs = state.getZIndices()
         prior_alpha = state.alpha
         prior_betas = state.betas
         #

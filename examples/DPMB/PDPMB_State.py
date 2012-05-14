@@ -43,7 +43,7 @@ class PDPMB_State():
         #         will also do seed operations
 
         # generate the data from a DPMB_State
-        state = ds.DPMB_State(self.gen_seed,
+        state = ds.DPMB_State(gen_seed,
                               self.num_cols,
                               num_rows,
                               init_alpha = init_alpha,
@@ -64,7 +64,7 @@ class PDPMB_State():
         log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
         for data_idx in range(len(self.vector_list)):
-            draw = hf.renormalize_and_sample(self.random_state.log_gammas)
+            draw = hf.renormalize_and_sample(self.random_state,log_gammas)
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
@@ -89,6 +89,10 @@ class PDPMB_State():
 
     def setAlpha(self,lnPdf,test_alpha):
         self.alpha = test_alpha
+        for model,gamma_i in zip(self.model_list,self.gammas):
+            lnPdf = hf.create_alpha_lnPdf(model.state)
+            model.state.removeAlpha(lnPdf)
+            model.state.setAlpha(lnPdf, self.alpha*gamma_i)
         self.score = lnPdf(test_alpha)
 
     def removeBetaD(self,lnPdf,col_idx):
@@ -98,6 +102,10 @@ class PDPMB_State():
     def setBetaD(self,lnPdf,col_idx,beta_val):
         beta_val = np.clip(beta_val,self.clip_beta[0],self.clip_beta[1])
         self.betas[col_idx] = beta_val
+        for model,gamma_i in zip(self.model_list,self.gammas):
+            lnPdf = hf.create_beta_lnPdf(model.state,col_idx)
+            model.state.removeBetaD(lnPdf,col_idx)
+            model.state.setBetaD(lnPdf,col_idx,beta_val)
         self.score = lnPdf(beta_val)
 
     def get_cluster_list(self):
@@ -204,27 +212,3 @@ class PDPMB_State():
 
     def get_timing(self):
         return self.timing.copy()
-
-    def removeAlpha(self,lnPdf):
-        scoreDelta = lnPdf(self.alpha)
-        self.modifyScore(-scoreDelta)
-
-    def setAlpha(self,lnPdf,alpha):
-        scoreDelta = lnPdf(alpha)
-        self.modifyScore(scoreDelta)        
-        self.alpha = alpha
-
-    def removeBetaD(self,lnPdf,colIdx):
-        scoreDelta = lnPdf(self.betas[colIdx])
-        self.modifyScore(-scoreDelta)        
-
-    def setBetaD(self,lnPdf,colIdx,newBetaD):
-        newBetaD = np.clip(newBetaD,self.clip_beta[0],self.clip_beta[1])
-        scoreDelta = lnPdf(newBetaD)
-        self.modifyScore(scoreDelta)        
-        self.betas[colIdx] = newBetaD
-
-    def modifyScore(self,scoreDelta):
-        if not np.isfinite(scoreDelta):
-            pdb.set_trace()
-        self.score += scoreDelta

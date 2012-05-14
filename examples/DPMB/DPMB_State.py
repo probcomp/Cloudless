@@ -81,17 +81,10 @@ class DPMB_State():
             self.cluster_list = new_cluster_list
             
 
-    # sample a cluster from the CRP, possibly resulting in a new one being generated
-    # if force_last is True, always returns the last generated cluster in the model
-    # if force_new is True, always returns a new cluster
-    # force_last and force_new can only both be True if there are no other clusters
-    #
-    # initializing all apart requires repeated calling with force_new=True
-    # initializing all together requires repeated calling with force_last = True
-    # initializing from the prior requires no arguments
     def initialize_alpha(self,init_alpha):
         if init_alpha is not None:
             self.alpha = init_alpha
+
         else:
             self.alpha = 10.0**self.random_state.uniform(
                 np.log10(self.alpha_min),np.log10(self.alpha_max))
@@ -114,6 +107,7 @@ class DPMB_State():
                           for cluster in self.cluster_list
                           ] + [self.alpha]
             draw = hf.renormalize_and_sample(
+
                 self.random_state, np.log(unnorm_vec))
 
         if draw == len(self.cluster_list):
@@ -123,6 +117,15 @@ class DPMB_State():
             return cluster
         else:
             return self.cluster_list[draw]
+
+    # sample a cluster from the CRP, possibly resulting in a new one being generated
+    # if force_last is True, always returns the last generated cluster in the model
+    # if force_new is True, always returns a new cluster
+    # force_last and force_new can only both be True if there are no other clusters
+    #
+    # initializing all apart requires repeated calling with force_new=True
+    # initializing all together requires repeated calling with force_last = True
+    # initializing from the prior requires no arguments
 
     # Given:
     # data=None, cluster=None: sample cluster from CRP, sample data from predictive of that cluster.

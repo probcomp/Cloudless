@@ -83,7 +83,7 @@ class PDPMB():
     def transition_z(self):
         self.state.timing["zs"] = 0
         for model in self.state.model_list:
-            model.transition()
+            model.transition_z()
             self.state.timing["zs"] += model.state.timing["zs"]
 
     def transition_x(self):
@@ -103,8 +103,8 @@ class PDPMB():
 
     def transition(self):
         transition_type_list = [self.transition_z,self.transition_alpha
-                                ,self.transition_beta,self.transition_gamma,self
-                                .transition_node_assignments]
+                                ,self.transition_beta,self.transition_gamma
+                                ,self.transition_node_assignments]
         for transition_type in self.random_state.permutation(
             transition_type_list):
             
