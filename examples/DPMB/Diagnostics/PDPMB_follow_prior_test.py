@@ -77,35 +77,35 @@ if False:
 # can automate "are these two histograms similar enough?" by normalizing them into probability distribution estimates, and running a Kolmogorov-Smirnof test
 # but for starters, just eyeballing is enough
 
-if True:
-    sample_alpha_list = []
-    sample_beta_0_list = []
-    sample_num_clusters_list = []
+if True and "pmodel" not in locals():
+
     start_ts = datetime.datetime.now()
     EVERY_N = 1
-    NUM_ITERS = 3000
+    NUM_ITERS = 100
     INIT_X = None
-    INIT_BETAS = None
-    INIT_ALPHA = None # FIXME : should be None
+    NUM_COLS = 8
+    NUM_ROWS = 8
     NUM_NODES = 1
+    ALPHA_MAX = 1E2
+    ALPHA_MIN = 1E-1
     pstate = pds.PDPMB_State(
         gen_seed=0
-        ,num_cols=dataset_spec["num_cols"]
-        ,num_rows=8
+        ,num_cols=NUM_COLS
+        ,num_rows=NUM_ROWS
         ,num_nodes=NUM_NODES
         ,init_gammas=[1.0/NUM_NODES
                      for idx in range(NUM_NODES)]
-        ,init_alpha=INIT_ALPHA
-        ,init_betas=INIT_BETAS
-        ,init_z = ("balanced",2))
+        ,init_alpha=None
+        ,init_betas=None
+        ,init_z = ("balanced",2)
+        ,alpha_max = ALPHA_MAX
+        ,alpha_min = ALPHA_MIN
+        )
     pmodel = pdm.PDPMB(
-        0
-        ,pstate
-        ,run_spec["infer_do_alpha_inference"]
-        ,run_spec["infer_do_betas_inference"])
-    sample_alpha_list.append(pstate.alpha)
-    sample_beta_0_list.append(pstate.betas[0])
-    sample_num_clusters_list.append(len(pstate.get_cluster_list()))
+        inf_seed=0
+        ,state=pstate
+        ,infer_alpha = True
+        ,infer_beta = True)
 
     ##
     chain_alpha_list = []
@@ -129,15 +129,18 @@ if True:
 
         rand_state = nr.mtrand.RandomState(iter_num)
         seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
-        for gamma_i,model,gen_seed in zip(
+        for gamma_i,model,gen_seed_i in zip(
                 pstate.gammas,pstate.model_list,seed_list):
+
             prior_zs = model.state.getZIndices()
-            # FIXME : What to use for gen_seed here?
-            state = ds.DPMB_State(gen_seed=gen_seed
-                                  ,num_cols=dataset_spec["num_cols"]
+            prior_alpha = model.state.alpha
+            prior_betas = model.state.betas
+
+            state = ds.DPMB_State(gen_seed=gen_seed_i
+                                  ,num_cols=NUM_COLS
                                   ,num_rows=len(prior_zs)
-                                  ,init_alpha=INIT_ALPHA
-                                  ,init_betas=INIT_BETAS
+                                  ,init_alpha=prior_alpha
+                                  ,init_betas=prior_betas
                                   ,init_z=prior_zs
                                   ,init_x=INIT_X
                                   ,alpha_min=gamma_i*pstate.alpha_min
@@ -165,8 +168,8 @@ if True:
         pylab.title("num_clusters")
         #
         pylab.subplots_adjust(hspace=.5)
-        pylab.savefig("pdpmb_follow_prior.png")
+        pylab.savefig("pdpmb_hist_" + str(iter_num))
         pylab.close()
         gc.collect()
 
-    print "Time delta: ",datetime.datetime.now()-start_ts
+        print "Time delta: ",datetime.datetime.now()-start_ts

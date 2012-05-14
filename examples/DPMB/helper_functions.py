@@ -1,9 +1,9 @@
 import datetime,sys,pdb
 ##
+from numpy.random import RandomState
 import pylab
 import matplotlib
 import numpy as np
-import numpy.random as nr
 import scipy.special as ss
 ##
 import DPMB_State as ds
@@ -12,14 +12,11 @@ import DPMB_State as ds
 
 ####################
 # PROBABILITY FUNCTIONS
-def renormalize_and_sample(logpstar_vec,verbose=False):
+def renormalize_and_sample(random_state,logpstar_vec):
     p_vec = log_conditional_to_norm_prob(logpstar_vec)
-    randv = nr.random()
+    randv = random_state.uniform()
     for (i, p) in enumerate(p_vec):
         if randv < p:
-            if verbose:
-                print " - hash of seed is " + str(hash(str(nr.get_state())))
-                print " - draw,probs: ",i,np.array(np.log(p_vec)).round(2)
             return i
         else:
             randv = randv - p
@@ -157,11 +154,11 @@ def mle_alpha(clusters,points_per_cluster,max_alpha=100):
     mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
     return mle
 
-def mhSample(initVal,nSamples,lnPdf,sampler):
+def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
     samples = [initVal]
     priorSample = initVal
     for counter in range(nSamples):
-        unif = nr.rand()
+        unif = random_state.uniform()
         proposal = sampler(priorSample)
         thresh = np.exp(lnPdf(proposal) - lnPdf(priorSample)) ## presume symmetric
         if np.isfinite(thresh) and unif < min(1,thresh):
@@ -210,18 +207,15 @@ def delta_since(start_dt):
     
 ####################
 # SEED FUNCTIONS
-def set_seed(seed):
+def generate_random_state(seed):
+    random_state = RandomState()
     if type(seed) == tuple:
-        nr.set_state(seed)
+        random_state.set_state(seed)
     elif type(seed) == int:
-        nr.seed(seed)
+        random_state.seed(seed)
     else:
-        pdb.set_trace()
-        print 1
-        raise Exception("Bad argument to set_seed: " + str(seed)) 
-
-def get_seed():
-    return nr.get_state()
+        raise Exception("Bad argument to generate_random_state: " + str(seed)) 
+    return random_state
 
 ####################
 # ARI FUNCTIONS

@@ -1,16 +1,19 @@
 #!python
 
 import numpy as np
-import numpy.random as nr
 import scipy.special as ss
-import pylab,sys
+import pylab
+import sys
 import datetime
+#
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
 
 class PDPMB():
     def __init__(self,inf_seed,state,infer_alpha,infer_beta):
-        hf.set_seed(inf_seed)
+        self.random_state = hf.generate_random_state(inf_seed)
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
@@ -20,9 +23,11 @@ class PDPMB():
     def transition_gamma(self):
         start_dt = datetime.datetime.now()
         #
-        node_sizes = [len(model.state.vector_list) for model in self.state.model_list]
+        node_sizes = [len(model.state.vector_list) 
+                      for model in self.state.model_list]
         modified_prior = np.array(node_sizes)+self.state.alpha
-        self.state.gammas = nr.dirichlet(modified_prior,1).tolist()[0]
+        self.state.gammas = self.random_state.dirichlet(
+            modified_prior,1).tolist()[0]
         #
         self.state.timing["gamma"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["gamma"]
@@ -32,7 +37,7 @@ class PDPMB():
         self.state.cluster_list = self.state.get_cluster_list()
         #
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
-        alpha_idx = hf.renormalize_and_sample(logp_list)
+        alpha_idx = hf.renormalize_and_sample(self.random_state, logp_list)
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         # empty everything that was just used to mimic DPMB_State
@@ -46,7 +51,7 @@ class PDPMB():
         #
         for col_idx in range(self.state.num_cols):
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
-            beta_idx = hf.renormalize_and_sample(logp_list)
+            beta_idx = hf.renormalize_and_sample(self.random_state, logp_list)
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
         # empty everything that was just used to mimic DPMB_State
@@ -56,7 +61,7 @@ class PDPMB():
 
     def transition_single_node_assignment(self, cluster):
         node_log_prob_list = hf.calculate_node_conditional(self.state,cluster)
-        draw = hf.renormalize_and_sample(node_log_prob_list)
+        draw = hf.renormalize_and_sample(self.random_state, node_log_prob_list)
         to_state = self.state.model_list[draw].state
         self.state.move_cluster(cluster,to_state)
 
@@ -67,7 +72,8 @@ class PDPMB():
             cluster_list_list.append(model.state.cluster_list)
 
         for state_idx,cluster_list in enumerate(cluster_list_list):
-            print "state #" + str(state_idx) + " has " + str(len(cluster_list)) + " clusters"
+            print "state #" + str(state_idx) \
+                + " has " + str(len(cluster_list)) + " clusters"
             for cluster in cluster_list:
                 self.transition_single_node_assignment(cluster)
         self.state.timing["nodes"] = hf.delta_since(start_dt)
@@ -80,15 +86,26 @@ class PDPMB():
             model.transition()
             self.state.timing["zs"] += model.state.timing["zs"]
 
-    def transition(self):
-        for transition_type in [
-            self.transition_z,self.transition_alpha,self.transition_beta
-            ,self.transition_gamma,self.transition_node_assignments]:
-            transition_type()
+    def transition_x(self):
+        # FIXME : this is bad to do, will replace current seed with gen_seed
+        state = ds.DPMB_State(gen_seed=gen_seed_i
+                              ,num_cols=NUM_COLS
+                              ,num_rows=len(prior_zs)
+                              ,init_alpha=prior_alpha
+                              ,init_betas=prior_betas
+                              ,init_z=prior_zs
+                              ,init_x=INIT_X
+                              ,alpha_min=gamma_i*pstate.alpha_min
+                              ,alpha_max=gamma_i*pstate.alpha_max
+                              )
+        model.state = state
 
-        # self.transition_z()
-        # self.transition_alpha()
-        # self.transition_beta()
-        # #
-        # self.transition_gamma()
-        # self.transition_node_assignments()
+
+    def transition(self):
+        transition_type_list = [self.transition_z,self.transition_alpha
+                                ,self.transition_beta,self.transition_gamma,self
+                                .transition_node_assignments]
+        for transition_type in self.random_state.permutation(
+            transition_type_list):
+            
+            transition_type()

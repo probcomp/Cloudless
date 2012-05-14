@@ -1,6 +1,5 @@
 #!python
 import numpy as np
-import numpy.random as nr
 import scipy.special as ss
 import pylab,sys
 import datetime
@@ -26,7 +25,7 @@ class PDPMB_State():
                  ,beta_min=.01,beta_max=1E4
                  ,gamma_min=.01,gamma_max=1E4
                  ,grid_N=100):
-        self.gen_seed = gen_seed
+        self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.num_nodes = num_nodes
         self.alpha_min = alpha_min
@@ -42,11 +41,9 @@ class PDPMB_State():
         self.clip_beta = [1E-2,1E10]
         # FIXME : setting seed becomes complicated when child states 
         #         will also do seed operations
-        hf.set_seed(gen_seed) 
 
         # generate the data from a DPMB_State
         state = ds.DPMB_State(self.gen_seed,
-
                               self.num_cols,
                               num_rows,
                               init_alpha = init_alpha,
@@ -62,16 +59,16 @@ class PDPMB_State():
         self.score = 0.0 #initially empty score
 
         # deal out data to states
-        self.gammas = nr.dirichlet(np.repeat(self.alpha,num_nodes),1).tolist()[0]
+        self.gammas = self.random_state.dirichlet(
+            np.repeat(self.alpha,num_nodes),1).tolist()[0]
         log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
         for data_idx in range(len(self.vector_list)):
-            draw = hf.renormalize_and_sample(log_gammas)
+            draw = hf.renormalize_and_sample(self.random_state.log_gammas)
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
-        rand_state = nr.mtrand.RandomState()
-        seed_list = [int(x) for x in rand_state.tomaxint(num_nodes)]
+        seed_list = [int(x) for x in self.random_state.tomaxint(num_nodes)]
         for state_idx,gen_seed in enumerate(seed_list):
             node_data = []
             for index in node_data_indices[state_idx]:
@@ -149,14 +146,14 @@ class PDPMB_State():
         if init_alpha is not None:
             self.alpha = init_alpha
         else:
-            self.alpha = 10.0**nr.uniform(
+            self.alpha = 10.0**self.random_state.uniform(
                 np.log10(self.alpha_min),np.log10(self.alpha_max))
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = np.array(init_betas).copy()
         else:
-            self.betas = 10.0**nr.uniform(
+            self.betas = 10.0**self.random_state.uniform(
                 np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
 
@@ -164,7 +161,7 @@ class PDPMB_State():
         if init_gammas is not None:
             self.gammas = np.array(init_gammas).copy()
         else:
-            self.gammas = 10.0**nr.uniform(
+            self.gammas = 10.0**self.random_state.uniform(
                 np.log10(self.gamma_min),np.log10(self.gamma_max),self.num_cols)
         pass
 

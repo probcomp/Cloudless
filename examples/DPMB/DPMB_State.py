@@ -1,5 +1,8 @@
 #!python
-import numpy as np, numpy.random as nr,pylab,sys
+import numpy as np
+import pylab
+import sys
+#
 import DPMB as dm
 reload(dm)
 import helper_functions as hf
@@ -13,8 +16,7 @@ class DPMB_State():
                  ,init_z=None,init_x=None,decanon_indices=None
                  ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4
                  ,grid_N=100):
-
-        self.gen_seed = gen_seed
+        self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
@@ -25,7 +27,6 @@ class DPMB_State():
         self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
-        hf.set_seed(gen_seed)
         ##
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
@@ -92,14 +93,14 @@ class DPMB_State():
         if init_alpha is not None:
             self.alpha = init_alpha
         else:
-            self.alpha = 10.0**nr.uniform(
+            self.alpha = 10.0**self.random_state.uniform(
                 np.log10(self.alpha_min),np.log10(self.alpha_max))
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = np.array(init_betas).copy()
         else:
-            self.betas = 10.0**nr.uniform(
+            self.betas = 10.0**self.random_state.uniform(
                 np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
     
@@ -109,8 +110,11 @@ class DPMB_State():
         elif force_last:
             draw = max(0,len(self.cluster_list) - 1)
         else:
-            unnorm_vec = [cluster.count() for cluster in self.cluster_list] + [self.alpha]
-            draw = hf.renormalize_and_sample(np.log(unnorm_vec))
+            unnorm_vec = [cluster.count() 
+                          for cluster in self.cluster_list
+                          ] + [self.alpha]
+            draw = hf.renormalize_and_sample(
+                self.random_state, np.log(unnorm_vec))
 
         if draw == len(self.cluster_list):
             # create a new cluster and assign it
@@ -131,7 +135,7 @@ class DPMB_State():
         if cluster is None:
             cluster = self.generate_cluster_assignment()
 
-        vector = Vector(cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
+        vector = Vector(self.random_state, cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
         self.vector_list.append(vector)
         cluster.assign_vector(vector)
         return vector
@@ -373,7 +377,7 @@ class DPMB_State():
 
 
 class Vector():
-    def __init__(self,cluster,data=None):
+    def __init__(self,random_state,cluster,data=None):
         if cluster is None:
             raise Exception("creating a vector without a cluster")
         
@@ -384,7 +388,7 @@ class Vector():
             N_cluster = cluster.count()
             betas_vec = self.cluster.state.betas
             thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
-            self.data = [nr.binomial(1, theta) for theta in thetas]
+            self.data = [random_state.binomial(1, theta) for theta in thetas]
         else:
             self.data = data
 

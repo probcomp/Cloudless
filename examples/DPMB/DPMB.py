@@ -1,5 +1,9 @@
 #!python
-import datetime,numpy as np,numpy.random as nr,scipy.special as ss,sys
+import datetime
+import numpy as np
+import scipy.special as ss
+import sys
+#
 import DPMB_State as ds
 reload(ds)
 import helper_functions as hf
@@ -10,7 +14,7 @@ import pdb
 
 class DPMB():
     def __init__(self,inf_seed,state,infer_alpha,infer_beta):
-        hf.set_seed(inf_seed)
+        self.random_state = hf.generate_random_state(inf_seed)
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
@@ -25,7 +29,7 @@ class DPMB():
             return # don't transition
         ##
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
-        alpha_idx = hf.renormalize_and_sample(logp_list,self.state.verbose)
+        alpha_idx = hf.renormalize_and_sample(self.random_state, logp_list)
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
@@ -45,7 +49,7 @@ class DPMB():
                 break
 
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
-            beta_idx = hf.renormalize_and_sample(logp_list)
+            beta_idx = hf.renormalize_and_sample(self.random_state, logp_list)
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
@@ -77,7 +81,7 @@ class DPMB():
         start_dt = datetime.datetime.now()
         ##
         # for each vector
-        for vector in nr.permutation(self.state.get_all_vectors()):
+        for vector in self.random_state.permutation(self.state.get_all_vectors()):
 
             if self.state.verbose:
                 print " - transitioning vector idx " + str(self.state.vector_list.index(vector))
@@ -93,7 +97,7 @@ class DPMB():
             score_vec = hf.calculate_cluster_conditional(self.state,vector)
 
             # sample an assignment
-            draw = hf.renormalize_and_sample(score_vec,verbose=self.state.verbose)
+            draw = hf.renormalize_and_sample(self.random_state, score_vec)
 
             cluster = None
             if draw == len(self.state.cluster_list):
@@ -128,7 +132,9 @@ class DPMB():
     def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None,random_order=True):
 
         transition_func_list = [self.transition_beta,self.transition_z,self.transition_alpha]
-        if random_order : transition_func_list = nr.permutation(transition_func_list)
+        if random_order :
+            transition_func_list = self.random_state.permutation(
+                transition_func_list)
 
         for counter in range(numSteps):
             for transition_func in transition_func_list:
@@ -175,7 +181,7 @@ class DPMB():
             ,"cluster_counts":[cluster.count() 
                                for cluster in self.state.cluster_list]
             ,"timing":self.state.get_timing()
-            ,"inf_seed":hf.get_seed()
+            ,"inf_seed":self.random_state.get_state()
             }
 
         if true_zs is not None:
