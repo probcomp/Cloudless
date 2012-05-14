@@ -135,26 +135,7 @@ if True:
         gammas_list.append(pmodel.state.gammas[:])
         data_size_list.append([len(model.state.vector_list) for model in pmodel.state.model_list])
 
-        rand_state = RandomState(true_iter_num)
-        seed_list = [int(x) for x in rand_state.tomaxint(len(pstate.model_list))]
-        for gamma_i,model,gen_seed_i in zip(
-                pstate.gammas,pstate.model_list,seed_list):
-
-            prior_zs = model.state.getZIndices()
-            prior_alpha = model.state.alpha
-            prior_betas = model.state.betas
-
-            state = ds.DPMB_State(gen_seed=gen_seed_i
-                                  ,num_cols=NUM_COLS
-                                  ,num_rows=len(prior_zs)
-                                  ,init_alpha=prior_alpha
-                                  ,init_betas=prior_betas
-                                  ,init_z=prior_zs
-                                  ,init_x=None
-                                  ,alpha_min=gamma_i*pstate.alpha_min
-                                  ,alpha_max=gamma_i*pstate.alpha_max
-                                  )
-            model.state = state
+        pmodel.transition_x()
 
         save_str = "state_"+str(true_iter_num)+"_0"
         pmodel.state.model_list[0].state.plot(show=False,save_str=save_str)

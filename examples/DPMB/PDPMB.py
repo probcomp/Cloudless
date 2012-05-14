@@ -87,19 +87,8 @@ class PDPMB():
             self.state.timing["zs"] += model.state.timing["zs"]
 
     def transition_x(self):
-        # FIXME : this is bad to do, will replace current seed with gen_seed
-        state = ds.DPMB_State(gen_seed=gen_seed_i
-                              ,num_cols=NUM_COLS
-                              ,num_rows=len(prior_zs)
-                              ,init_alpha=prior_alpha
-                              ,init_betas=prior_betas
-                              ,init_z=prior_zs
-                              ,init_x=INIT_X
-                              ,alpha_min=gamma_i*pstate.alpha_min
-                              ,alpha_max=gamma_i*pstate.alpha_max
-                              )
-        model.state = state
-
+        for model in self.state.model_list:
+            model.transition_x()
 
     def transition(self,exclude_list=None):
         import sets

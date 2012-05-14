@@ -119,7 +119,7 @@ class DPMB():
             self.state.timing["zs"] = (datetime.datetime.now()-start_dt).seconds()
         self.state.timing["run_sum"] += self.state.timing["zs"]
 
-    def transition_x():
+    def transition_x(self):
         # regenerate new vector values, preserving the exact same clustering
         # create a new state, where you force init_z to be the current markov_chain, but you don't pass in init_x
         # then copy out the data vectors from this new state (getXValues())
@@ -127,7 +127,23 @@ class DPMB():
         # then you manually or otherwise recalculate the counts and the score --- write a full_score_and_count refresh
         # or do the state-swapping thing, where you switch points
 
-        pass
+        prior_timing = self.state.timing
+
+        state = ds.DPMB_State(gen_seed=self.random_state # use inference seed
+                              ,num_cols=self.state.num_cols
+                              ,num_rows=len(self.state.vector_list)
+                              ,init_alpha=self.state.alpha
+                              ,init_betas=self.state.betas
+                              ,init_z=self.state.getZIndices()
+                              ,init_x=None
+                              ,alpha_min=self.state.alpha_min
+                              ,alpha_max=self.state.alpha_max
+                              ,beta_min=self.state.beta_min
+                              ,beta_max=self.state.beta_max
+                              ,grid_N=self.state.grid_N
+                              )
+        self.state = state
+        self.state.timing = prior_timing
     
     def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None,random_order=True):
 
