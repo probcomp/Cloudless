@@ -23,6 +23,27 @@ class DPMB():
         self.time_seatbelt_hit = False
         self.ari_seatbelt_hit = False
     
+    def transition_alpha_slice(self,time_seatbelt=None):
+        def logprob(state,alpha):
+            N = len(state.vector_list)
+            J = len(state.cluster_list)
+            return J*np.log(alpha) + ss.gammaln(alpha) - ss.gammaln(N+alpha)
+        lower = self.state.alpha_min
+        upper = self.state.alpha_max
+        init = self.state.alpha
+        slice = np.log(self.state.random_state.uniform()) + logprob(self.state,init)
+        while True:
+            a = self.state.random_state.uniform()*(upper-lower) + lower
+            if slice < logprob(a):
+                break;
+            elif a < init:
+                lower = a
+            elif a > init:
+                upper = a
+            else:
+                raise Exception('Slice sampler for alpha shrank to zero.')
+        return a
+
     def transition_alpha_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
         if self.check_time_seatbelt(time_seatbelt):
@@ -109,7 +130,7 @@ class DPMB():
             cluster.assign_vector(vector)
 
         # debug print out states:
-        if self.state.verbose or True:
+        if self.state.verbose:
             # print " --- " + str(self.state.getZIndices())
             print "     " + str([cluster.count() for cluster in self.state.cluster_list])
         ##

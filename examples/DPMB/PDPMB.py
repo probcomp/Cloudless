@@ -10,6 +10,8 @@ import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
+#
+import pdb
 
 class PDPMB():
     def __init__(self,inf_seed,state,infer_alpha,infer_beta):
@@ -71,11 +73,19 @@ class PDPMB():
         for model in self.state.model_list:
             cluster_list_list.append(model.state.cluster_list)
 
+        print "pre transition node"
         for state_idx,cluster_list in enumerate(cluster_list_list):
             print "state #" + str(state_idx) \
                 + " has " + str(len(cluster_list)) + " clusters"
+            print "     " + str([cluster.count() for cluster in cluster_list])
             for cluster in cluster_list:
                 self.transition_single_node_assignment(cluster)
+        print "post transition node"
+        for state_idx,cluster_list in enumerate(cluster_list_list):
+            print "state #" + str(state_idx) \
+                + " has " + str(len(cluster_list)) + " clusters"
+            print "     " + str([cluster.count() for cluster in cluster_list])
+
         self.state.timing["nodes"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["nodes"]
 
@@ -96,7 +106,8 @@ class PDPMB():
         transition_type_list = [self.transition_z,self.transition_alpha
                                 ,self.transition_beta,self.transition_gamma
                                 ,self.transition_node_assignments]
-        for transition_type in self.random_state.permutation(
+        #for transition_type in self.random_state.permutation(
+        for transition_type in ( # FIXME : change back to permutation later
             transition_type_list):
 
             if transition_type in exclude_set:

@@ -1,5 +1,5 @@
 import matplotlib
-matplotlib.use('Agg')
+#matplotlib.use('Agg')
 import numpy as np
 from numpy.random import RandomState
 import matplotlib.pylab as pylab
@@ -84,12 +84,11 @@ if True and "pmodel" not in locals():
     NUM_ITERS = 1000
     INIT_X = None
     NUM_COLS = 8
-    NUM_ROWS = 16
+    NUM_ROWS = 32
     NUM_NODES = 2
-    ALPHA_MAX = 1E2
-    ALPHA_MIN = 1E-1
-    # INIT_GAMMAS = [1.0/NUM_NODES for idx in range(NUM_NODES)]
-    INIT_GAMMAS = [1.0] + [0.0 for idx in range(NUM_NODES-1)] # FIXME : remove when done testing
+    ALPHA_MAX = 1E3
+    ALPHA_MIN = 1E-2
+    INIT_GAMMAS = [1.0/NUM_NODES for idx in range(NUM_NODES)]
     pstate = pds.PDPMB_State(
         gen_seed=0
         ,num_cols=NUM_COLS
@@ -118,9 +117,10 @@ if True and "pmodel" not in locals():
 
 if True:
 
-    for iter_num in range(NUM_ITERS):
+    for iter_num in range(10): # range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
         print "iter num : " + str(true_iter_num)
+        pmodel.transition_x()
         pmodel.transition(exclude_list=[pmodel.transition_gamma])
         
         if true_iter_num % EVERY_N == 0: ## must do this after inference
@@ -135,10 +135,11 @@ if True:
         gammas_list.append(pmodel.state.gammas[:])
         data_size_list.append([len(model.state.vector_list) for model in pmodel.state.model_list])
 
-        pmodel.transition_x()
-
-        save_str = "state_"+str(true_iter_num)+"_0"
-        pmodel.state.model_list[0].state.plot(show=False,save_str=save_str)
+        save_str = "state_"+str(true_iter_num)+"_parent"
+        pmodel.state.plot(show=False,save_str=save_str)
+        for model_idx,model in enumerate(pmodel.state.model_list):
+            save_str = "state_"+str(true_iter_num)+"_child_"+str(model_idx)
+            pmodel.state.model_list[model_idx].state.plot(show=False,save_str=save_str)
 
         pylab.figure()
         pylab.subplot(411)
@@ -165,3 +166,57 @@ if True:
         gc.collect()
 
         print "Time delta: ",datetime.datetime.now()-start_ts
+
+def force_alpha(pmodel,alpha_val):
+    pmodel.state.setAlpha(lambda x:0,alpha_val)
+    pmodel.transition_z()
+    pmodel.transition_alpha()
+    pmodel.transition_beta()
+    pmodel.transition_x()
+
+def display_info(pmodel):
+    pmodel.state.plot(show=False,save_str="one_off")
+    print pmodel.state.alpha
+    print [model.state.alpha for model in pmodel.state.model_list]
+    [pmodel.state.model_list[idx].state.plot(show=False,save_str="submodel_state_"+str(idx)) for idx in range(len(pmodel.state.model_list))]
+
+def transition_alpha_helper(model,alpha=None):
+    model.state.cluster_list = model.state.get_cluster_list()
+    logp_list,lnPdf,grid = hf.calc_alpha_conditional(model.state)
+    if alpha is None:
+        alpha_idx = hf.renormalize_and_sample(model.random_state, logp_list)
+        alpha = grid[alpha_idx]
+    model.state.removeAlpha(lnPdf)
+    model.state.setAlpha(lnPdf,alpha)
+    # empty everything that was just used to mimic DPMB_State
+    model.state.cluster_list = None
+
+def force_beta(pmodel,beta_val):
+    pmodel.state.cluster_list = pmodel.state.get_cluster_list()
+    for col_idx in range(pmodel.state.num_cols):
+        logp_list, lnPdf, grid = hf.calc_beta_conditional(pmodel.state,col_idx)
+        pmodel.state.removeBetaD(lnPdf,col_idx)
+        pmodel.state.setBetaD(lnPdf,col_idx,beta_val)
+    pmodel.state.cluster_list = None
+
+def transition_alpha_slice(model,time_seatbelt=None):
+    import scipy.special as ss
+    def logprob(state,alpha):
+        N = len(state.vector_list)
+        J = len(state.cluster_list)
+        return J*np.log(alpha) + ss.gammaln(alpha) - ss.gammaln(N+alpha)
+    lower = model.state.alpha_min
+    upper = model.state.alpha_max
+    init = model.state.alpha
+    slice = np.log(model.state.random_state.uniform()) + logprob(model.state,init)
+    while True:
+        a = model.state.random_state.uniform()*(upper-lower) + lower
+        if slice < logprob(model.state,a):
+            break;
+        elif a < init:
+            lower = a
+        elif a > init:
+            upper = a
+        else:
+            raise Exception('Slice sampler for alpha shrank to zero.')
+    return a
