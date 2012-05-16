@@ -82,7 +82,7 @@ if True and "pmodel" not in locals():
     NUM_ITERS = 1000
     INIT_X = None
     NUM_COLS = 8
-    NUM_ROWS = 256
+    NUM_ROWS = 32
     NUM_NODES = 5
     ALPHA_MAX = 1E4
     ALPHA_MIN = 1E-1
@@ -112,7 +112,7 @@ if True and "pmodel" not in locals():
 
 if True:
 
-    for iter_num in range(1500): # range(NUM_ITERS):
+    for iter_num in range(200): # range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
         print "iter num : " + str(true_iter_num)
         pmodel.transition_x()
@@ -213,3 +213,11 @@ if False:
 
     pmodel.transition_node_assignments()
     display_info(pmodel)
+
+# pmodel.state.setAlpha(lambda x:0,.1)
+# pmodel.transition_z()
+# pmodel.transition_beta()
+# display_info(pmodel)
+
+# pmodel.transition_node_assignments()
+# display_info(pmodel)
