@@ -24,25 +24,29 @@ class DPMB():
         self.ari_seatbelt_hit = False
     
     def transition_alpha_slice(self,time_seatbelt=None):
-        def logprob(state,alpha):
-            N = len(state.vector_list)
-            J = len(state.cluster_list)
-            return J*np.log(alpha) + ss.gammaln(alpha) - ss.gammaln(N+alpha)
-        lower = self.state.alpha_min
-        upper = self.state.alpha_max
-        init = self.state.alpha
-        slice = np.log(self.state.random_state.uniform()) + logprob(self.state,init)
-        while True:
-            a = self.state.random_state.uniform()*(upper-lower) + lower
-            if slice < logprob(a):
-                break;
-            elif a < init:
-                lower = a
-            elif a > init:
-                upper = a
-            else:
-                raise Exception('Slice sampler for alpha shrank to zero.')
-        return a
+        start_dt = datetime.datetime.now()
+        if self.check_time_seatbelt(time_seatbelt):
+            return # don't transition
+        new_alpha = hf.slice_sample_alpha(self.state)
+        logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
+        self.state.removeAlpha(lnPdf)
+        self.state.setAlpha(lnPdf,new_alpha)
+        self.state.timing["alpha"] = hf.delta_since(start_dt)
+        self.state.timing["run_sum"] += self.state.timing["alpha"]
+
+    def transition_beta_slice(self,time_seatbelt=None):
+        start_dt = datetime.datetime.now()
+        ##
+        for col_idx in range(self.state.num_cols):
+            delta_t = hf.delta_since(start_dt)
+            if self.check_time_seatbelt(time_seatbelt,delta_t):
+                break
+            new_beta = hf.slice_sample_beta(self.state,col_idx)
+            logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
+            self.state.removeBetaD(lnPdf,col_idx)
+            self.state.setBetaD(lnPdf,col_idx,new_beta)
+        self.state.timing["betas"] = hf.delta_since(start_dt)
+        self.state.timing["run_sum"] += self.state.timing["betas"]
 
     def transition_alpha_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
@@ -54,10 +58,7 @@ class DPMB():
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
-        try: ##older datetime modules don't have .total_seconds()
-            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).total_seconds()
-        except Exception, e:
-            self.state.timing["alpha"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["alpha"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["alpha"]
 
     def transition_beta_discrete_gibbs(self,time_seatbelt=None):
@@ -74,10 +75,7 @@ class DPMB():
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
-        try: ##older datetime modules don't have .total_seconds()
-            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).total_seconds()
-        except Exception, e:
-            self.state.timing["betas"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["betas"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["betas"]
 
     def transition_alpha(self,time_seatbelt=None):

@@ -277,6 +277,11 @@ class DPMB_State():
         self.score += scoreDelta
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
+        if len(self.cluster_list) == 0:
+            if save_str is not None:
+                pylab.figure()
+                pylab.savefig(save_str)
+            return
         which_plots = ["data","alpha","beta","cluster"] if which_plots is None else which_plots
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))

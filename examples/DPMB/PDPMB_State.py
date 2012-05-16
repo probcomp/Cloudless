@@ -18,7 +18,7 @@ import pdb
 
 class PDPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows
-                 ,num_nodes,init_gammas=None
+                 ,num_nodes
                  ,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None
                  ,alpha_min=.01,alpha_max=1E4
@@ -27,13 +27,14 @@ class PDPMB_State():
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.num_nodes = num_nodes
+        self.mus = np.repeat(1.0/self.num_nodes,num_nodes)
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.grid_N = grid_N
         ##
-        self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"gamma":0,"run_sum":0}
+        self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         # FIXME : setting seed becomes complicated when child states 
@@ -59,15 +60,13 @@ class PDPMB_State():
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
         self.initialize_betas(init_betas)
-        self.initialize_gammas(init_gammas)
         ##
         self.score = 0.0 #initially empty score
 
         # deal out data to states
-        log_gammas = np.log(self.gammas)
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
         for data_idx in range(len(self.vector_list)):
-            draw = hf.renormalize_and_sample(self.random_state,log_gammas)
+            draw = hf.renormalize_and_sample(self.random_state,np.log(self.mus))
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
@@ -77,19 +76,18 @@ class PDPMB_State():
             zip(gen_seed_list,inf_seed_list)):
 
             node_data = []
+            alpha_factor = 1.0 / self.num_nodes
             for index in node_data_indices[state_idx]:
                 node_data.append(self.vector_list[index].data)
-
-            gamma_i = self.gammas[state_idx]
 
             state = ds.DPMB_State(gen_seed=gen_seed
                                   ,num_cols=self.num_cols
                                   ,num_rows=len(node_data)
-                                  ,init_alpha = self.alpha * gamma_i
+                                  ,init_alpha = self.alpha * alpha_factor
                                   ,init_betas = self.betas
                                   ,init_x = node_data
-                                  ,alpha_min=self.alpha_min * gamma_i
-                                  ,alpha_max=self.alpha_max * gamma_i
+                                  ,alpha_min=self.alpha_min * alpha_factor
+                                  ,alpha_max=self.alpha_max * alpha_factor
                                   ,beta_min=self.beta_min
                                   ,beta_max=self.beta_max
                                   ,grid_N=self.grid_N
@@ -105,10 +103,11 @@ class PDPMB_State():
 
     def setAlpha(self,lnPdf,test_alpha):
         self.alpha = test_alpha
-        for model,gamma_i in zip(self.model_list,self.gammas):
+        sub_alpha = self.alpha/float(self.num_nodes)
+        for model in self.model_list:
             lnPdf_i = hf.create_alpha_lnPdf(model.state)
             model.state.removeAlpha(lnPdf_i)
-            model.state.setAlpha(lnPdf_i, self.alpha*gamma_i)
+            model.state.setAlpha(lnPdf_i, sub_alpha)
         self.score = lnPdf(test_alpha)
 
     def removeBetaD(self,lnPdf,col_idx):
@@ -118,7 +117,7 @@ class PDPMB_State():
     def setBetaD(self,lnPdf,col_idx,beta_val):
         beta_val = np.clip(beta_val,self.clip_beta[0],self.clip_beta[1])
         self.betas[col_idx] = beta_val
-        for model,gamma_i in zip(self.model_list,self.gammas):
+        for model in self.model_list:
             lnPdf_i = hf.create_beta_lnPdf(model.state,col_idx)
             model.state.removeBetaD(lnPdf_i,col_idx)
             model.state.setBetaD(lnPdf_i,col_idx,beta_val)
@@ -181,18 +180,10 @@ class PDPMB_State():
                 np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
 
-    def initialize_gammas(self,init_gammas):
-        if init_gammas is not None:
-            self.gammas = np.array(init_gammas).copy()
-        else:
-            self.gammas = self.random_state.dirichlet(
-                np.repeat(self.alpha,num_nodes),1).tolist()[0]
-        pass
-
     def pop_cluster(self,cluster):
         data_list = []
         state = cluster.state
-        for vector in cluster.vector_list:
+        for vector in cluster.vector_list[:]:
             data_list.append(vector.data)
             state.remove_vector(vector)
         return data_list
@@ -211,6 +202,9 @@ class PDPMB_State():
     def move_cluster(self,cluster,to_state):
         if cluster.state is to_state:
             return # don't bother if from_state == to_state
+        if hasattr(to_state,"debug_move_cluster"):
+            import pdb
+            pdb.set_trace()
         from_idx = self.find_state_idx(cluster.state)
         to_idx = self.find_state_idx(to_state)
         data_list = self.pop_cluster(cluster)
@@ -230,7 +224,7 @@ class PDPMB_State():
         return self.timing.copy()
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
-        which_plots = ["gamma","alpha","beta","node"] if which_plots is None else which_plots
+        which_plots = ["data_dist","alpha","beta","node"] if which_plots is None else which_plots
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))
         handle_lookup = dict(zip(which_plots,which_handles))
@@ -243,9 +237,11 @@ class PDPMB_State():
         fh1 = None
         fh = pylab.figure()
         pylab.subplot(411)
-        if "gamma" in which_plots or True:
-            title_str = "gamma" if title_append is None else "gamma" + ": " + title_append
-            fh1 = hf.bar_helper(x=np.arange(len(self.gammas))-.5,y=self.gammas,fh=fh,title_str=title_str)
+        if "data_dist" in which_plots or True:
+            cluster_counts = [len(model.state.vector_list) for model in self.model_list]
+            data_dist = [float(cluster_count)/sum(cluster_counts) for cluster_count in cluster_counts]
+            title_str = "data_dist" if title_append is None else "data_dist" + ": " + title_append
+            fh1 = hf.bar_helper(x=np.arange(self.num_nodes)-.5,y=data_dist,fh=fh,title_str=title_str)
 
         fh2 = None
         pylab.subplot(412)

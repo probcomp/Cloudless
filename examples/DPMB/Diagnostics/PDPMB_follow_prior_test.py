@@ -1,5 +1,5 @@
 import matplotlib
-#matplotlib.use('Agg')
+matplotlib.use('Agg')
 import numpy as np
 from numpy.random import RandomState
 import matplotlib.pylab as pylab
@@ -37,8 +37,6 @@ if False:
             ,num_cols=dataset_spec["num_cols"]
             ,num_rows=dataset_spec["num_rows"]
             ,num_nodes=4
-            ,init_gammas=[1.0/dataset_spec["num_cols"]
-                         for idx in range(dataset_spec["num_cols"])]
 #            ,init_alpha=dataset_spec["gen_alpha"]
 #            ,init_betas=dataset_spec["gen_betas"]
             ,init_z = dataset_spec["gen_z"])
@@ -84,17 +82,15 @@ if True and "pmodel" not in locals():
     NUM_ITERS = 1000
     INIT_X = None
     NUM_COLS = 8
-    NUM_ROWS = 32
-    NUM_NODES = 2
-    ALPHA_MAX = 1E3
-    ALPHA_MIN = 1E-2
-    INIT_GAMMAS = [1.0/NUM_NODES for idx in range(NUM_NODES)]
+    NUM_ROWS = 256
+    NUM_NODES = 5
+    ALPHA_MAX = 1E4
+    ALPHA_MIN = 1E-1
     pstate = pds.PDPMB_State(
         gen_seed=0
         ,num_cols=NUM_COLS
         ,num_rows=NUM_ROWS
         ,num_nodes=NUM_NODES
-        ,init_gammas=INIT_GAMMAS
         ,init_alpha=None
         ,init_betas=None
         ,init_z = ("balanced",2)
@@ -112,16 +108,15 @@ if True and "pmodel" not in locals():
     chain_beta_0_list = []
     chain_cluster_0_count_list = []
     chain_num_clusters_list = []
-    gammas_list = []
     data_size_list = []
 
 if True:
 
-    for iter_num in range(10): # range(NUM_ITERS):
+    for iter_num in range(1500): # range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
         print "iter num : " + str(true_iter_num)
         pmodel.transition_x()
-        pmodel.transition(exclude_list=[pmodel.transition_gamma])
+        pmodel.transition()
         
         if true_iter_num % EVERY_N == 0: ## must do this after inference
             cluster_list_len = len(pstate.get_cluster_list())
@@ -132,7 +127,6 @@ if True:
             print "betas[0]: " + str(pstate.betas[0])
             print "num clusters: " + str(cluster_list_len)
 
-        gammas_list.append(pmodel.state.gammas[:])
         data_size_list.append([len(model.state.vector_list) for model in pmodel.state.model_list])
 
         save_str = "state_"+str(true_iter_num)+"_parent"
@@ -169,9 +163,15 @@ if True:
 
 def force_alpha(pmodel,alpha_val):
     pmodel.state.setAlpha(lambda x:0,alpha_val)
-    pmodel.transition_z()
-    pmodel.transition_alpha()
-    pmodel.transition_beta()
+
+    if True:
+        pmodel.transition_z()
+        pmodel.transition_beta()
+        pmodel.transition_alpha()
+        pmodel.transition_node_assignments()
+    else:
+        pmodel.transition()
+
     pmodel.transition_x()
 
 def display_info(pmodel):
@@ -179,6 +179,7 @@ def display_info(pmodel):
     print pmodel.state.alpha
     print [model.state.alpha for model in pmodel.state.model_list]
     [pmodel.state.model_list[idx].state.plot(show=False,save_str="submodel_state_"+str(idx)) for idx in range(len(pmodel.state.model_list))]
+    pylab.close('all')
 
 def transition_alpha_helper(model,alpha=None):
     model.state.cluster_list = model.state.get_cluster_list()
@@ -199,24 +200,16 @@ def force_beta(pmodel,beta_val):
         pmodel.state.setBetaD(lnPdf,col_idx,beta_val)
     pmodel.state.cluster_list = None
 
-def transition_alpha_slice(model,time_seatbelt=None):
-    import scipy.special as ss
-    def logprob(state,alpha):
-        N = len(state.vector_list)
-        J = len(state.cluster_list)
-        return J*np.log(alpha) + ss.gammaln(alpha) - ss.gammaln(N+alpha)
-    lower = model.state.alpha_min
-    upper = model.state.alpha_max
-    init = model.state.alpha
-    slice = np.log(model.state.random_state.uniform()) + logprob(model.state,init)
-    while True:
-        a = model.state.random_state.uniform()*(upper-lower) + lower
-        if slice < logprob(model.state,a):
-            break;
-        elif a < init:
-            lower = a
-        elif a > init:
-            upper = a
-        else:
-            raise Exception('Slice sampler for alpha shrank to zero.')
-    return a
+
+if False:
+    while any([len(model.state.cluster_list)>1 for model in pmodel.state.model_list]):
+        pmodel.state.setAlpha(lambda x:0,.01)
+        pmodel.transition_z()
+        pmodel.transition_beta()
+        display_info(pmodel)
+
+    for model in pmodel.state.model_list:
+        model.state.debug_move_cluster = True 
+
+    pmodel.transition_node_assignments()
+    display_info(pmodel)

@@ -59,9 +59,13 @@ def cluster_vector_joint(vector,cluster,state):
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
-    lnPdf = lambda alpha: (ss.gammaln(alpha) + len(state.cluster_list)*np.log(alpha)
-                           - ss.gammaln(alpha+len(state.vector_list)) + lnProdGammas)
+    lnProdGammas = 0 # FIXME : decide whether to entirely remove this
+    # lnProdGammas = sum([ss.gammaln(cluster.count()) 
+    #                     for cluster in state.cluster_list])
+    lnPdf = lambda alpha: ss.gammaln(alpha) \
+        + len(state.cluster_list)*np.log(alpha) \
+        - ss.gammaln(alpha+len(state.vector_list)) \
+        + lnProdGammas
     return lnPdf
 
 def create_beta_lnPdf(state,col_idx):
@@ -72,6 +76,42 @@ def create_beta_lnPdf(state,col_idx):
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
                                 - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
     return lnPdf
+
+def slice_sample_alpha(state,init=None):
+    logprob = create_alpha_lnPdf(state)
+    lower = state.alpha_min
+    upper = state.alpha_max
+    init = state.alpha if init is None else init
+    slice = np.log(state.random_state.uniform()) + logprob(init)
+    while True:
+        a = state.random_state.uniform()*(upper-lower) + lower
+        if slice < logprob(a):
+            break;
+        elif a < init:
+            lower = a
+        elif a > init:
+            upper = a
+        else:
+            raise Exception('Slice sampler for alpha shrank to zero.')
+    return a
+
+def slice_sample_beta(state,col_idx,init=None):
+    logprob = create_beta_lnPdf(state,col_idx)
+    lower = state.beta_min
+    upper = state.beta_max
+    init = state.betas[col_idx] if init is None else init
+    slice = np.log(state.random_state.uniform()) + logprob(init)
+    while True:
+        a = state.random_state.uniform()*(upper-lower) + lower
+        if slice < logprob(a):
+            break;
+        elif a < init:
+            lower = a
+        elif a > init:
+            upper = a
+        else:
+            raise Exception('Slice sampler for beta shrank to zero.')
+    return a
 
 def calc_alpha_conditional(state):
     ##save original value, should be invariant
@@ -126,28 +166,7 @@ def calculate_cluster_conditional(state,vector):
     return conditionals
 
 def calculate_node_conditional(pstate,cluster):
-    # this breaks with cluster_conditional in not actually 
-    # using the object
-    # the cluster being tested should already be popped from its node
-
-    cluster_size = len(cluster.vector_list)
-    node_sizes = []
-    for model in pstate.model_list:
-        state = model.state
-        node_size = len(state.vector_list)
-        if state == cluster.state:
-            node_size -= cluster_size
-        node_sizes.append(node_size)
-
-    model_size = sum(node_sizes)
-    conditionals = []
-    for gamma,node_size in zip(pstate.gammas,node_sizes):
-        conditional = 0
-        conditional += cluster_size*np.log(gamma)
-        for i in range(cluster_size):
-            conditional += np.log(model_size + i + 1) 
-            conditional -= np.log(node_size + i + 1)
-        conditionals.append(conditional)
+    conditionals = pstate.mus
     return conditionals
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
