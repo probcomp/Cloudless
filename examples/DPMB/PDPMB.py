@@ -5,6 +5,7 @@ import scipy.special as ss
 import pylab
 import sys
 import datetime
+import sets
 #
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
@@ -16,13 +17,14 @@ reload(dm)
 import pdb
 
 class PDPMB():
-    def __init__(self,inf_seed,state,infer_alpha,infer_beta):
+    def __init__(self,inf_seed,state,infer_alpha
+                 ,infer_beta,hypers_every_N=1):
         self.random_state = hf.generate_random_state(inf_seed)
         self.state = state
         self.infer_alpha = infer_alpha
         self.infer_beta = infer_beta
+        self.hypers_every_N = hypers_every_N
         ##
-        self.transition_count = 0
         self.transition_count = 0
         self.time_seatbelt_hit = False
         self.ari_seatbelt_hit = False
@@ -150,19 +152,30 @@ class PDPMB():
             model.transition_x()
 
     def transition(self,time_seatbelt=None,ari_seatbelt=None,true_zs=None,exclude_list=None):
-        import sets
         exclude_set = sets.Set(exclude_list)
-        transition_type_list = [self.transition_z
-                                ,self.transition_alpha
-                                ,self.transition_beta
-                                ,self.transition_node_assignments]
-        for transition_type in self.random_state.permutation(
-        #for transition_type in ( # FIXME : change back to permutation later
-            transition_type_list):
+        hyper_inference_set = sets.Set([
+            self.transition_alpha
+            ,self.transition_beta
+            ,self.transition_node_assignments
+            ])
+        transition_type_list = [
+            self.transition_z
+            ,self.transition_alpha
+            ,self.transition_beta
+            ,self.transition_node_assignments
+            ]
+        self.transition_count += 1
+        transition_hypers = self.transition_count % self.hypers_every_N == 0
+        self.state.timing = self.state.create_fresh_timing()
 
+        for transition_type in self.random_state.permutation(
+            transition_type_list
+            ):
             if transition_type in exclude_set:
                 continue
-
+            if transition_type in hyper_inference_set \
+                    and not transition_hypers:
+                continue
             transition_type(time_seatbelt=time_seatbelt)
 
     def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):

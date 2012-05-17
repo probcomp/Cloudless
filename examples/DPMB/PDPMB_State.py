@@ -3,6 +3,7 @@ import numpy as np
 import scipy.special as ss
 import pylab,sys
 import datetime
+import copy
 #
 import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
@@ -35,8 +36,7 @@ class PDPMB_State():
         self.beta_max = beta_max
         self.grid_N = grid_N
         ##
-        self.timing = {"alpha":0,"betas":0,"zs":0
-                       ,"each_zs":None,"nodes":0,"run_sum":0}
+        self.timing = self.create_fresh_timing()
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         # FIXME : setting seed becomes complicated when child states 
@@ -114,6 +114,13 @@ class PDPMB_State():
                 np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
 
+    def create_fresh_timing(self):
+        run_sum = 0
+        if hasattr(self,"timing"):
+            run_sum = self.timing["run_sum"]
+        return {"alpha":0,"betas":0,"zs":0
+                ,"each_zs":None,"nodes":0,"run_sum":run_sum}
+
     def removeAlpha(self,lnPdf):
         self.alpha = None
         self.score = None
@@ -167,7 +174,7 @@ class PDPMB_State():
         return single_state
 
     def get_timing(self):
-        return self.timing.copy()
+        return copy.deepcopy(self.timing) # for each_zs
 
     def pop_cluster(self,cluster):
         data_list = []
