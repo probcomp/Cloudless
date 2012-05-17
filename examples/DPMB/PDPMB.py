@@ -132,7 +132,7 @@ class PDPMB():
 
 
     def transition_z(self,time_seatbelt=None):
-        self.state.timing["each_zs"] = []
+        self.state.timing["each_zs"] = [0]
         start_dt = datetime.datetime.now()
 
         for model in self.state.model_list:
@@ -144,8 +144,12 @@ class PDPMB():
             model.transition_z()
             individual_z_time = model.state.timing["zs"]
             self.state.timing["each_zs"].append(individual_z_time)
+        if len(self.state.timing["each_zs"])==0:
+            self.state.timing["zs"] = 0
+        else:
+            self.state.timing["zs"] = max(self.state.timing["each_zs"])
         self.state.timing["compute_zs"] = sum(self.state.timing["each_zs"])
-        self.state.timing["zs"] = max(self.state.timing["each_zs"])
+
 
     def transition_x(self):
         for model in self.state.model_list:
