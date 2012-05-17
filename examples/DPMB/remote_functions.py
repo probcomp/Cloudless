@@ -3,6 +3,7 @@ import copy
 import time
 from threading import Thread
 import datetime
+from numpy import array
 ##
 import numpy as np
 import pylab
@@ -243,7 +244,7 @@ def infer(run_spec):
                                     # 
                                     init_x = problem["xs"],
                                     decanon_indices=decanon_indices,
-                                    data_subset_indices=data_subset_indices)
+                                    )
     #
     print "...initialized"
     transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
@@ -291,12 +292,12 @@ def infer(run_spec):
     summaries[-1]["decanon_indices"] = decanon_indices
     return summaries
 
-def extract_problems_from_memo(asyncmemo):
-    from numpy import array
+def extract_dataset_specs_from_memo(asyncmemo):
     ALL_RUN_SPECS = [eval(key)[0] for key in asyncmemo.memo.keys()]
-    ALL_PROBLEM_STRS = dict(zip([str(run_spec["problem"]) for run_spec in ALL_RUN_SPECS],np.repeat(None,len(ALL_RUN_SPECS)))).keys()
-    ALL_PROBLEMS = [eval(problem_str) for problem_str in ALL_PROBLEM_STRS]
-    return ALL_PROBLEMS
+    ALL_DATASET_SPEC_STRS = [str(runspec["dataset_spec"]) for runspec in ALL_RUN_SPECS]
+    import sets
+    ALL_DATASET_SPECS = [eval(spec_str) for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
+    return ALL_DATASET_SPECS
 
 def pickle_asyncmemoize(asyncmemo,file_str):
     with open(file_str,"wb") as fh:
@@ -327,17 +328,24 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
         print "Done all jobs, memo pickled"
         return True
 
-def plot_measurement(memoized_infer, which_measurement, target_problem, by_time = True
+def plot_measurement(memoized_infer, which_measurement, target_dataset_spec, by_time = True
                      ,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None
                      ,do_legend=True):
+
+    h_line = None
+    if which_measurement == "predictive":
+        problem = gen_problem(target_dataset_spec)
+        h_line = np.mean(problem["test_lls_under_gen"])
+
     matching_runs = []
     matching_summaries = []
+    run_spec_filter = run_spec_filter if run_spec_filter is not None else (lambda x: True)
     #
     for (args, summaries) in memoized_infer.iter():
         run_spec = args[0]
-        if run_spec_filter is not None and not run_spec_filter(run_spec):
+        if not run_spec_filter(run_spec):
             continue
-        if str(run_spec["problem"]) == str(target_problem): ##FIXME: This is a hack, it should work without making str
+        if str(run_spec["dataset_spec"]) == str(target_dataset_spec):
             matching_runs.append(run_spec)
             matching_summaries.append(summaries)
     #
@@ -392,6 +400,7 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
         matching_legendstrs.append(legendstr)
     # FIXME: enable plots. still need to debug timing ***urgent***
 
+    # FIXME: create list of unique linespecs,legendstrs to reduce legend size
     # unique_legendstrs = np.unique(matching_legendstrs)
     # unique_linespecs = []
     # for unique_legendstr in unique_legendstrs:
@@ -407,11 +416,17 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
             fh = pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
             pylab.xlabel("time (seconds)")
             line_list.append(fh[0])
+            if h_line is not None:
+                xlim = fh[0].get_axes().get_xlim()
+                pylab.hlines(h_line,*xlim,color="red",linewidth=3)
     else:
         for measurement,linespec in zip(matching_measurements,matching_linespecs):
             fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
             pylab.xlabel("iter")
             line_list.append(fh[0])
+            if h_line is not None:
+                xlim = fh[0].get_axes().get_xlim()
+                pylab.hlines(h_line,*xlim,color="red",linewidth=3)
     #
     if title_str is not None:
         if type(title_str) is str:
@@ -433,29 +448,45 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
     #
-    for problem_idx,target_problem in enumerate(extract_problems_from_memo(memoized_infer)):
-        cluster_str = "clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
-        col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
-        row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
+    for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
+        cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1]) ## FIXME : presumes dataset_spec is always balanced
+        col_str = "cols" + str(target_dataset_spec["num_cols"])
+        row_str = "rows" + str(target_dataset_spec["num_rows"])
         config_str = "_".join([col_str,row_str,cluster_str])    
         #
         for which_measurement in which_measurements:
             try:
-                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter
-                                    ,save_str="_".join([which_measurement,config_str,"time.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
-                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter, by_time=False
-                                    ,save_str="_".join([which_measurement,config_str,"iter.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
+                # by time
+                plot_measurement(memoized_infer
+                                 , which_measurement
+                                 , target_dataset_spec
+                                 , run_spec_filter=run_spec_filter
+                                 , by_time=True
+                                 , save_str="_".join([which_measurement,config_str,"time.png"])
+                                 , title_str=[config_str,which_measurement]
+                                 , ylabel_str=which_measurement
+                                 , legend_args={"ncol":2,"markerscale":2}
+                                 , do_legend=do_legend)
+                # by iter
+                plot_measurement(memoized_infer
+                                 , which_measurement
+                                 , target_dataset_spec
+                                 , run_spec_filter=run_spec_filter
+                                 , by_time=False
+                                 , save_str="_".join([which_measurement,config_str,"iter.png"])
+                                 , title_str=[config_str,which_measurement]
+                                 , ylabel_str=which_measurement
+                                 , legend_args={"ncol":2,"markerscale":2}
+                                 , do_legend=do_legend)
             except Exception, e:
                 print e
-    #plot_measurement(memoized_infer, "predictive", target_problem)
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
-    # "predictive" FIXME
     if np.in1d(which_measurement,["num_clusters","ari","alpha","score"])[0]:
         return [summary[which_measurement] for summary in one_runs_data]
+    elif which_measurement == "predictive":
+        return [np.mean(summary["test_lls"]) for summary in one_runs_data]
     elif which_measurement == "mean_beta":
         return [np.mean(summary["betas"]) for summary in one_runs_data]
     else:
