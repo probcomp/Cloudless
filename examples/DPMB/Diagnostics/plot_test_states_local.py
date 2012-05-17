@@ -1,11 +1,5 @@
 import cPickle,matplotlib,sys
 matplotlib.use('Agg')
-import DPMB_plotutils as dp
-reload(dp)
-import DPMB_State as ds
-reload(ds)
-import DPMB_helper_functions as hf
-reload(hf)
 import numpy as np
 import matplotlib.pylab as pylab
 ##
@@ -16,15 +10,6 @@ import Cloudless
 reload(Cloudless)
 import Cloudless.memo
 reload(Cloudless.memo)
-
-
-# block 2
-# configure remote nodes
-# TODO: Clean up naming of load balanced vs direct views
-import Cloudless.examples.DPMB_plotutils as dp
-reload(dp)
-import Cloudless.examples.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB_helper_functions as hf
 reload(hf)
 import numpy as np

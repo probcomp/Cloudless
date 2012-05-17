@@ -1,7 +1,6 @@
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
-from numpy.random import RandomState
 import matplotlib.pylab as pylab
 import datetime
 import gc

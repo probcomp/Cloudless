@@ -13,40 +13,29 @@ import Cloudless.memo
 reload(Cloudless.memo)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
-import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
-import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 
-#generate a state with test data and generative state's predictive score
-
-#initialize a model with the state's x's to the prior on zs
-
-#run the model for n iterations and produce plot of predictive over iteration/time
-
-#success when plot asymptotically approaches the generative state's predictive score
-
-NUM_CLUSTERS = 4
+NUM_CLUSTERS = 32
 dataset_spec = {}
 dataset_spec["gen_seed"] = 0
 dataset_spec["num_cols"] = 16
-dataset_spec["num_rows"] = 128
+dataset_spec["num_rows"] = 32*32
 dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
 dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
 dataset_spec["gen_z"] = ("balanced", NUM_CLUSTERS)
-dataset_spec["N_test"] = 32
+dataset_spec["N_test"] = 128
 #
 problem = rf.gen_problem(dataset_spec)
 
 ALL_RUN_SPECS = []
-num_iters = 100
+num_iters = 10
+num_nodes = 2
 count = 0
 for infer_seed in range(1):
     for infer_init_alpha in [1.0]: #note: we're never trying sample-alpha-from-prior-for-init
         for infer_init_betas in [np.repeat(0.1, dataset_spec["num_cols"])]:
             for infer_do_alpha_inference in [True, False]:
                 for infer_do_betas_inference in [True, False]:
-                    for infer_init_z in [1, "N", None]:
+                    for infer_init_z in [None, 1, "N"]:
                         run_spec = {}
                         run_spec["num_iters"] = num_iters
                         run_spec["infer_seed"] = infer_seed
@@ -57,8 +46,9 @@ for infer_seed in range(1):
                         run_spec["infer_init_z"] = infer_init_z
                         run_spec["dataset_spec"] = dataset_spec
                         ##
-                        run_spec["time_seatbelt"] = 600
-                        run_spec["ari_seatbelt"] = .9
+                        run_spec["num_nodes"] = num_nodes
+                        run_spec["time_seatbelt"] = 1200
+                        run_spec["ari_seatbelt"] = .95
                         ALL_RUN_SPECS.append(run_spec) ## this seems to make the comparison fail copy.deepcopy(run_spec))
 
 print "Generated " + str(len(ALL_RUN_SPECS)) + " run specs!"

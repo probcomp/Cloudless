@@ -12,6 +12,12 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
+import Cloudless.examples.DPMB.PDPMB_State as pds
+reload(pds)
+import Cloudless.examples.DPMB.PDPMB as pdm
+reload(pdm)
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
 import Cloudless
 reload(Cloudless)
 import Cloudless.memo
@@ -223,7 +229,7 @@ def infer(run_spec):
     problem = gen_problem(dataset_spec)
     verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
-    data_subset_indices = run_spec.get("data_subset_indices",None)
+    num_nodes = run_spec.get("num_nodes",1)
     #
     if verbose_state:
         print "doing run: "
@@ -233,24 +239,33 @@ def infer(run_spec):
             else:
                 print "   " + str(k) + " ---- " + str(v)
     #
+    kwargs = {}
     print "initializing"
-    inference_state = ds.DPMB_State(dataset_spec["gen_seed"],
-                                    dataset_spec["num_cols"],
-                                    dataset_spec["num_rows"],
-                                    # these could be the state at the end of an inference run
-                                    init_alpha=run_spec["infer_init_alpha"],
-                                    init_betas=run_spec["infer_init_betas"],
-                                    init_z=run_spec["infer_init_z"],
-                                    # 
-                                    init_x = problem["xs"],
-                                    decanon_indices=decanon_indices,
-                                    )
+    if num_nodes == 1:
+        state_type = ds.DPMB_State
+        model_type = dm.DPMB
+        kwargs = {"decanon_indices":decanon_indices}
+    else:
+        state_type = pds.PDPMB_State
+        model_type = pdm.PDPMB
+        kwargs = {"num_nodes":num_nodes}
+    inference_state = state_type(dataset_spec["gen_seed"],
+                                 dataset_spec["num_cols"],
+                                 dataset_spec["num_rows"],
+                                 init_alpha=run_spec["infer_init_alpha"],
+                                 init_betas=run_spec["infer_init_betas"],
+                                 init_z=run_spec["infer_init_z"],
+                                 init_x = problem["xs"],
+                                 #
+                                 **kwargs
+                                 )
     #
     print "...initialized"
-    transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
-                           state = inference_state,
-                           infer_alpha = run_spec["infer_do_alpha_inference"],
-                           infer_beta = run_spec["infer_do_betas_inference"])
+    transitioner = model_type(
+        inf_seed = run_spec["infer_seed"],
+        state = inference_state,
+        infer_alpha = run_spec["infer_do_alpha_inference"],
+        infer_beta = run_spec["infer_do_betas_inference"])
     #
     summaries = []
     summaries.append(
@@ -275,7 +290,7 @@ def infer(run_spec):
             time_seatbelt=time_seatbelt
             ,ari_seatbelt=ari_seatbelt
             ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
-        print "finished doing iteration" + str(i)
+        hf.printTS("finished doing iteration" + str(i))
         next_summary = transitioner.extract_state_summary(
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
@@ -285,9 +300,10 @@ def infer(run_spec):
             summaries[-1]["failed_info"] = next_summary
             break
         summaries.append(next_summary)
-        print "finished saving iteration" + str(i)
-        last_valid_zs = transitioner.state.getZIndices()
-        decanon_indices = transitioner.state.get_decanonicalizing_indices()
+        hf.printTS("finished saving iteration" + str(i))
+        if hasattr(transitioner.state,"getZIndices"):
+            last_valid_zs = transitioner.state.getZIndices()
+            decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs
     summaries[-1]["decanon_indices"] = decanon_indices
     return summaries

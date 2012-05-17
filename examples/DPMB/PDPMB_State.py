@@ -26,6 +26,7 @@ class PDPMB_State():
                  ,grid_N=100):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
+        self.num_rows = num_rows
         self.num_nodes = num_nodes
         self.mus = np.repeat(1.0/self.num_nodes,num_nodes)
         self.alpha_min = alpha_min
@@ -34,7 +35,8 @@ class PDPMB_State():
         self.beta_max = beta_max
         self.grid_N = grid_N
         ##
-        self.timing = {"alpha":0,"betas":0,"zs":0,"nodes":0,"run_sum":0}
+        self.timing = {"alpha":0,"betas":0,"zs":0
+                       ,"each_zs":None,"nodes":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
         # FIXME : setting seed becomes complicated when child states 
@@ -97,6 +99,21 @@ class PDPMB_State():
                             ,infer_alpha=False,infer_beta=False)
             self.model_list.append(model)
 
+    def initialize_alpha(self,init_alpha):
+        if init_alpha is not None:
+            self.alpha = init_alpha
+        else:
+            self.alpha = 10.0**self.random_state.uniform(
+                np.log10(self.alpha_min),np.log10(self.alpha_max))
+            
+    def initialize_betas(self,init_betas):
+        if init_betas is not None:
+            self.betas = np.array(init_betas).copy()
+        else:
+            self.betas = 10.0**self.random_state.uniform(
+                np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
+        pass
+
     def removeAlpha(self,lnPdf):
         self.alpha = None
         self.score = None
@@ -129,22 +146,6 @@ class PDPMB_State():
             cluster_list.extend(model.state.cluster_list)
         return cluster_list
 
-    def N_score_component(self):
-        counts = np.array([len(model.state.vector_list) 
-                           for model in self.model_list])
-        first_part = ss.gammaln(sum(counts)+1) - sum(ss.gammaln(counts+1))
-        second_part = sum(counts*np.log(self.gammas))
-        N_score = first_part + second_part
-        return N_score,first_part,second_part
-
-    def gamma_score_component(self):
-        alpha = self.alpha # /self.num_nodes
-        first_part = (ss.gammaln(float(alpha)*self.num_nodes)
-                      - self.num_nodes*ss.gammaln(float(alpha)))
-        second_part = (alpha-1) * sum(np.log(self.gammas))
-        gamma_score = first_part + second_part
-        return gamma_score,first_part,second_part
-
     def create_single_state(self):
         single_state = None
         cluster_idx = 0
@@ -165,20 +166,8 @@ class PDPMB_State():
             ,init_x=xs,init_z=zs)
         return single_state
 
-    def initialize_alpha(self,init_alpha):
-        if init_alpha is not None:
-            self.alpha = init_alpha
-        else:
-            self.alpha = 10.0**self.random_state.uniform(
-                np.log10(self.alpha_min),np.log10(self.alpha_max))
-            
-    def initialize_betas(self,init_betas):
-        if init_betas is not None:
-            self.betas = np.array(init_betas).copy()
-        else:
-            self.betas = 10.0**self.random_state.uniform(
-                np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
-        pass
+    def get_timing(self):
+        return self.timing.copy()
 
     def pop_cluster(self,cluster):
         data_list = []
@@ -219,9 +208,6 @@ class PDPMB_State():
         ##endpoint should be set by MLE of all data in its own cluster?
         grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N) 
         return grid
-
-    def get_timing(self):
-        return self.timing.copy()
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
         which_plots = ["data_dist","alpha","beta","node"] if which_plots is None else which_plots
@@ -275,3 +261,20 @@ class PDPMB_State():
             pylab.savefig(save_str)
 
         return fh1,fh2,fh3,fh4
+
+    def N_score_component(self):
+        counts = np.array([len(model.state.vector_list) 
+                           for model in self.model_list])
+        first_part = ss.gammaln(sum(counts)+1) - sum(ss.gammaln(counts+1))
+        second_part = sum(counts*np.log(self.gammas))
+        N_score = first_part + second_part
+        return N_score,first_part,second_part
+
+    def gamma_score_component(self):
+        alpha = self.alpha # /self.num_nodes
+        first_part = (ss.gammaln(float(alpha)*self.num_nodes)
+                      - self.num_nodes*ss.gammaln(float(alpha)))
+        second_part = (alpha-1) * sum(np.log(self.gammas))
+        gamma_score = first_part + second_part
+        return gamma_score,first_part,second_part
+

@@ -206,7 +206,7 @@ class DPMB():
         self.ari_seatbelt_hit = hf.calc_ari(self.state.getZIndices(),true_zs) > ari_seatbelt
         return self.ari_seatbelt_hit
 
-    def extract_state_summary(self,true_zs=None,send_zs=True,verbose_state=False,test_xs=None):
+    def extract_state_summary(self,true_zs=None,send_zs=False,verbose_state=False,test_xs=None):
         
         state_dict = {
             "alpha":self.state.alpha
