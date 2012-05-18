@@ -40,6 +40,8 @@ class DPMB_State():
 
         # FIXME: address issue of Gibbs-type initialization, e.g. to get sharper
         #        results for the convergence of the sampler
+        #        Gibbs-type will require a special test for init_x not None and
+        #        init_z is None (have data but not cluster assignments)
         for R in range(num_rows):
             cluster = None
             if init_z is None:
