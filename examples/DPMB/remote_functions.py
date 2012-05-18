@@ -395,10 +395,16 @@ def runspec_to_plotspec(runspec):
         legendstr += ";every_N=1"
     elif every_N < num_nodes:
         linespec["color"] = "red"
-        legendstr += ";every_N<K"
-    else:
+        legendstr += ";1<every_N<K"
+    elif every_N == num_nodes:
         linespec["color"] = "blue"
-        legendstr += ";every_N>=K"
+        legendstr += ";every_N==K"
+    elif every_N > num_nodes:
+        linespec["color"] = "orange"
+        legendstr += ";every_N>K"
+    else:
+        linespec["color"] = "yellow"
+        legendstr += ";every_N???K"
     linespec["linestyle"] = "-"
     return linespec,legendstr
 
