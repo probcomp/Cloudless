@@ -386,7 +386,7 @@ def runspec_to_plotspec_bak(runspec):
 def speclist_to_plotspecs(speclist,keylist):
     # take a list of keys that you want know unique combinations of
     colors = ["black","green","red","blue","orange"]
-    linestyles = ["-",".",":"]
+    linestyles = ["-","--","-."]
     #
     legendstrs = []
     for spec in speclist:
