@@ -8,7 +8,21 @@ import scipy.special as ss
 ##
 import DPMB_State as ds
 
-# FIXME: do generate_from_prior test (to make Ryan happy)
+
+def transition_single_z(vector,random_state):
+    cluster = vector.cluster
+    state = cluster.state
+    #
+    vector.cluster.deassign_vector(vector)
+    score_vec = calculate_cluster_conditional(state,vector)
+    draw = renormalize_and_sample(random_state, score_vec)
+    #
+    cluster = None
+    if draw == len(state.cluster_list):
+        cluster = state.generate_cluster_assignment(force_new = True)
+    else:
+        cluster = state.cluster_list[draw]
+    cluster.assign_vector(vector)
 
 ####################
 # PROBABILITY FUNCTIONS
@@ -44,15 +58,19 @@ def cluster_vector_joint(vector,cluster,state):
         boolIdx = np.array(vector.data,dtype=type(True))
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
         numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
-        numerator2 = (~boolIdx) * np.log(cluster.count() - cluster.column_sums + state.betas)
+        numerator2 = (~boolIdx) * np.log(cluster.count() \
+                                             - cluster.column_sums + state.betas)
         denominator = np.log(cluster.count() + 2*state.betas)
         data_term = (numerator1 + numerator2 - denominator).sum()
         retVal = alpha_term + data_term
     if not np.isfinite(retVal):
         pdb.set_trace()
     if hasattr(state,"print_predictive") and state.print_predictive:
-        mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) if "numerator1" in locals() else .5
-        print retVal.round(2),alpha_term.round(2),data_term.round(2),state.vector_list.index(vector),state.cluster_list.index(cluster),mean_p
+        mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) \
+            if "numerator1" in locals() else .5
+        print retVal.round(2),alpha_term.round(2) \
+            ,data_term.round(2),state.vector_list.index(vector) \
+            ,state.cluster_list.index(cluster),mean_p
     if hasattr(state,"debug_predictive") and state.debug_predictive:
         pdb.set_trace()
         temp = 1 ## if this isn't here, debug start in return and can't see local variables?
@@ -70,11 +88,13 @@ def create_alpha_lnPdf(state):
 
 def create_beta_lnPdf(state,col_idx):
     S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
-    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
+                  for cluster in state.cluster_list]
     beta_d = state.betas[col_idx]
     lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
-                                - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+                                - ss.gammaln(S+R+2*beta_d) 
+                                for S,R in zip(S_list,R_list)])
     return lnPdf
 
 def slice_sample_alpha(state,init=None):
@@ -170,7 +190,9 @@ def calculate_node_conditional(pstate,cluster):
     return conditionals
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
-    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
+    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) 
+                       - ss.gammaln(clusters*points_per_cluster+alpha) 
+                       for alpha in range(1,max_alpha)])
     return mle
 
 def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
@@ -189,10 +211,12 @@ def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
 
 ####################
 # UTILITY FUNCTIONS
-def plot_data(data,fh=None,h_lines=None,title_str=None,interpolation="nearest",**kwargs):
+def plot_data(data,fh=None,h_lines=None,title_str=None
+              ,interpolation="nearest",**kwargs):
     if fh is None:
         fh = pylab.figure()
-    pylab.imshow(data,interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
+    pylab.imshow(data,interpolation=interpolation
+                 ,cmap=matplotlib.cm.binary,**kwargs)
     if h_lines is not None:
         xlim = fh.get_axes()[0].get_xlim()
         pylab.hlines(h_lines-.5,*xlim,color="red",linewidth=3)
@@ -205,7 +229,8 @@ def bar_helper(x,y,fh=None,v_line=None,title_str=None,which_id=0):
         fh = pylab.figure()
     pylab.bar(x,y,width=min(np.diff(x)))
     if v_line is not None:
-        pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim(),color="red",linewidth=3)
+        pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim()
+                     ,color="red",linewidth=3)
     if title_str is not None:
         pylab.ylabel(title_str)
     return fh
@@ -215,7 +240,8 @@ def printTS(printStr):
     sys.stdout.flush()
 
 def listCount(listIn):
-    return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
+    return dict([(currValue,sum(np.array(listIn)==currValue)) 
+                 for currValue in np.unique(listIn)])
 
 def delta_since(start_dt):
     try: ##older datetime modules don't have .total_seconds()

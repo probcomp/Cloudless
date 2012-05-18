@@ -98,44 +98,24 @@ class DPMB():
         if self.state.verbose:
             print "PRE transition_z score: ",self.state.score
         start_dt = datetime.datetime.now()
-        ##
-        # for each vector
+
         for vector in self.random_state.permutation(self.state.get_all_vectors()):
-
             if self.state.verbose:
-                print " - transitioning vector idx " + str(self.state.vector_list.index(vector))
-
+                print " - transitioning vector idx " + str(
+                    self.state.vector_list.index(vector))
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
-
-            # deassign it
-            vector.cluster.deassign_vector(vector)
             
-            # calculate the conditional
-            score_vec = hf.calculate_cluster_conditional(self.state,vector)
-
-            # sample an assignment
-            draw = hf.renormalize_and_sample(self.random_state, score_vec)
-
-            cluster = None
-            if draw == len(self.state.cluster_list):
-                cluster = self.state.generate_cluster_assignment(force_new = True)
-            else:
-                cluster = self.state.cluster_list[draw]
-
-            # assign it
-            cluster.assign_vector(vector)
+            hf.transition_single_z(vector,self.random_state)
 
         # debug print out states:
         if self.state.verbose:
             # print " --- " + str(self.state.getZIndices())
-            print "     " + str([cluster.count() for cluster in self.state.cluster_list])
+            print "     " + str([cluster.count() 
+                                 for cluster in self.state.cluster_list])
         ##
-        try: ##older datetime modules don't have .total_seconds()
-            self.state.timing["zs"] = (datetime.datetime.now()-start_dt).total_seconds()
-        except Exception, e:
-            self.state.timing["zs"] = (datetime.datetime.now()-start_dt).seconds()
+        self.state.timing["zs"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["zs"]
 
     def transition_x(self):
@@ -164,9 +144,13 @@ class DPMB():
         self.state = state
         self.state.timing = prior_timing
     
-    def transition(self,numSteps=1, regen_data=False,time_seatbelt=None,ari_seatbelt=None,true_zs=None,random_order=True):
+    def transition(self,numSteps=1, regen_data=False
+                   ,time_seatbelt=None,ari_seatbelt=None
+                   ,true_zs=None,random_order=True):
 
-        transition_func_list = [self.transition_beta,self.transition_z,self.transition_alpha]
+        transition_func_list = [self.transition_beta
+                                ,self.transition_z
+                                ,self.transition_alpha]
         if random_order :
             transition_func_list = self.random_state.permutation(
                 transition_func_list)
@@ -188,7 +172,8 @@ class DPMB():
                 print "mean beta: ",self.state.betas.mean()
 
             if self.ari_seatbelt_hit or self.time_seatbelt_hit:
-                return {"ari_seatbelt_hit":self.ari_seatbelt_hit,"time_seatbelt_hit":self.time_seatbelt_hit}
+                return {"ari_seatbelt_hit":self.ari_seatbelt_hit
+                        ,"time_seatbelt_hit":self.time_seatbelt_hit}
 
             self.transition_count += 1
 
@@ -197,16 +182,19 @@ class DPMB():
     def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):
         if time_seatbelt is None:
             return self.time_seatbelt_hit
-        self.time_seatbelt_hit = self.state.timing["run_sum"] + delta_t > time_seatbelt
+        self.time_seatbelt_hit = self.state.timing["run_sum"] \
+            + delta_t > time_seatbelt
         return self.time_seatbelt_hit
 
     def check_ari_seatbelt(self,ari_seatbelt=None,true_zs=None):
         if ari_seatbelt is None or true_zs is None:
             return self.ari_seatbelt_hit
-        self.ari_seatbelt_hit = hf.calc_ari(self.state.getZIndices(),true_zs) > ari_seatbelt
+        self.ari_seatbelt_hit = hf.calc_ari(
+            self.state.getZIndices(),true_zs) > ari_seatbelt
         return self.ari_seatbelt_hit
 
-    def extract_state_summary(self,true_zs=None,send_zs=False,verbose_state=False,test_xs=None):
+    def extract_state_summary(self,true_zs=None,send_zs=False
+                              ,verbose_state=False,test_xs=None):
         
         state_dict = {
             "alpha":self.state.alpha

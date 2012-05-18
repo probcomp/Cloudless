@@ -14,9 +14,10 @@ reload(Cloudless.memo)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 #
-Cloudless.base.remote_mode()
-Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
-Cloudless.base.remote_exec('reload(rf)')
+if False:
+    Cloudless.base.remote_mode()
+    Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
+    Cloudless.base.remote_exec('reload(rf)')
 
 pkl_file_str = "test_predictive_pickled_jobs.pkl"
 
@@ -24,7 +25,8 @@ ALL_RUN_SPECS = []
 #
 run_spec = rf.gen_default_run_spec()
 run_spec["num_iters"] = 20
-problem = rf.gen_problem(run_spec)
+run_spec["time_seatbelt"] = 60
+problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
 
 # now request the inference

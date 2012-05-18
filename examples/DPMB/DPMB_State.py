@@ -107,7 +107,8 @@ class DPMB_State():
                           for cluster in self.cluster_list
                           ] + [self.alpha]
             draw = hf.renormalize_and_sample(
-
+                #FIXME : should this be model's inference random_state
+                #        after initial state generation?
                 self.random_state, np.log(unnorm_vec))
 
         if draw == len(self.cluster_list):
