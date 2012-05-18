@@ -45,8 +45,8 @@ def gen_default_run_spec():
     #
     return run_spec
 
-NUM_RUNS = 1
-NUM_DATASETS = 1
+NUM_RUNS = 3
+NUM_DATASETS = 3
 NUM_NODES_LIST = [1,3,9]
 #
 ALL_RUN_SPECS = []
