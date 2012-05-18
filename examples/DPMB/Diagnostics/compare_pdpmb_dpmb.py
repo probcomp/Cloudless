@@ -69,5 +69,5 @@ print "Created memoizer"
 for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
-rf.try_plots(memoized_infer,which_measurements=which_measurements)
+rf.try_plots(memoized_infer,which_measurements=which_measurements,save_dir="/home/sgeadmin/")
 rf.pickle_if_done(memoized_infer,file_str=pkl_file_str)

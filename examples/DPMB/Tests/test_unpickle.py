@@ -22,4 +22,4 @@ summaries = memoized_infer.memo.values()[0]
 for summary in summaries:
     print summary["timing"]
 
-rf.try_plots(memoized_infer,which_measurements=which_measurements)
+rf.try_plots(memoized_infer,which_measurements=which_measurements,save_dir="/home/dlovell/")

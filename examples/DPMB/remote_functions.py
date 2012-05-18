@@ -5,6 +5,7 @@ from threading import Thread
 import datetime
 from numpy import array
 import sets
+import os
 ##
 import numpy as np
 import pylab
@@ -382,6 +383,32 @@ def runspec_to_plotspec_bak(runspec):
     #
     return linespec,legendstr
 
+def speclist_to_plotspecs(speclist,keylist):
+    # take a list of keys that you want know unique combinations of
+    colors = ["black","green","red","blue","orange"]
+    linestyles = ["-",".",":"]
+    #
+    legendstrs = []
+    for spec in speclist:
+        curr_legendstr_list = []
+        for key in keylist:
+            value = spec.get(key,"ERR")
+            curr_legendstr_list.append(key+"="+str(value))
+        legendstrs.append(";".join(curr_legendstr_list))
+    #
+    unique_legendstrs = list(sets.Set(legendstrs))
+    legendstrs_lookup = dict(zip(unique_legendstrs,range(len(unique_legendstrs))))
+    #
+    linespecs = []
+    for legendstr in legendstrs:
+        legendstr_idx = legendstrs_lookup[legendstr]
+        linespec = {}
+        linespec["color"] = colors[legendstr_idx % len(colors)]
+        linespec["linestyle"] = linestyles[(legendstr_idx / len(colors)) % len(linestyles)]
+        linespecs.append(linespec)
+    #
+    return linespecs,legendstrs
+
 def runspec_to_plotspec(runspec):
     linespec = {}
     legendstr = ""
@@ -441,14 +468,19 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
             print res["failures"][0][1]
         raise Exception("No data to plot with these characteristics!")
     #
-    matching_measurements = []
-    matching_linespecs = []
-    matching_legendstrs = []
-    for (run, summary) in zip(matching_runs, matching_summaries):
-        matching_measurements.append(extract_measurement(which_measurement, summary))
-        linespec,legendstr = runspec_to_plotspec(run)
-        matching_linespecs.append(linespec)
-        matching_legendstrs.append(legendstr)
+
+    matching_measurements = [extract_measurement(which_measurement,summary) 
+                             for summary in matching_summaries]
+    matching_linespecs,matching_legendstrs = speclist_to_plotspecs(matching_runs,["num_nodes","hypers_every_N"])
+
+    # matching_measurements = []
+    # matching_linespecs = []
+    # matching_legendstrs = []
+    # for (run, summary) in zip(matching_runs, matching_summaries):
+    #     matching_measurements.append(extract_measurement(which_measurement, summary))
+    #     linespec,legendstr = runspec_to_plotspec(run)
+    #     matching_linespecs.append(linespec)
+    #     matching_legendstrs.append(legendstr)
 
     pylab.figure()
     if do_legend:
@@ -487,9 +519,11 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
         pylab.savefig(save_str)
     pylab.close()
 
-def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True):
+def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True,save_dir=None):
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
+    save_dir = save_dir if save_dir is not None else ""
+    legend_args = {"ncol":1,"markerscale":2}
     #
     for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
         cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1]) ## FIXME : presumes dataset_spec is always balanced
@@ -505,10 +539,11 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
                                  , target_dataset_spec
                                  , run_spec_filter=run_spec_filter
                                  , by_time=True
-                                 , save_str="_".join([which_measurement,config_str,"time.png"])
+                                 , save_str=os.path.join(save_dir
+                                                         ,"_".join([which_measurement,config_str,"time.png"]))
                                  , title_str=config_str
                                  , ylabel_str=which_measurement
-                                 , legend_args={"ncol":2,"markerscale":2}
+                                 , legend_args=legend_args
                                  , do_legend=do_legend)
                 # by iter
                 plot_measurement(memoized_infer
@@ -516,10 +551,11 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
                                  , target_dataset_spec
                                  , run_spec_filter=run_spec_filter
                                  , by_time=False
-                                 , save_str="_".join([which_measurement,config_str,"iter.png"])
+                                 , save_str=os.path.join(save_dir,
+                                                         "_".join([which_measurement,config_str,"iter.png"]))
                                  , title_str=config_str
                                  , ylabel_str=which_measurement
-                                 , legend_args={"ncol":2,"markerscale":2}
+                                 , legend_args=legend_args
                                  , do_legend=do_legend)
             except Exception, e:
                 print e
