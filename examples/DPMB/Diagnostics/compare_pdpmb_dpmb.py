@@ -19,9 +19,10 @@ Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as r
 Cloudless.base.remote_exec('reload(rf)')
 
 pkl_file_str = "mixed_pickled_jobs.pkl"
+which_measurements=["predictive","ari","num_clusters","score"]
 
-NUM_ITERS = 10
-NUM_RUNS = 3
+NUM_ITERS = 1000
+NUM_RUNS = 5
 NUM_NODES_LIST = [1,5]
 #
 ALL_RUN_SPECS = []
@@ -31,7 +32,7 @@ for num_nodes in NUM_NODES_LIST:
         run_spec["num_iters"] = NUM_ITERS
         run_spec["num_nodes"] = num_nodes
         run_spec["infer_seed"] = infer_seed
-        run_spec["time_seatbelt"] = 60
+        run_spec["time_seatbelt"] = 1200
         ALL_RUN_SPECS.append(run_spec)
 
 # now request the inference
@@ -41,5 +42,5 @@ print "Created memoizer"
 for run_spec in ALL_RUN_SPECS:
     memoized_infer(run_spec)
 
-rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
+rf.try_plots(memoized_infer,which_measurements=which_measurements)
 rf.pickle_if_done(memoized_infer,file_str=pkl_file_str)

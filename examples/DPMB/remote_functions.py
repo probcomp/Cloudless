@@ -390,7 +390,6 @@ def runspec_to_plotspec(runspec):
     legendstr = "K="+str(num_nodes)
     if num_nodes == 1:
         linespec["color"] = "black"
-        legendstr += ";K=1"
     elif every_N == 1:
         linespec["color"] = "green"
         legendstr += ";every_N=1"
@@ -480,6 +479,7 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
     ##pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
+    pylab.close()
 
 def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True):
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
