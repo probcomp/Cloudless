@@ -18,15 +18,17 @@ if True:
 pkl_file_str = "big_mixed_pickled_jobs.pkl"
 which_measurements=["predictive","ari","num_clusters","score"]
 
+NUM_CLUSTERS = 64
+VECTORS_PER_CLUSTER = 64
 def gen_default_run_spec():
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = 16
-    dataset_spec["num_rows"] = 64*64
+    dataset_spec["num_rows"] = NUM_CLUSTERS*VECTORS_PER_CLUSTER
     dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
-    dataset_spec["gen_z"] = ("balanced", 64)
-    dataset_spec["N_test"] = 256
+    dataset_spec["gen_z"] = ("balanced", NUM_CLUSTERS)
+    dataset_spec["N_test"] = NUM_CLUSTERS*VECTORS_PER_CLUSTER/8
     ##
     run_spec = {}
     run_spec["dataset_spec"] = dataset_spec

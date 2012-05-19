@@ -385,7 +385,7 @@ def runspec_to_plotspec_bak(runspec):
 
 def speclist_to_plotspecs(speclist,keylist):
     # take a list of keys that you want know unique combinations of
-    colors = ["black","green","red","blue","orange"]
+    colors = ["black","brown","green","red","blue","orange"]
     linestyles = ["-","--","-."]
     #
     legendstrs = []
@@ -396,7 +396,7 @@ def speclist_to_plotspecs(speclist,keylist):
             curr_legendstr_list.append(key+"="+str(value))
         legendstrs.append(";".join(curr_legendstr_list))
     #
-    unique_legendstrs = list(sets.Set(legendstrs))
+    unique_legendstrs = np.sort(list(sets.Set(legendstrs)))
     legendstrs_lookup = dict(zip(unique_legendstrs,range(len(unique_legendstrs))))
     #
     linespecs = []
@@ -507,6 +507,8 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
             legendstr_set.add(legendstr)
             unique_legendstrs.append(legendstr)
             unique_lines.append(line)
+    unique_lines = np.array(unique_lines)[np.argsort(unique_legendstrs)]
+    unique_legendstrs = np.sort(unique_legendstrs)
 
     pylab.xlabel(xlabel)
     pylab.title(title_str)
