@@ -233,6 +233,8 @@ def infer(run_spec):
     decanon_indices = run_spec.get("decanon_indices",None)
     num_nodes = run_spec.get("num_nodes",1)
     hypers_every_N = run_spec.get("hypers_every_N",1)
+    time_seatbelt = run_spec.get("time_seatbelt",None)
+    ari_seatbelt = run_spec.get("ari_seatbelt",None)
     #
     if verbose_state:
         print "doing run: "
@@ -282,13 +284,6 @@ def infer(run_spec):
             ,test_xs=problem["test_xs"]))
     #
     print "saved initialization"
-    #
-    time_seatbelt = None
-    ari_seatbelt = None
-    if "time_seatbelt" in run_spec:
-        time_seatbelt = run_spec["time_seatbelt"]
-    if "ari_seatbelt" in run_spec:
-        ari_seatbelt = run_spec["ari_seatbelt"]
     #
     last_valid_zs = None
     decanon_indices = None

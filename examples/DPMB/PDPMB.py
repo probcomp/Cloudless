@@ -81,7 +81,7 @@ class PDPMB():
         #
         for col_idx in range(self.state.num_cols):
 
-            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
+            delta_t = hf.delta_since(start_dt)
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
 
@@ -110,46 +110,25 @@ class PDPMB():
         start_dt = datetime.datetime.now()
         cluster_list_list = self.get_cluster_list_list()
 
-        print "pre transition node"
-        for state_idx,cluster_list in enumerate(cluster_list_list):
-            print "state #" + str(state_idx) \
-                + " has " + str(len(cluster_list)) + " clusters"
-            print "     " + str([cluster.count() for cluster in cluster_list])
-
         for cluster_list in cluster_list_list[:]:
             for cluster in cluster_list[:]:
                 self.transition_single_node_assignment(cluster)
 
-        print "post transition node"
-        cluster_list_list = self.get_cluster_list_list()
-        for state_idx,cluster_list in enumerate(cluster_list_list):
-            print "state #" + str(state_idx) \
-                + " has " + str(len(cluster_list)) + " clusters"
-            print "     " + str([cluster.count() for cluster in cluster_list])
-
         self.state.timing["nodes"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["nodes"]
 
-
     def transition_z(self,time_seatbelt=None):
-        self.state.timing["each_zs"] = [0]
+        self.state.timing["each_zs"] = []
         start_dt = datetime.datetime.now()
-
         for model in self.state.model_list:
-
-            delta_t = (datetime.datetime.now() - start_dt).total_seconds()
-            if self.check_time_seatbelt(time_seatbelt,delta_t):
-                break
-
             model.transition_z()
             individual_z_time = model.state.timing["zs"]
             self.state.timing["each_zs"].append(individual_z_time)
-        if len(self.state.timing["each_zs"])==0:
-            self.state.timing["zs"] = 0
-        else:
-            self.state.timing["zs"] = max(self.state.timing["each_zs"])
+            # don't break here like in DPMB, wait till all individual models complete and break after
+            # since they are suppposed run in parallel
+        self.state.timing["zs"] = max(self.state.timing["each_zs"])
         self.state.timing["compute_zs"] = sum(self.state.timing["each_zs"])
-
+        self.state.timing["run_sum"] += self.state.timing["zs"]
 
     def transition_x(self):
         for model in self.state.model_list:
@@ -182,14 +161,22 @@ class PDPMB():
                 continue
             transition_type(time_seatbelt=time_seatbelt)
 
+        self.check_time_seatbelt(time_seatbelt)
+        self.check_ari_seatbelt(ari_seatbelt,true_zs)
+
+        if self.ari_seatbelt_hit or self.time_seatbelt_hit:
+            return {"ari_seatbelt_hit":self.ari_seatbelt_hit
+                    ,"time_seatbelt_hit":self.time_seatbelt_hit}
+
     def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):
-        if time_seatbelt is None:
+        if self.time_seatbelt_hit or time_seatbelt is None:
             return self.time_seatbelt_hit
         self.time_seatbelt_hit = self.state.timing["run_sum"] + delta_t > time_seatbelt
         return self.time_seatbelt_hit
 
     def check_ari_seatbelt(self,ari_seatbelt=None,true_zs=None):
-        if ari_seatbelt is None or true_zs is None:
+        if self.ari_seatbelt_hit or True or ari_seatbelt is None or true_zs is None:
+            # FIXME : how to implement ari seatbelt without a second reconstitute state?
             return self.ari_seatbelt_hit
         self.ari_seatbelt_hit = hf.calc_ari(self.state.getZIndices(),true_zs) > ari_seatbelt
         return self.ari_seatbelt_hit
