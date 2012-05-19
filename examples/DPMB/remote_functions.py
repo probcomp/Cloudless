@@ -519,7 +519,7 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
 def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True,save_dir=None):
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
-    save_dir = save_dir if save_dir is not None else ""
+    save_dir = save_dir if save_dir is not None else os.path.expanduser("~/")
     legend_args = {"ncol":1,"markerscale":2}
     #
     for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
