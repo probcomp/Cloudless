@@ -15,10 +15,10 @@ if True:
     Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
     Cloudless.base.remote_exec('reload(rf)')
 
-pkl_file_str = "big_mixed_pickled_jobs.pkl"
+pkl_file_str = "bigger_mixed_pickled_jobs.pkl"
 which_measurements=["predictive","ari","num_clusters","score"]
 
-NUM_CLUSTERS = 64
+NUM_CLUSTERS = 256
 VECTORS_PER_CLUSTER = 64
 def gen_default_run_spec():
     dataset_spec = {}
@@ -42,14 +42,14 @@ def gen_default_run_spec():
     run_spec["infer_init_z"] = None
     run_spec["hypers_every_N"] = 1
     run_spec["time_seatbelt"] = 1200
-    run_spec["ari_seatbelt"] = .95
+    run_spec["ari_seatbelt"] = None
     run_spec["verbose_state"] = False
     #
     return run_spec
 
 NUM_RUNS = 3
 NUM_DATASETS = 3
-NUM_NODES_LIST = [1,3,9]
+NUM_NODES_LIST = [1,4,16]
 #
 ALL_RUN_SPECS = []
 for num_nodes in NUM_NODES_LIST:
