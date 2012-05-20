@@ -12,7 +12,7 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
 base_dir = "/usr/local/Cloudless/examples/DPMB/Diagnostics/"
-pkl_file_str = "mixed_pickled_jobs.pkl"
+pkl_file_str = "bigger_mixed_pickled_jobs.pkl"
 which_measurements=["predictive","ari","num_clusters","score"]
 
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
@@ -22,4 +22,4 @@ summaries = memoized_infer.memo.values()[0]
 for summary in summaries:
     print summary["timing"]
 
-rf.try_plots(memoized_infer,which_measurements=which_measurements,save_dir="/home/dlovell/")
+rf.try_plots(memoized_infer,which_measurements=which_measurements)
