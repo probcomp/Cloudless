@@ -12,16 +12,18 @@ cdef extern from "math.h":
 cdef extern from "math.h":
     double lgamma(double)
 
-def cluster_vector_joint_helper(np.ndarray[np.int32_t,ndim=1] data
-                                ,np.ndarray[np.float64_t,ndim=1] column_sums
-                                ,np.ndarray[np.float64_t,ndim=1] betas
-                                ,int count,int num_els):
+def cluster_vector_joint_helper(
+    #np.ndarray[np.int32_t,ndim=1] data
+    list data
+    ,np.ndarray[np.float64_t,ndim=1] column_sums
+    ,np.ndarray[np.float64_t,ndim=1] betas
+    ,int count
+    ):
     
     cdef int idx
     cdef double curr_beta,curr_denominator,curr_column_sum,data_term
     data_term = 0
-    for idx in range(num_els):
-
+    for idx in range(len(betas)):
         if data[idx] == 0:
                 data_term += log(count - column_sums[idx] + betas[idx]) \
                     - log(count + 2.0*betas[idx])
@@ -30,16 +32,19 @@ def cluster_vector_joint_helper(np.ndarray[np.int32_t,ndim=1] data
                     - log(count + 2.0*betas[idx])
     return data_term
 
-def calc_beta_conditional_helper(np.ndarray[np.float64_t,ndim=1] S_list
-                                 ,np.ndarray[np.float64_t,ndim=1] R_list
-                                 ,np.ndarray[np.float64_t,ndim=1] grid
-                                 ,np.float64_t score
-                                 ):
-    cdef int list_len = S_list.shape[0]
+def calc_beta_conditional_helper(
+    # np.ndarray[np.float64_t,ndim=1] S_list
+    # ,np.ndarray[np.float64_t,ndim=1] R_list
+    list S_list
+    ,list R_list
+    ,np.ndarray[np.float64_t,ndim=1] grid
+    ,np.float64_t score
+    ):
+    # cdef int list_len = S_list.shape[0]
+    cdef int list_len = len(S_list)
     cdef int grid_len = grid.shape[0]
     cdef double s,r,curr_score
     cdef np.ndarray ret_arr = np.zeros([1, grid_len], dtype=np.float64)
-    print ret_arr
     for grid_idx,test_beta in enumerate(grid):
         curr_score = score
         for S,R in zip(S_list,R_list):

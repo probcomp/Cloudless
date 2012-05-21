@@ -58,10 +58,12 @@ def cluster_vector_joint(vector,cluster,state):
     else:
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
         data_term = pf.cluster_vector_joint_helper(
-            np.array(vector.data)
+            #np.array(vector.data)
+            vector.data
             ,cluster.column_sums
             ,state.betas
-            ,cluster.count(),len(state.betas))
+            ,cluster.count()
+            )
     retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
 
@@ -165,8 +167,10 @@ def calc_beta_conditional(state,col_idx):
                   for cluster in state.cluster_list]
 
     logp_arr = pf.calc_beta_conditional_helper(
-        np.array(S_list)
-        ,np.array(R_list)
+        # np.array(S_list)
+        # ,np.array(R_list)
+        S_list
+        ,R_list
         ,grid
         ,state.score
         )
