@@ -61,19 +61,11 @@ def cluster_vector_joint(vector,cluster,state):
         data_term = state.num_cols*np.log(.5)
     else:
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
-        if not (TRY_OPTIMIZED and OPT_JOINT):
-            boolIdx = np.array(vector.data,dtype=type(True))
-            numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
-            numerator2 = (~boolIdx) * np.log(cluster.count() \
-                                                 - cluster.column_sums + state.betas)
-            denominator = np.log(cluster.count() + 2*state.betas)
-            data_term = (numerator1 + numerator2 - denominator).sum()
-        else:
-            data_term = pf.cluster_vector_joint_helper(
-                np.array(vector.data)
-                ,cluster.column_sums
-                ,state.betas
-                ,cluster.count(),len(state.betas))
+        data_term = pf.cluster_vector_joint_helper(
+            np.array(vector.data)
+            ,cluster.column_sums
+            ,state.betas
+            ,cluster.count(),len(state.betas))
     retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
 
@@ -171,25 +163,18 @@ def calc_beta_conditional(state,col_idx):
     logp_list = []
     original_beta = state.betas[col_idx]
     ##
-    if not (TRY_OPTIMIZED and OPT_BETA):
-        for test_beta in grid:
-            state.removeBetaD(lnPdf,col_idx)
-            state.setBetaD(lnPdf,col_idx,test_beta)
-            logp_list.append(state.score)
-        ##put everything back how you found it
-        state.removeBetaD(lnPdf,col_idx)
-    else:
+    state.removeBetaD(lnPdf,col_idx)
+    S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
+                  for cluster in state.cluster_list]
 
-        state.removeBetaD(lnPdf,col_idx)
-        S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
-        R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
-                      for cluster in state.cluster_list]
-        for test_beta in grid:
-            score_delta = sum([ss.gammaln(2*test_beta) - 2*ss.gammaln(test_beta)
-                 + ss.gammaln(S+test_beta) + ss.gammaln(R+test_beta)
-                 - ss.gammaln(S+R+2*test_beta) 
-                 for S,R in zip(S_list,R_list)])
-            logp_list.append(state.score + score_delta)
+    logp_arr = pf.calc_beta_conditional_helper(
+        np.array(S_list)
+        ,np.array(R_list)
+        ,grid
+        ,state.score
+        )
+    logp_list = logp_arr.tolist()[0]
     ##
     state.setBetaD(lnPdf,col_idx,original_beta)
     return logp_list,lnPdf,grid
@@ -204,19 +189,12 @@ def calculate_cluster_conditional(state,vector):
     ##
     conditionals = []
     for cluster in state.cluster_list:
-        if (TRY_OPTIMIZED and OPT_CLUSTER):
-            scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,cluster.state)
-            conditionals.append(scoreDelta + state.score)
-        else:
-            # FIXME : below is prior version
-            cluster.assign_vector(vector)
-            conditionals.append(state.score)
-            cluster.deassign_vector(vector)
+        scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,cluster.state)
+        conditionals.append(scoreDelta + state.score)
     ##
     # FIXME : below is just for new version
-    if (TRY_OPTIMIZED and OPT_CLUSTER):
-        new_cluster.state.cluster_list.remove(new_cluster)
-        new_cluster.state = None
+    new_cluster.state.cluster_list.remove(new_cluster)
+    new_cluster.state = None
     
     return conditionals
 
