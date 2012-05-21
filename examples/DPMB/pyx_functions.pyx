@@ -7,6 +7,9 @@ import cython
 import numpy as np
 cimport numpy as np
 
+cdef extern from "math.h":
+    double log(double)
+
 def cluster_vector_joint_helper(np.ndarray[np.int32_t,ndim=1] data
                                 ,np.ndarray[np.float64_t,ndim=1] column_sums
                                 ,np.ndarray[np.float64_t,ndim=1] betas
@@ -16,12 +19,9 @@ def cluster_vector_joint_helper(np.ndarray[np.int32_t,ndim=1] data
     cdef double curr_beta,curr_denominator,curr_column_sum,data_term
     data_term = 0
     for idx in range(num_els):
-        curr_beta = betas[idx]
-        curr_column_sum = column_sums[idx]
-        curr_denominator = np.log(count + 2.0*curr_beta)
+
         if data[idx] == 0:
-            curr_numerator = np.log(count - curr_column_sum + curr_beta)
+                data_term += log(count - column_sums[idx] + betas[idx]) - log(count + 2.0*betas[idx])
         else:
-            curr_numerator = np.log(curr_column_sum + curr_beta)
-        data_term += curr_numerator - curr_denominator
+                data_term += log(column_sums[idx] + betas[idx]) - log(count + 2.0*betas[idx])
     return data_term

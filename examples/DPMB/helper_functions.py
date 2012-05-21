@@ -12,8 +12,8 @@ import pyximport
 pyximport.install()
 import pyx_functions as pf
 TRY_OPTIMIZED = True
-OPT_JOINT = False
-OPT_CLUSTER = False
+OPT_JOINT = True
+OPT_CLUSTER = True
 OPT_BETA = True
 
 def transition_single_z(vector,random_state):
@@ -71,8 +71,8 @@ def cluster_vector_joint(vector,cluster,state):
         else:
             data_term = pf.cluster_vector_joint_helper(
                 np.array(vector.data)
-                ,np.array(cluster.column_sums)
-                ,np.array(state.betas)
+                ,cluster.column_sums
+                ,state.betas
                 ,cluster.count(),len(state.betas))
     retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
