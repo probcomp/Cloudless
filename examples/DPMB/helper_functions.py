@@ -53,19 +53,25 @@ def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha
     numVectors = len(state.get_all_vectors())
     if cluster is None or cluster.count() == 0:
-        ##if the cluster would be empty without the vector, then its a special case
+        # if the cluster would be empty without the vector, then its a special case
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
         data_term = state.num_cols*np.log(.5)
-        retVal =  alpha_term + data_term
     else:
-        boolIdx = np.array(vector.data,dtype=type(True))
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
-        numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
-        numerator2 = (~boolIdx) * np.log(cluster.count() \
-                                             - cluster.column_sums + state.betas)
-        denominator = np.log(cluster.count() + 2*state.betas)
-        data_term = (numerator1 + numerator2 - denominator).sum()
-        retVal = alpha_term + data_term
+        if not TRY_OPTIMIZED:
+            boolIdx = np.array(vector.data,dtype=type(True))
+            numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
+            numerator2 = (~boolIdx) * np.log(cluster.count() \
+                                                 - cluster.column_sums + state.betas)
+            denominator = np.log(cluster.count() + 2*state.betas)
+            data_term = (numerator1 + numerator2 - denominator).sum()
+        else:
+            data_term = pf.cluster_vector_joint_helper(
+                np.array(vector.data)
+                ,np.array(cluster.column_sums)
+                ,np.array(state.betas)
+                ,cluster.count(),len(state.betas))
+    retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
