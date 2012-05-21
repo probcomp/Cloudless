@@ -18,7 +18,7 @@ def cluster_vector_joint_helper(np.ndarray[np.int32_t,ndim=1] data
     for idx in range(num_els):
         curr_beta = betas[idx]
         curr_column_sum = column_sums[idx]
-        curr_denominatnor = np.log(count + 2*curr_beta)
+        curr_denominator = np.log(count + 2.0*curr_beta)
         if data[idx] == 0:
             curr_numerator = np.log(count - curr_column_sum + curr_beta)
         else:

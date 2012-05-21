@@ -12,6 +12,9 @@ import pyximport
 pyximport.install()
 import pyx_functions as pf
 TRY_OPTIMIZED = True
+OPT_JOINT = False
+OPT_CLUSTER = False
+OPT_BETA = True
 
 def transition_single_z(vector,random_state):
     cluster = vector.cluster
@@ -58,7 +61,7 @@ def cluster_vector_joint(vector,cluster,state):
         data_term = state.num_cols*np.log(.5)
     else:
         alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
-        if not TRY_OPTIMIZED:
+        if not (TRY_OPTIMIZED and OPT_JOINT):
             boolIdx = np.array(vector.data,dtype=type(True))
             numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
             numerator2 = (~boolIdx) * np.log(cluster.count() \
@@ -73,6 +76,20 @@ def cluster_vector_joint(vector,cluster,state):
                 ,cluster.count(),len(state.betas))
     retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
+
+def cluster_vector_joint_helper(data,column_sums,betas,count,num_els):
+    data_term = 0
+    for idx in range(num_els):
+        curr_beta = betas[idx]
+        curr_column_sum = column_sums[idx]
+        curr_denominator = np.log(count + 2*curr_beta)
+        if data[idx] == 0:
+            curr_numerator = np.log(count - curr_column_sum + curr_beta)
+        else:
+            curr_numerator = np.log(curr_column_sum + curr_beta)
+        data_term += curr_numerator - curr_denominator
+    return data_term
+
 
 def create_alpha_lnPdf(state):
     lnProdGammas = 0 # FIXME : decide whether to entirely remove this
@@ -154,7 +171,7 @@ def calc_beta_conditional(state,col_idx):
     logp_list = []
     original_beta = state.betas[col_idx]
     ##
-    if not TRY_OPTIMIZED:
+    if not (TRY_OPTIMIZED and OPT_BETA):
         for test_beta in grid:
             state.removeBetaD(lnPdf,col_idx)
             state.setBetaD(lnPdf,col_idx,test_beta)
@@ -187,7 +204,7 @@ def calculate_cluster_conditional(state,vector):
     ##
     conditionals = []
     for cluster in state.cluster_list:
-        if TRY_OPTIMIZED:
+        if (TRY_OPTIMIZED and OPT_CLUSTER):
             scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,cluster.state)
             conditionals.append(scoreDelta + state.score)
         else:
@@ -197,7 +214,7 @@ def calculate_cluster_conditional(state,vector):
             cluster.deassign_vector(vector)
     ##
     # FIXME : below is just for new version
-    if TRY_OPTIMIZED:
+    if (TRY_OPTIMIZED and OPT_CLUSTER):
         new_cluster.state.cluster_list.remove(new_cluster)
         new_cluster.state = None
     
