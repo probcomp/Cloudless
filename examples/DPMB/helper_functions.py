@@ -8,6 +8,10 @@ import scipy.special as ss
 ##
 import DPMB_State as ds
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+TRY_OPTIMIZED = True
 
 def transition_single_z(vector,random_state):
     cluster = vector.cluster
@@ -15,6 +19,9 @@ def transition_single_z(vector,random_state):
     #
     vector.cluster.deassign_vector(vector)
     score_vec = calculate_cluster_conditional(state,vector)
+    # FIXME : printing score_vec to be able to compare output of optimized and non-optimized routines
+    #         remove when done
+    print score_vec
     draw = renormalize_and_sample(random_state, score_vec)
     #
     cluster = None
@@ -23,7 +30,7 @@ def transition_single_z(vector,random_state):
     else:
         cluster = state.cluster_list[draw]
     cluster.assign_vector(vector)
-
+    
 ####################
 # PROBABILITY FUNCTIONS
 def renormalize_and_sample(random_state,logpstar_vec):
@@ -43,10 +50,6 @@ def log_conditional_to_norm_prob(logp_list):
     return np.exp(logp_vec)
 
 def cluster_vector_joint(vector,cluster,state):
-    # FIXME: Is np.log(0.5) correct? (Probably, since it comes from symmetry plus beta_d < 1.0.) How does
-    # this relate to the idea that we mix out of all-in-one by first finding the prior over zs (by first
-    # washing out the effect of the data, by raising the betas so high that all clusters are nearly perfectly
-    # likely to be noisy)
     alpha = state.alpha
     numVectors = len(state.get_all_vectors())
     if cluster is None or cluster.count() == 0:
@@ -63,17 +66,6 @@ def cluster_vector_joint(vector,cluster,state):
         denominator = np.log(cluster.count() + 2*state.betas)
         data_term = (numerator1 + numerator2 - denominator).sum()
         retVal = alpha_term + data_term
-    if not np.isfinite(retVal):
-        pdb.set_trace()
-    if hasattr(state,"print_predictive") and state.print_predictive:
-        mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) \
-            if "numerator1" in locals() else .5
-        print retVal.round(2),alpha_term.round(2) \
-            ,data_term.round(2),state.vector_list.index(vector) \
-            ,state.cluster_list.index(cluster),mean_p
-    if hasattr(state,"debug_predictive") and state.debug_predictive:
-        pdb.set_trace()
-        temp = 1 ## if this isn't here, debug start in return and can't see local variables?
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
@@ -154,16 +146,29 @@ def calc_beta_conditional(state,col_idx):
     lnPdf = create_beta_lnPdf(state,col_idx)
     grid = state.get_beta_grid()
     logp_list = []
-    ##
     original_beta = state.betas[col_idx]
-    for test_beta in grid:
-        state.removeBetaD(lnPdf,col_idx)
-        state.setBetaD(lnPdf,col_idx,test_beta)
-        logp_list.append(state.score)
-    ##put everything back how you found it
-    state.removeBetaD(lnPdf,col_idx)
-    state.setBetaD(lnPdf,col_idx,original_beta)
     ##
+    if not TRY_OPTIMIZED:
+        for test_beta in grid:
+            state.removeBetaD(lnPdf,col_idx)
+            state.setBetaD(lnPdf,col_idx,test_beta)
+            logp_list.append(state.score)
+        ##put everything back how you found it
+        state.removeBetaD(lnPdf,col_idx)
+    else:
+
+        state.removeBetaD(lnPdf,col_idx)
+        S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
+        R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
+                      for cluster in state.cluster_list]
+        for test_beta in grid:
+            score_delta = sum([ss.gammaln(2*test_beta) - 2*ss.gammaln(test_beta)
+                 + ss.gammaln(S+test_beta) + ss.gammaln(R+test_beta)
+                 - ss.gammaln(S+R+2*test_beta) 
+                 for S,R in zip(S_list,R_list)])
+            logp_list.append(state.score + score_delta)
+    ##
+    state.setBetaD(lnPdf,col_idx,original_beta)
     return logp_list,lnPdf,grid
 
 def calculate_cluster_conditional(state,vector):
@@ -171,18 +176,25 @@ def calculate_cluster_conditional(state,vector):
     ##new_cluster is auto appended to cluster list
     ##and pops off when vector is deassigned
 
-    # FIXME: if there is already an empty cluster (either because deassigning didn't clear it out,
-    #        or for some other reason), then we'll have a problem here. maybe a crash, maybe just
-    #        incorrect probabilities.
     new_cluster = ds.Cluster(state)
     state.cluster_list.append(new_cluster)
     ##
     conditionals = []
     for cluster in state.cluster_list:
-        cluster.assign_vector(vector)
-        conditionals.append(state.score)
-        cluster.deassign_vector(vector)
+        if TRY_OPTIMIZED:
+            scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,cluster.state)
+            conditionals.append(scoreDelta + state.score)
+        else:
+            # FIXME : below is prior version
+            cluster.assign_vector(vector)
+            conditionals.append(state.score)
+            cluster.deassign_vector(vector)
     ##
+    # FIXME : below is just for new version
+    if TRY_OPTIMIZED:
+        new_cluster.state.cluster_list.remove(new_cluster)
+        new_cluster.state = None
+    
     return conditionals
 
 def calculate_node_conditional(pstate,cluster):
