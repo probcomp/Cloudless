@@ -11,10 +11,6 @@ import DPMB_State as ds
 import pyximport
 pyximport.install()
 import pyx_functions as pf
-TRY_OPTIMIZED = True
-OPT_JOINT = True
-OPT_CLUSTER = True
-OPT_BETA = True
 
 def transition_single_z(vector,random_state):
     cluster = vector.cluster
