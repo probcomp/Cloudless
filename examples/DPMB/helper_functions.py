@@ -51,7 +51,9 @@ def log_conditional_to_norm_prob(logp_list):
 def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha
     numVectors = len(state.get_all_vectors())
-    if cluster is None or cluster.count() == 0:
+    count = cluster.count() if cluster is not None else 0
+    
+    if count == 0:
         # if the cluster would be empty without the vector, then its a special case
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
         data_term = state.num_cols*np.log(.5)
@@ -65,21 +67,17 @@ def cluster_vector_joint(vector,cluster,state):
             ,cluster.count()
             )
     retVal = alpha_term + data_term
+
+    # retVal,alpha_term,data_term = pf.cluster_vector_joint_helper_2(
+    #     alpha
+    #     ,numVectors
+    #     ,state.num_cols
+    #     ,vector.data
+    #     ,cluster.column_sums if count != 0 else None
+    #     ,state.betas
+    #     ,count
+    #     )
     return retVal,alpha_term,data_term
-
-def cluster_vector_joint_helper(data,column_sums,betas,count,num_els):
-    data_term = 0
-    for idx in range(num_els):
-        curr_beta = betas[idx]
-        curr_column_sum = column_sums[idx]
-        curr_denominator = np.log(count + 2*curr_beta)
-        if data[idx] == 0:
-            curr_numerator = np.log(count - curr_column_sum + curr_beta)
-        else:
-            curr_numerator = np.log(curr_column_sum + curr_beta)
-        data_term += curr_numerator - curr_denominator
-    return data_term
-
 
 def create_alpha_lnPdf(state):
     lnProdGammas = 0 # FIXME : decide whether to entirely remove this
@@ -184,17 +182,19 @@ def calculate_cluster_conditional(state,vector):
     ##new_cluster is auto appended to cluster list
     ##and pops off when vector is deassigned
 
-    new_cluster = ds.Cluster(state)
-    state.cluster_list.append(new_cluster)
+    # FIXME : uncomment when done debuggin
+    # new_cluster = ds.Cluster(state)
+    # state.cluster_list.append(new_cluster)
+
     ##
     conditionals = []
-    for cluster in state.cluster_list:
-        scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,cluster.state)
+    for cluster in state.cluster_list + [None]:
+        scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,state)
         conditionals.append(scoreDelta + state.score)
     ##
-    # FIXME : below is just for new version
-    new_cluster.state.cluster_list.remove(new_cluster)
-    new_cluster.state = None
+    # FIXME : uncomment when done debuggin
+    # new_cluster.state.cluster_list.remove(new_cluster)
+    # new_cluster.state = None
     
     return conditionals
 

@@ -32,6 +32,34 @@ def cluster_vector_joint_helper(
                     - log(count + 2.0*betas[idx])
     return data_term
 
+def cluster_vector_joint_helper_2(
+    double alpha
+    ,int numVectors
+    ,int num_cols
+    ,list data
+    ,np.ndarray[np.float64_t,ndim=1] column_sums
+    ,np.ndarray[np.float64_t,ndim=1] betas
+    ,int count
+    ):
+
+    cdef double retVal,data_term
+    cdef alpha_term = log(alpha) - log(numVectors-1+alpha)
+    if count==0:
+        data_term = num_cols*log(.5)
+        return alpha_term + data_term,alpha_term,data_term
+
+    cdef int idx
+    cdef double curr_beta,curr_denominator,curr_column_sum
+    data_term = 0
+    for idx in range(len(betas)):
+        if data[idx] == 0:
+                data_term += log(count - column_sums[idx] + betas[idx]) \
+                    - log(count + 2.0*betas[idx])
+        else:
+                data_term += log(column_sums[idx] + betas[idx]) \
+                    - log(count + 2.0*betas[idx])
+    return alpha_term + data_term,alpha_term,data_term
+
 def calc_beta_conditional_helper(
     # np.ndarray[np.float64_t,ndim=1] S_list
     # ,np.ndarray[np.float64_t,ndim=1] R_list
