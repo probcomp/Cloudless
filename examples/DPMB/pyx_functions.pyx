@@ -13,26 +13,6 @@ cdef extern from "math.h":
     double lgamma(double)
 
 def cluster_vector_joint_helper(
-    #np.ndarray[np.int32_t,ndim=1] data
-    list data
-    ,np.ndarray[np.float64_t,ndim=1] column_sums
-    ,np.ndarray[np.float64_t,ndim=1] betas
-    ,int count
-    ):
-    
-    cdef int idx
-    cdef double curr_beta,curr_denominator,curr_column_sum,data_term
-    data_term = 0
-    for idx in range(len(betas)):
-        if data[idx] == 0:
-                data_term += log(count - column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-        else:
-                data_term += log(column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-    return data_term
-
-def cluster_vector_joint_helper_2(
     double alpha
     ,int numVectors
     ,int num_cols
@@ -42,14 +22,15 @@ def cluster_vector_joint_helper_2(
     ,int count
     ):
 
-    cdef double retVal,data_term
-    cdef alpha_term = log(alpha) - log(numVectors-1+alpha)
+    cdef double retVal,alpha_term,data_term
     if count==0:
+        alpha_term = log(alpha) - log(numVectors-1+alpha)
         data_term = num_cols*log(.5)
         return alpha_term + data_term,alpha_term,data_term
 
     cdef int idx
     cdef double curr_beta,curr_denominator,curr_column_sum
+    alpha_term = log(count) - log(numVectors-1+alpha)
     data_term = 0
     for idx in range(len(betas)):
         if data[idx] == 0:

@@ -53,30 +53,15 @@ def cluster_vector_joint(vector,cluster,state):
     numVectors = len(state.get_all_vectors())
     count = cluster.count() if cluster is not None else 0
     
-    if count == 0:
-        # if the cluster would be empty without the vector, then its a special case
-        alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
-        data_term = state.num_cols*np.log(.5)
-    else:
-        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
-        data_term = pf.cluster_vector_joint_helper(
-            #np.array(vector.data)
-            vector.data
-            ,cluster.column_sums
-            ,state.betas
-            ,cluster.count()
-            )
-    retVal = alpha_term + data_term
-
-    # retVal,alpha_term,data_term = pf.cluster_vector_joint_helper_2(
-    #     alpha
-    #     ,numVectors
-    #     ,state.num_cols
-    #     ,vector.data
-    #     ,cluster.column_sums if count != 0 else None
-    #     ,state.betas
-    #     ,count
-    #     )
+    retVal,alpha_term,data_term = pf.cluster_vector_joint_helper_2(
+        alpha
+        ,numVectors
+        ,state.num_cols
+        ,vector.data
+        ,cluster.column_sums if count != 0 else None
+        ,state.betas
+        ,count
+        )
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
