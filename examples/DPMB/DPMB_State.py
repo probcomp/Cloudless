@@ -37,7 +37,7 @@ class DPMB_State():
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
-        self.vector_list = [] #contains all added (possibly unassigned) vectors, in order
+        self.vector_list = {} #contains all added (possibly unassigned) vectors, in order
         
         # now deal with init_z and init_x specs:
 
@@ -145,7 +145,7 @@ class DPMB_State():
             cluster = self.generate_cluster_assignment()
 
         vector = Vector(self.random_state, cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
-        self.vector_list.append(vector)
+        self.vector_list[vector] = None
         cluster.assign_vector(vector)
         return vector
 
@@ -155,7 +155,7 @@ class DPMB_State():
         vector.cluster.deassign_vector(vector)
         vector.cluster = None ##deassign does this as well
         # now we remove it
-        self.vector_list.remove(vector)
+        self.vector_list.pop(vector)
 
     def calculate_log_predictive(self, vector):
         assert vector.cluster is None,("Tried calculate_log_predictive on a" +
@@ -338,9 +338,9 @@ class DPMB_State():
         fh4 = None
         pylab.subplot(414)
         if ("cluster" in which_plots or True) and len(self.vector_list)>1:
-            vector = self.vector_list[0]
+            vector = list(self.vector_list)[0]
             cluster = vector.cluster
-            cluster_idx = self.getZIndices()[self.vector_list.index(vector)] ##ALWAYS GO THROUGH getZIndices
+            cluster_idx = self.getZIndices()[list(self.vector_list).index(vector)] ##ALWAYS GO THROUGH getZIndices
             ##
             # calculate the conditional
             cluster.deassign_vector(vector)
@@ -413,7 +413,7 @@ class Cluster():
     def __init__(self, state):
         self.state = state
         self.column_sums = np.zeros(self.state.num_cols)
-        self.vector_list = []
+        self.vector_list = {}
         
     def count(self):
         return len(self.vector_list)
@@ -422,14 +422,14 @@ class Cluster():
         scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(scoreDelta)
         ##
-        self.vector_list.append(vector)
+        self.vector_list[vector] = None
         self.column_sums += vector.data
         vector.cluster = self
         
     def deassign_vector(self,vector):
         vector.cluster = None
         self.column_sums -= vector.data
-        self.vector_list.remove(vector)
+        self.vector_list.pop(vector)
         ##
         scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(-scoreDelta)

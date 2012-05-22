@@ -99,10 +99,7 @@ class DPMB():
             print "PRE transition_z score: ",self.state.score
         start_dt = datetime.datetime.now()
 
-        for vector in self.random_state.permutation(self.state.get_all_vectors()):
-            if self.state.verbose:
-                print " - transitioning vector idx " + str(
-                    self.state.vector_list.index(vector))
+        for vector in self.random_state.permutation(list(self.state.get_all_vectors())):
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
