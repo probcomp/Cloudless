@@ -14,7 +14,6 @@ import pyximport
 pyximport.install()
 import pyx_functions as pf
 
-
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
@@ -162,7 +161,7 @@ class DPMB_State():
         assert vector.cluster is None,("Tried calculate_log_predictive on a" +
                                        " vector already in model. Not kosher!")
         clusters = list(self.cluster_list) + [None]
-        log_joints = [hf.cluster_vector_joint(vector, cluster, self)[0]
+        log_joints = [pf.cluster_vector_joint(vector, cluster, self)[0]
                       for cluster in clusters]
         log_marginal_on_vector = reduce(np.logaddexp, log_joints)
         return log_marginal_on_vector
@@ -420,7 +419,7 @@ class Cluster():
         return len(self.vector_list)
 
     def assign_vector(self,vector):
-        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(scoreDelta)
         ##
         self.vector_list.append(vector)
@@ -432,7 +431,7 @@ class Cluster():
         self.column_sums -= vector.data
         self.vector_list.remove(vector)
         ##
-        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
             self.state.cluster_list.remove(self)
