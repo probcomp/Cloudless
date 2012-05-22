@@ -24,8 +24,10 @@ pkl_file_str = "test_predictive_pickled_jobs.pkl"
 ALL_RUN_SPECS = []
 #
 run_spec = rf.gen_default_run_spec()
+# run_spec["dataset_spec"]["num_rows"] = 64*64
+# run_spec["dataset_spec"]["gen_z"] = ("balanced",64)
 run_spec["num_iters"] = 5
-run_spec["time_seatbelt"] = 60
+run_spec["time_seatbelt"] = 600
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
 

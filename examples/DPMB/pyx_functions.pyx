@@ -41,6 +41,34 @@ def log_conditional_to_norm_prob_helper(
     logZ = reduce(np.logaddexp, scaled)
     return [exp(s - logZ) for s in scaled]
 
+def cluster_vector_joint(vector,cluster,state):
+    cdef int count = cluster.count() if cluster is not None else 0
+    cdef double alpha = state.alpha
+    cdef int numVectors = len(state.get_all_vectors())
+
+    cdef double alpha_term,data_term
+    if count==0:
+        alpha_term = log(alpha) - log(numVectors-1+alpha)
+        data_term = state.num_cols*log(.5)
+        return alpha_term + data_term,alpha_term,data_term
+
+    cdef int idx
+    cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
+    cdef np.ndarray[np.int32_t,ndim=1] data = np.array(vector.data,dtype=np.int32) 
+    cdef np.ndarray[np.float64_t,ndim=1] column_sums = cluster.column_sums
+    cdef double curr_beta,curr_denominator,curr_column_sum
+    alpha_term = log(count) - log(numVectors-1+alpha)
+    data_term = 0
+    for idx in range(len(state.betas)):
+        if data[idx] == 0:
+                data_term += log(count - column_sums[idx] + betas[idx]) \
+                    - log(count + 2.0*betas[idx])
+        else:
+                data_term += log(column_sums[idx] + betas[idx]) \
+                    - log(count + 2.0*betas[idx])
+    return alpha_term + data_term,alpha_term,data_term
+    
+    
 def cluster_vector_joint_helper(
     double alpha
     ,int numVectors

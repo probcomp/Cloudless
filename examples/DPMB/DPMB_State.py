@@ -10,6 +10,10 @@ reload(hf)
 ##
 import pdb
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
@@ -273,10 +277,6 @@ class DPMB_State():
         self.betas[colIdx] = newBetaD
 
     def modifyScore(self,scoreDelta):
-        if not np.isfinite(scoreDelta):
-            # pdb.set_trace()
-            pass # FIXME : for testing gamma = [1,0,0...]
-                 #          remove when done
         self.score += scoreDelta
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):

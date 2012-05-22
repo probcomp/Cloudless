@@ -73,13 +73,11 @@ def cluster_vector_joint(vector,cluster,state):
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    lnProdGammas = 0 # FIXME : decide whether to entirely remove this
     # lnProdGammas = sum([ss.gammaln(cluster.count()) 
     #                     for cluster in state.cluster_list])
     lnPdf = lambda alpha: ss.gammaln(alpha) \
         + len(state.cluster_list)*np.log(alpha) \
-        - ss.gammaln(alpha+len(state.vector_list)) \
-        + lnProdGammas
+        - ss.gammaln(alpha+len(state.vector_list))
     return lnPdf
 
 def create_beta_lnPdf(state,col_idx):
