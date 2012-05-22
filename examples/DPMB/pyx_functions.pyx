@@ -7,6 +7,7 @@
 import cython
 import numpy as np
 cimport numpy as np
+cimport cython
 
 cdef extern from "math.h":
     double log(double)
@@ -14,6 +15,23 @@ cdef extern from "math.h":
     double exp(double)
 cdef extern from "math.h":
     double lgamma(double)
+
+# def renormalize_and_sample(
+#     np.float64_t randv
+#     ,np.ndarray[np.float64_t,ndim=1] logpstar_vec):
+
+#     cdef double maxv = max(logpstar_vec)
+#     cdef np.ndarray[np.float64_t,ndim=1] scaled = logpstar_vec - maxv
+#     cdef double logZ = reduce(np.logaddexp, scaled)
+#     cdef np.ndarray[np.float64_t,ndim=1] p_vec = np.exp(scaled - logZ)
+#     cdef int idx = 0
+
+#     while True:
+#         if randv < p_vec[idx]:
+#             return idx
+#         else:
+#             randv = randv - p_vec[idx]
+#             idx += 1
 
 def renormalize_and_sample_helper(
     np.float64_t randv
@@ -32,7 +50,6 @@ def renormalize_and_sample_helper(
             randv = randv - p_vec[idx]
             idx += 1
 
-
 def log_conditional_to_norm_prob_helper(
     np.ndarray[np.float64_t,ndim=1] logp_list):
     # list logp_list):
@@ -41,62 +58,78 @@ def log_conditional_to_norm_prob_helper(
     logZ = reduce(np.logaddexp, scaled)
     return [exp(s - logZ) for s in scaled]
 
-cdef cluster_vector_joint(vector,cluster,state):
-    cdef int count = cluster.count() if cluster is not None else 0
-    cdef double alpha = state.alpha
-    cdef int numVectors = len(state.get_all_vectors())
+@cython.boundscheck(False)
+cdef int renormalize_and_sample(
+    np.ndarray[np.float64_t,ndim=1] conditionals
+    ,float randv):
+    #
+    cdef np.ndarray[np.float64_t,ndim=1] scaled
+    cdef np.ndarray[np.float64_t,ndim=1] p_vec
+    cdef double maxv
+    cdef double logZ
+    cdef int draw
+    #
+    maxv = max(conditionals)
+    scaled = conditionals - maxv
+    logZ = reduce(np.logaddexp, scaled)
+    p_vec = np.exp(scaled - logZ)    
+    draw = 0
+    while True:
+        if randv < p_vec[draw]:
+            return draw
+        else:
+            randv = randv - p_vec[draw]
+            draw += 1
 
-    cdef double alpha_term,data_term
-    if count==0:
-        alpha_term = log(alpha) - log(numVectors-1+alpha)
-        data_term = state.num_cols*log(.5)
-        return alpha_term + data_term,alpha_term,data_term
+@cython.boundscheck(False)
+#def calculate_cluster_conditional(state,vector):
+def draw_from_conditional(state,vector,float randv):
+    ##vector should be unassigned
 
-    cdef int idx
     cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
-    cdef np.ndarray[np.int32_t,ndim=1] data = np.array(vector.data,dtype=np.int32) 
-    cdef np.ndarray[np.float64_t,ndim=1] column_sums = cluster.column_sums
+    cdef np.ndarray[np.int32_t,ndim=1] data = np.array(vector.data)
+    cdef int num_clusters = len(state.cluster_list)
+    cdef int num_cols = len(betas)
+    cdef int state_num_vectors = len(state.get_all_vectors())
+    cdef float alpha = state.alpha
+    cdef float score = state.score
+    #
+    cdef np.ndarray[np.float64_t,ndim=1] column_sums
+    cdef int cluster_num_vectors
+    cdef int cluster_idx
+    cdef int column_idx
+    cdef double alpha_term,data_term
     cdef double curr_beta,curr_denominator,curr_column_sum
-    alpha_term = log(count) - log(numVectors-1+alpha)
-    data_term = 0
-    for idx in range(len(state.betas)):
-        if data[idx] == 0:
-                data_term += log(count - column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-        else:
-                data_term += log(column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-    return alpha_term + data_term,alpha_term,data_term
-    
-    
-def cluster_vector_joint_helper(
-    np.float64_t alpha
-    ,int numVectors
-    ,int num_cols
-    ,list data
-    ,np.ndarray[np.float64_t,ndim=1] column_sums
-    ,np.ndarray[np.float64_t,ndim=1] betas
-    ,int count
-    ):
+    #
+    conditionals = np.ndarray((num_clusters+1,),dtype=np.float64)
+    for cluster_idx from 0 <= cluster_idx < num_clusters:
+        # cluster_vector_joint
+        cluster = state.cluster_list[cluster_idx]
+        cluster_num_vectors = len(cluster.vector_list)
+        column_sums = cluster.column_sums
+        #
+        alpha_term = log(cluster_num_vectors) - log(state_num_vectors-1+alpha)
+        data_term = 0
+        for column_idx from 0 <= column_idx < num_cols:
+            if data[column_idx] == 0:
+                    data_term += \
+                        log( cluster_num_vectors \
+                                 - column_sums[column_idx] \
+                                 + betas[column_idx]) \
+                        - log(cluster_num_vectors \
+                                  + 2.0*betas[column_idx])
+            else:
+                    data_term += \
+                    log(column_sums[column_idx] + betas[column_idx]) \
+                        - log(cluster_num_vectors + 2.0*betas[column_idx])
+        conditionals[cluster_idx] = score + alpha_term + data_term
 
-    cdef double retVal,alpha_term,data_term
-    if count==0:
-        alpha_term = log(alpha) - log(numVectors-1+alpha)
-        data_term = num_cols*log(.5)
-        return alpha_term + data_term,alpha_term,data_term
-
-    cdef int idx
-    cdef double curr_beta,curr_denominator,curr_column_sum
-    alpha_term = log(count) - log(numVectors-1+alpha)
-    data_term = 0
-    for idx in range(len(betas)):
-        if data[idx] == 0:
-                data_term += log(count - column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-        else:
-                data_term += log(column_sums[idx] + betas[idx]) \
-                    - log(count + 2.0*betas[idx])
-    return alpha_term + data_term,alpha_term,data_term
+    # last run for new cluster
+    conditionals[num_clusters] = state.score \
+        + log(alpha) - log(state_num_vectors-1+alpha) \
+        + num_cols*log(.5)
+    
+    return conditionals,renormalize_and_sample(conditionals,randv)
 
 def calc_beta_conditional_helper(
     # np.ndarray[np.float64_t,ndim=1] S_list

@@ -17,12 +17,20 @@ def transition_single_z(vector,random_state):
     state = cluster.state
     #
     vector.cluster.deassign_vector(vector)
-    score_vec = calculate_cluster_conditional(state,vector)
-    # FIXME : printing score_vec to be able to compare output of optimized and non-optimized routines
-    #         remove when done
-    print score_vec
-    draw = renormalize_and_sample(random_state, score_vec)
-    #
+
+    if True:
+        # score_vec = pf.calculate_cluster_conditional(state,vector)
+        # draw = renormalize_and_sample(random_state, score_vec)
+        score_vec,draw = pf.draw_from_conditional(
+            state,vector,random_state.uniform())
+    else:
+        score_vec = calculate_cluster_conditional(state,vector)
+        draw = renormalize_and_sample(random_state, score_vec)
+
+    # FIXME : printing score_vec to be able to compare 
+    # optimized and non-optimized output for correctness
+    print score_vec.tolist()
+
     cluster = None
     if draw == len(state.cluster_list):
         cluster = state.generate_cluster_assignment(force_new = True)
@@ -33,43 +41,37 @@ def transition_single_z(vector,random_state):
 ####################
 # PROBABILITY FUNCTIONS
 def renormalize_and_sample(random_state,logpstar_vec):
-    if True:
-        p_vec = log_conditional_to_norm_prob(logpstar_vec)
-        randv = random_state.uniform()
-        for (i, p) in enumerate(p_vec):
-            if randv < p:
-                return i
-            else:
-                randv = randv - p
-    else:
-        return pf.renormalize_and_sample_helper(
-            random_state.uniform()
-            ,np.array(logpstar_vec))
+    p_vec = log_conditional_to_norm_prob(logpstar_vec)
+    randv = random_state.uniform()
+    for (i, p) in enumerate(p_vec):
+        if randv < p:
+            return i
+        else:
+            randv = randv - p
 
 def log_conditional_to_norm_prob(logp_list):
-    if True:
-        maxv = max(logp_list)
-        scaled = [logpstar - maxv for logpstar in logp_list]
-        logZ = reduce(np.logaddexp, scaled)
-        logp_vec = [s - logZ for s in scaled]
-        return np.exp(logp_vec)
-    else:
-        return pf.log_conditional_to_norm_prob_helper(np.array(logp_list))
+    maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    logp_vec = [s - logZ for s in scaled]
+    return np.exp(logp_vec)
 
 def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha
-    numVectors = len(state.get_all_vectors()) # len(state.vector_list) # 
-    count = len(cluster.vector_list) if cluster is not None else 0
-
-    return pf.cluster_vector_joint_helper(
-        alpha
-        ,numVectors
-        ,state.num_cols
-        ,vector.data
-        ,cluster.column_sums if count != 0 else None
-        ,state.betas
-        ,count
-        )
+    numVectors = len(state.get_all_vectors())
+    if cluster is None or cluster.count() == 0:
+        alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
+        data_term = state.num_cols*np.log(.5)
+    else:
+        boolIdx = np.array(vector.data,dtype=type(True))
+        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
+        numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
+        numerator2 = (~boolIdx) * np.log(cluster.count() \
+                                             - cluster.column_sums + state.betas)
+        denominator = np.log(cluster.count() + 2*state.betas)
+        data_term = (numerator1 + numerator2 - denominator).sum()
+    retVal = alpha_term + data_term
+    return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
     # lnProdGammas = sum([ss.gammaln(cluster.count()) 
@@ -167,15 +169,11 @@ def calc_beta_conditional(state,col_idx):
 
 def calculate_cluster_conditional(state,vector):
     ##vector should be unassigned
-    ##new_cluster is auto appended to cluster list
-    ##and pops off when vector is deassigned
-
-    ##
     conditionals = []
     for cluster in state.cluster_list + [None]:
-        scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,state)
+        scoreDelta,alpha_term,data_term = cluster_vector_joint(
+            vector,cluster,state)
         conditionals.append(scoreDelta + state.score)
-    
     return conditionals
 
 def calculate_node_conditional(pstate,cluster):
