@@ -19,17 +19,17 @@ def transition_single_z(vector,random_state):
     vector.cluster.deassign_vector(vector)
 
     if True:
-        # score_vec = pf.calculate_cluster_conditional(state,vector)
-        # draw = renormalize_and_sample(random_state, score_vec)
-        score_vec,draw = pf.draw_from_conditional(
-            state,vector,random_state.uniform())
+        score_vec = pf.calculate_cluster_conditional(state,vector)
+        draw = renormalize_and_sample(random_state, score_vec)
+        # score_vec,draw = pf.draw_from_conditional(
+        #     state,vector,random_state.uniform())
     else:
         score_vec = calculate_cluster_conditional(state,vector)
         draw = renormalize_and_sample(random_state, score_vec)
 
     # FIXME : printing score_vec to be able to compare 
     # optimized and non-optimized output for correctness
-    print score_vec.tolist()
+    # print score_vec.tolist()
 
     cluster = None
     if draw == len(state.cluster_list):
