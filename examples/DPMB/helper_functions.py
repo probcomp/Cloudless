@@ -167,19 +167,11 @@ def calculate_cluster_conditional(state,vector):
     ##new_cluster is auto appended to cluster list
     ##and pops off when vector is deassigned
 
-    # FIXME : uncomment when done debuggin
-    # new_cluster = ds.Cluster(state)
-    # state.cluster_list.append(new_cluster)
-
     ##
     conditionals = []
     for cluster in state.cluster_list + [None]:
         scoreDelta,alpha_term,data_term = cluster_vector_joint(vector,cluster,state)
         conditionals.append(scoreDelta + state.score)
-    ##
-    # FIXME : uncomment when done debuggin
-    # new_cluster.state.cluster_list.remove(new_cluster)
-    # new_cluster.state = None
     
     return conditionals
 
