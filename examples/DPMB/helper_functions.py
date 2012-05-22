@@ -53,7 +53,7 @@ def cluster_vector_joint(vector,cluster,state):
     numVectors = len(state.get_all_vectors())
     count = cluster.count() if cluster is not None else 0
     
-    retVal,alpha_term,data_term = pf.cluster_vector_joint_helper_2(
+    retVal,alpha_term,data_term = pf.cluster_vector_joint_helper(
         alpha
         ,numVectors
         ,state.num_cols
