@@ -58,10 +58,10 @@ def log_conditional_to_norm_prob(logp_list):
 
 def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha
-    numVectors = len(state.get_all_vectors())
-    count = cluster.count() if cluster is not None else 0
-    
-    retVal,alpha_term,data_term = pf.cluster_vector_joint_helper(
+    numVectors = len(state.get_all_vectors()) # len(state.vector_list) # 
+    count = len(cluster.vector_list) if cluster is not None else 0
+
+    return pf.cluster_vector_joint_helper(
         alpha
         ,numVectors
         ,state.num_cols
@@ -70,7 +70,6 @@ def cluster_vector_joint(vector,cluster,state):
         ,state.betas
         ,count
         )
-    return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
     # lnProdGammas = sum([ss.gammaln(cluster.count()) 
@@ -156,8 +155,6 @@ def calc_beta_conditional(state,col_idx):
                   for cluster in state.cluster_list]
 
     logp_arr = pf.calc_beta_conditional_helper(
-        # np.array(S_list)
-        # ,np.array(R_list)
         S_list
         ,R_list
         ,grid

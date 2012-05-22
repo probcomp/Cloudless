@@ -20,9 +20,9 @@ def renormalize_and_sample_helper(
     ,np.ndarray[np.float64_t,ndim=1] logpstar_vec):
 
     cdef double maxv = max(logpstar_vec)
-    cdef np.ndarray scaled = logpstar_vec - maxv
+    cdef np.ndarray[np.float64_t,ndim=1] scaled = logpstar_vec - maxv
     cdef double logZ = reduce(np.logaddexp, scaled)
-    cdef np.ndarray p_vec = np.exp(scaled - logZ)
+    cdef np.ndarray[np.float64_t,ndim=1] p_vec = np.exp(scaled - logZ)
     cdef int idx = 0
 
     while True:
@@ -41,7 +41,7 @@ def log_conditional_to_norm_prob_helper(
     logZ = reduce(np.logaddexp, scaled)
     return [exp(s - logZ) for s in scaled]
 
-def cluster_vector_joint(vector,cluster,state):
+cdef cluster_vector_joint(vector,cluster,state):
     cdef int count = cluster.count() if cluster is not None else 0
     cdef double alpha = state.alpha
     cdef int numVectors = len(state.get_all_vectors())
@@ -70,7 +70,7 @@ def cluster_vector_joint(vector,cluster,state):
     
     
 def cluster_vector_joint_helper(
-    double alpha
+    np.float64_t alpha
     ,int numVectors
     ,int num_cols
     ,list data
