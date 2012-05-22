@@ -18,18 +18,17 @@ def transition_single_z(vector,random_state):
     #
     vector.cluster.deassign_vector(vector)
 
-    if True:
-        score_vec = pf.calculate_cluster_conditional(state,vector)
-        draw = renormalize_and_sample(random_state, score_vec)
-        # score_vec,draw = pf.draw_from_conditional(
-        #     state,vector,random_state.uniform())
-    else:
-        score_vec = calculate_cluster_conditional(state,vector)
-        draw = renormalize_and_sample(random_state, score_vec)
+    # score_vec = pf.calculate_cluster_conditional(state,vector,None)
+    # draw = renormalize_and_sample(random_state, score_vec)
+    score_vec,draw = pf.calculate_cluster_conditional(
+        state,vector,random_state.uniform())
 
     # FIXME : printing score_vec to be able to compare 
     # optimized and non-optimized output for correctness
-    # print score_vec.tolist()
+    if type(score_vec) == list:
+        print score_vec
+    else:
+        print score_vec.tolist()
 
     cluster = None
     if draw == len(state.cluster_list):
@@ -152,16 +151,9 @@ def calc_beta_conditional(state,col_idx):
     original_beta = state.betas[col_idx]
     ##
     state.removeBetaD(lnPdf,col_idx)
-    S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
-    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
-                  for cluster in state.cluster_list]
 
     logp_arr = pf.calc_beta_conditional_helper(
-        S_list
-        ,R_list
-        ,grid
-        ,state.score
-        )
+        state,grid,col_idx)
     logp_list = logp_arr.tolist()[0]
     ##
     state.setBetaD(lnPdf,col_idx,original_beta)
