@@ -321,7 +321,7 @@ class DPMB_State():
         pylab.subplot(412)
         if "alpha" in which_plots or True:
             logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
-            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
             title_str = "alpha" if title_append is None else "alpha" + ": " + title_append
             ##fh = handle_lookup["alpha"]
             fh2 = hf.bar_helper(x=np.log10(grid),fh=fh,y=norm_prob,v_line=np.log10(self.alpha),title_str=title_str,which_id=1)
@@ -331,7 +331,7 @@ class DPMB_State():
         if "beta" in which_plots or True:
             beta_idx = 0
             logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
-            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
             title_str  = "Beta" if title_append is None else "Beta" + ": " + title_append
             ##fh = handle_lookup["beta"]
             fh3 = hf.bar_helper(x=np.log10(grid),y=norm_prob,fh=fh,v_line=np.log10(self.betas[beta_idx]),title_str=title_str,which_id=2)
@@ -377,7 +377,7 @@ class DPMB_State():
                 # we need to put the singleton cluster's score at the end
                 sorted_scores[-1] = score_vec[-1]
 
-            norm_prob = hf.log_conditional_to_norm_prob(sorted_scores)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(sorted_scores))
             
             title_str  = "Cluster cond" if title_append is None else "Cluster cond" + ": " + title_append
             ##fh = handle_lookup["cluster"]

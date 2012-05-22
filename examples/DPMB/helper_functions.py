@@ -33,20 +33,28 @@ def transition_single_z(vector,random_state):
 ####################
 # PROBABILITY FUNCTIONS
 def renormalize_and_sample(random_state,logpstar_vec):
-    p_vec = log_conditional_to_norm_prob(logpstar_vec)
-    randv = random_state.uniform()
-    for (i, p) in enumerate(p_vec):
-        if randv < p:
-            return i
-        else:
-            randv = randv - p
+    if True:
+        p_vec = log_conditional_to_norm_prob(logpstar_vec)
+        randv = random_state.uniform()
+        for (i, p) in enumerate(p_vec):
+            if randv < p:
+                return i
+            else:
+                randv = randv - p
+    else:
+        return pf.renormalize_and_sample_helper(
+            random_state.uniform()
+            ,np.array(logpstar_vec))
 
 def log_conditional_to_norm_prob(logp_list):
-    maxv = max(logp_list)
-    scaled = [logpstar - maxv for logpstar in logp_list]
-    logZ = reduce(np.logaddexp, scaled)
-    logp_vec = [s - logZ for s in scaled]
-    return np.exp(logp_vec)
+    if True:
+        maxv = max(logp_list)
+        scaled = [logpstar - maxv for logpstar in logp_list]
+        logZ = reduce(np.logaddexp, scaled)
+        logp_vec = [s - logZ for s in scaled]
+        return np.exp(logp_vec)
+    else:
+        return pf.log_conditional_to_norm_prob_helper(np.array(logp_list))
 
 def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha

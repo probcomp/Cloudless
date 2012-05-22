@@ -3,6 +3,7 @@
 # pyximport.install()
 # import pyx_functions as pf
 
+# cython: profile=True
 import cython
 import numpy as np
 cimport numpy as np
@@ -10,7 +11,35 @@ cimport numpy as np
 cdef extern from "math.h":
     double log(double)
 cdef extern from "math.h":
+    double exp(double)
+cdef extern from "math.h":
     double lgamma(double)
+
+def renormalize_and_sample_helper(
+    np.float64_t randv
+    ,np.ndarray[np.float64_t,ndim=1] logpstar_vec):
+
+    cdef double maxv = max(logpstar_vec)
+    cdef np.ndarray scaled = logpstar_vec - maxv
+    cdef double logZ = reduce(np.logaddexp, scaled)
+    cdef np.ndarray p_vec = np.exp(scaled - logZ)
+    cdef int idx = 0
+
+    while True:
+        if randv < p_vec[idx]:
+            return idx
+        else:
+            randv = randv - p_vec[idx]
+            idx += 1
+
+
+def log_conditional_to_norm_prob_helper(
+    np.ndarray[np.float64_t,ndim=1] logp_list):
+    # list logp_list):
+    cdef double maxv = max(logp_list)
+    scaled = [logpstar - maxv for logpstar in logp_list]
+    logZ = reduce(np.logaddexp, scaled)
+    return [exp(s - logZ) for s in scaled]
 
 def cluster_vector_joint_helper(
     double alpha
