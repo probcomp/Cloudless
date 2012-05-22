@@ -19,7 +19,7 @@ cdef extern from "math.h":
 @cython.boundscheck(False)
 cdef int renormalize_and_sample(
     np.ndarray[np.float64_t,ndim=1] conditionals
-    ,float randv):
+    ,double randv):
     #
     cdef np.ndarray[np.float64_t,ndim=1] scaled
     cdef np.ndarray[np.float64_t,ndim=1] p_vec
@@ -40,8 +40,7 @@ cdef int renormalize_and_sample(
             draw += 1
 
 @cython.boundscheck(False)
-def calculate_cluster_conditional(state,vector):
-#def draw_from_conditional(state,vector,float randv):
+def calculate_cluster_conditional(state,vector,randv):
     ##vector should be unassigned
 
     cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
@@ -49,8 +48,8 @@ def calculate_cluster_conditional(state,vector):
     cdef int num_clusters = len(state.cluster_list)
     cdef int num_cols = len(betas)
     cdef int state_num_vectors = len(state.get_all_vectors())
-    cdef float alpha = state.alpha
-    cdef float score = state.score
+    cdef double alpha = state.alpha
+    cdef double score = state.score
     #
     cdef np.ndarray[np.float64_t,ndim=1] column_sums
     cdef int cluster_num_vectors
@@ -86,31 +85,74 @@ def calculate_cluster_conditional(state,vector):
     conditionals[num_clusters] = state.score \
         + log(alpha) - log(state_num_vectors-1+alpha) \
         + num_cols*log(.5)
-    
-    return conditionals
-    #return conditionals,renormalize_and_sample(conditionals,randv)
 
+    if randv is None:
+        return conditionals
+    else:
+        return conditionals,renormalize_and_sample(conditionals,randv)
+
+@cython.boundscheck(False)
+def cluster_vector_joint(vector,cluster,state):
+
+    cdef int num_cols = len(state.betas)
+    cdef double alpha = state.alpha
+    cdef int state_num_vectors = len(state.get_all_vectors())
+    cdef int cluster_num_vectors = len(cluster.vector_list) \
+        if cluster is not None else 0
+    cdef double alpha_term,data_term
+
+    if cluster_num_vectors == 0:
+        alpha_term = log(alpha) - log(state_num_vectors-1+alpha)
+        data_term = num_cols * log(.5)
+        return alpha_term+data_term,alpha_term,data_term
+
+    cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
+    cdef np.ndarray[np.int32_t,ndim=1] data = np.array(vector.data)
+    cdef np.ndarray[np.float64_t,ndim=1] column_sums = cluster.column_sums
+    #
+    alpha_term = log(cluster_num_vectors) - log(state_num_vectors-1+alpha)
+    data_term = 0
+    for column_idx from 0 <= column_idx < num_cols:
+        if data[column_idx] == 0:
+                data_term += \
+                    log( cluster_num_vectors \
+                             - column_sums[column_idx] \
+                             + betas[column_idx]) \
+                    - log(cluster_num_vectors \
+                              + 2.0*betas[column_idx])
+        else:
+                data_term += \
+                log(column_sums[column_idx] + betas[column_idx]) \
+                    - log(cluster_num_vectors + 2.0*betas[column_idx])
+    return alpha_term + data_term,alpha_term,data_term
+
+
+@cython.boundscheck(False)
 def calc_beta_conditional_helper(
-    # np.ndarray[np.float64_t,ndim=1] S_list
-    # ,np.ndarray[np.float64_t,ndim=1] R_list
-    list S_list
-    ,list R_list
+    state
     ,np.ndarray[np.float64_t,ndim=1] grid
-    ,np.float64_t score
-    ):
-    # cdef int list_len = S_list.shape[0]
-    cdef int list_len = len(S_list)
+    ,int col_idx):
+
+    cdef np.float64_t score = state.score
+    cdef int num_clusters = len(state.cluster_list)
     cdef int grid_len = grid.shape[0]
-    cdef double s,r,curr_score
+    cdef double S,curr_score,test_beta
+    cdef int N
     cdef np.ndarray ret_arr = np.zeros([1, grid_len], dtype=np.float64)
-    for grid_idx,test_beta in enumerate(grid):
+    cdef int grid_idx
+    cdef int cluster_idx
+
+    for grid_idx from 0 <= grid_idx < grid_len:
+        test_beta = grid[grid_idx]
         curr_score = score
-        for S,R in zip(S_list,R_list):
+        for cluster_idx from 0 <= cluster_idx < num_clusters:
+            S = state.cluster_list[cluster_idx].column_sums[col_idx]
+            N = len(state.cluster_list[cluster_idx].vector_list)
             curr_score += lgamma(2*test_beta) \
                 - 2*lgamma(test_beta) \
                 + lgamma(S+test_beta) \
-                + lgamma(R+test_beta) \
-                - lgamma(S+R+2*test_beta)
+                + lgamma(N-S+test_beta) \
+                - lgamma(N+2*test_beta)
         ret_arr[0,grid_idx] = curr_score
     return ret_arr
 
