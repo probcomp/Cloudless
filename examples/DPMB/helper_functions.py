@@ -18,8 +18,6 @@ def transition_single_z(vector,random_state):
     #
     vector.cluster.deassign_vector(vector)
 
-    # score_vec = pf.calculate_cluster_conditional(state,vector,None)
-    # draw = renormalize_and_sample(random_state, score_vec)
     score_vec,draw = pf.calculate_cluster_conditional(
         state,vector,random_state.uniform())
 
@@ -40,14 +38,16 @@ def transition_single_z(vector,random_state):
     
 ####################
 # PROBABILITY FUNCTIONS
-def renormalize_and_sample(random_state,logpstar_vec):
-    p_vec = log_conditional_to_norm_prob(logpstar_vec)
-    randv = random_state.uniform()
-    for (i, p) in enumerate(p_vec):
-        if randv < p:
-            return i
-        else:
-            randv = randv - p
+
+# deprecated : use pyx_functions optimized version instead
+# def renormalize_and_sample(random_state,logpstar_vec):
+#     p_vec = log_conditional_to_norm_prob(logpstar_vec)
+#     randv = random_state.uniform()
+#     for (i, p) in enumerate(p_vec):
+#         if randv < p:
+#             return i
+#         else:
+#             randv = randv - p
 
 def log_conditional_to_norm_prob(logp_list):
     maxv = max(logp_list)
@@ -59,22 +59,22 @@ def log_conditional_to_norm_prob(logp_list):
 def cluster_vector_joint(vector,cluster,state):
     alpha = state.alpha
     numVectors = len(state.get_all_vectors())
-    if cluster is None or cluster.count() == 0:
+    if cluster is None or len(cluster.vector_list) == 0:
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
         data_term = state.num_cols*np.log(.5)
     else:
         boolIdx = np.array(vector.data,dtype=type(True))
-        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
+        alpha_term = np.log(len(cluster.vector_list)) - np.log(numVectors-1+alpha)
         numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
-        numerator2 = (~boolIdx) * np.log(cluster.count() \
+        numerator2 = (~boolIdx) * np.log(len(cluster.vector_list) \
                                              - cluster.column_sums + state.betas)
-        denominator = np.log(cluster.count() + 2*state.betas)
+        denominator = np.log(len(cluster.vector_list) + 2*state.betas)
         data_term = (numerator1 + numerator2 - denominator).sum()
     retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    # lnProdGammas = sum([ss.gammaln(cluster.count()) 
+    # lnProdGammas = sum([ss.gammaln(len(cluster.vector_list)) 
     #                     for cluster in state.cluster_list])
     lnPdf = lambda alpha: ss.gammaln(alpha) \
         + len(state.cluster_list)*np.log(alpha) \
