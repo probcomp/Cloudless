@@ -22,21 +22,19 @@ cdef int renormalize_and_sample(
     ,double randv):
     #
     cdef np.ndarray[np.float64_t,ndim=1] scaled
-    cdef np.ndarray[np.float64_t,ndim=1] p_vec
     cdef double maxv
     cdef double logZ
     cdef int draw
     #
-    maxv = max(conditionals)
+    maxv = conditionals.max()
     scaled = conditionals - maxv
     logZ = reduce(np.logaddexp, scaled)
-    p_vec = np.exp(scaled - logZ)    
     draw = 0
     while True:
-        if randv < p_vec[draw]:
+        randv -= exp(scaled[draw] - logZ)
+        if randv < 0:
             return draw
         else:
-            randv = randv - p_vec[draw]
             draw += 1
 
 @cython.boundscheck(False)
