@@ -25,10 +25,11 @@ def transition_single_z(vector,random_state):
 
     # FIXME : printing score_vec to be able to compare 
     # optimized and non-optimized output for correctness
-    if type(score_vec) == list:
-        print score_vec
-    else:
-        print score_vec.tolist()
+    if True:
+        if type(score_vec) == list:
+            print score_vec
+        else:
+            print score_vec.tolist()
 
     cluster = None
     if draw == len(state.cluster_list):
