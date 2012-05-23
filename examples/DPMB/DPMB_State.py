@@ -1,5 +1,8 @@
 #!python
-import numpy as np, numpy.random as nr,pylab,sys
+import numpy as np
+import pylab
+import sys
+#
 import DPMB as dm
 reload(dm)
 import helper_functions as hf
@@ -7,13 +10,18 @@ reload(hf)
 ##
 import pdb
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+
+from collections import OrderedDict as od
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
-                 ,init_z=None,init_x=None,decanon_indices=None,data_subset_indices=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4,grid_N=100):
-
-        self.gen_seed = gen_seed
+                 ,init_z=None,init_x=None,decanon_indices=None
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4
+                 ,grid_N=100):
+        self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.alpha_min = alpha_min
         self.alpha_max = alpha_max
@@ -24,7 +32,6 @@ class DPMB_State():
         self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
         self.verbose = False
         self.clip_beta = [1E-2,1E10]
-        hf.set_seed(gen_seed)
         ##
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
@@ -32,12 +39,14 @@ class DPMB_State():
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
-        self.vector_list = [] #contains all added (possibly unassigned) vectors, in order
+        self.vector_list = od() #contains all added (possibly unassigned) vectors, in order
         
         # now deal with init_z and init_x specs:
 
         # FIXME: address issue of Gibbs-type initialization, e.g. to get sharper
         #        results for the convergence of the sampler
+        #        Gibbs-type will require a special test for init_x not None and
+        #        init_z is None (have data but not cluster assignments)
         for R in range(num_rows):
             cluster = None
             if init_z is None:
@@ -49,6 +58,9 @@ class DPMB_State():
             elif isinstance(init_z, tuple) and init_z[0] == "balanced":
                 num_clusters = init_z[1]
                 mod_val = num_rows / num_clusters
+                if mod_val == 0 : 
+                    import pdb
+                    pdb.set_trace()
                 if R % mod_val == 0:
                     # create a new cluster
                     cluster = self.generate_cluster_assignment(force_new=True)
@@ -76,27 +88,20 @@ class DPMB_State():
             self.cluster_list = new_cluster_list
             
 
-    # sample a cluster from the CRP, possibly resulting in a new one being generated
-    # if force_last is True, always returns the last generated cluster in the model
-    # if force_new is True, always returns a new cluster
-    # force_last and force_new can only both be True if there are no other clusters
-    #
-    # initializing all apart requires repeated calling with force_new=True
-    # initializing all together requires repeated calling with force_last = True
-    # initializing from the prior requires no arguments
     def initialize_alpha(self,init_alpha):
         if init_alpha is not None:
             self.alpha = init_alpha
+
         else:
-            self.alpha = 10.0**nr.uniform(
-                np.log10(alpha_min),np.log10(alpha_max))
+            self.alpha = 10.0**self.random_state.uniform(
+                np.log10(self.alpha_min),np.log10(self.alpha_max))
             
     def initialize_betas(self,init_betas):
         if init_betas is not None:
             self.betas = np.array(init_betas).copy()
         else:
-            self.betas = 10.0**nr.uniform(
-                np.log10(beta_min),np.log10(beta_max),self.num_cols)
+            self.betas = 10.0**self.random_state.uniform(
+                np.log10(self.beta_min),np.log10(self.beta_max),self.num_cols)
         pass
     
     def generate_cluster_assignment(self, force_last=False, force_new=False):
@@ -105,8 +110,13 @@ class DPMB_State():
         elif force_last:
             draw = max(0,len(self.cluster_list) - 1)
         else:
-            unnorm_vec = [cluster.count() for cluster in self.cluster_list] + [self.alpha]
-            draw = hf.renormalize_and_sample(np.log(unnorm_vec))
+            unnorm_vec = [len(cluster.vector_list) 
+                          for cluster in self.cluster_list
+                          ] + [self.alpha]
+            draw = pf.renormalize_and_sample(
+                #FIXME : should this be model's inference random_state
+                #        after initial state generation?
+                np.log(unnorm_vec),self.random_state.uniform())
 
         if draw == len(self.cluster_list):
             # create a new cluster and assign it
@@ -115,6 +125,15 @@ class DPMB_State():
             return cluster
         else:
             return self.cluster_list[draw]
+
+    # sample a cluster from the CRP, possibly resulting in a new one being generated
+    # if force_last is True, always returns the last generated cluster in the model
+    # if force_new is True, always returns a new cluster
+    # force_last and force_new can only both be True if there are no other clusters
+    #
+    # initializing all apart requires repeated calling with force_new=True
+    # initializing all together requires repeated calling with force_last = True
+    # initializing from the prior requires no arguments
 
     # Given:
     # data=None, cluster=None: sample cluster from CRP, sample data from predictive of that cluster.
@@ -127,8 +146,8 @@ class DPMB_State():
         if cluster is None:
             cluster = self.generate_cluster_assignment()
 
-        vector = Vector(cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
-        self.vector_list.append(vector)
+        vector = Vector(self.random_state, cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
+        self.vector_list[vector] = None
         cluster.assign_vector(vector)
         return vector
 
@@ -138,13 +157,13 @@ class DPMB_State():
         vector.cluster.deassign_vector(vector)
         vector.cluster = None ##deassign does this as well
         # now we remove it
-        self.vector_list.remove(vector)
+        self.vector_list.pop(vector)
 
     def calculate_log_predictive(self, vector):
         assert vector.cluster is None,("Tried calculate_log_predictive on a" +
                                        " vector already in model. Not kosher!")
         clusters = list(self.cluster_list) + [None]
-        log_joints = [hf.cluster_vector_joint(vector, cluster, self)[0]
+        log_joints = [pf.cluster_vector_joint(vector, cluster, self)[0]
                       for cluster in clusters]
         log_marginal_on_vector = reduce(np.logaddexp, log_joints)
         return log_marginal_on_vector
@@ -259,11 +278,14 @@ class DPMB_State():
         self.betas[colIdx] = newBetaD
 
     def modifyScore(self,scoreDelta):
-        if not np.isfinite(scoreDelta):
-            pdb.set_trace()
         self.score += scoreDelta
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
+        if len(self.cluster_list) == 0:
+            if save_str is not None:
+                pylab.figure()
+                pylab.savefig(save_str)
+            return
         which_plots = ["data","alpha","beta","cluster"] if which_plots is None else which_plots
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))
@@ -300,7 +322,7 @@ class DPMB_State():
         pylab.subplot(412)
         if "alpha" in which_plots or True:
             logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
-            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
             title_str = "alpha" if title_append is None else "alpha" + ": " + title_append
             ##fh = handle_lookup["alpha"]
             fh2 = hf.bar_helper(x=np.log10(grid),fh=fh,y=norm_prob,v_line=np.log10(self.alpha),title_str=title_str,which_id=1)
@@ -310,17 +332,17 @@ class DPMB_State():
         if "beta" in which_plots or True:
             beta_idx = 0
             logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
-            norm_prob = hf.log_conditional_to_norm_prob(logp_list)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
             title_str  = "Beta" if title_append is None else "Beta" + ": " + title_append
             ##fh = handle_lookup["beta"]
             fh3 = hf.bar_helper(x=np.log10(grid),y=norm_prob,fh=fh,v_line=np.log10(self.betas[beta_idx]),title_str=title_str,which_id=2)
             
         fh4 = None
         pylab.subplot(414)
-        if "cluster" in which_plots or True:
-            vector = self.vector_list[0]
+        if ("cluster" in which_plots or True) and len(self.vector_list)>1:
+            vector = list(self.vector_list)[0]
             cluster = vector.cluster
-            cluster_idx = self.getZIndices()[self.vector_list.index(vector)] ##ALWAYS GO THROUGH getZIndices
+            cluster_idx = self.getZIndices()[list(self.vector_list).index(vector)] ##ALWAYS GO THROUGH getZIndices
             ##
             # calculate the conditional
             cluster.deassign_vector(vector)
@@ -356,11 +378,16 @@ class DPMB_State():
                 # we need to put the singleton cluster's score at the end
                 sorted_scores[-1] = score_vec[-1]
 
-            norm_prob = hf.log_conditional_to_norm_prob(sorted_scores)
+            norm_prob = hf.log_conditional_to_norm_prob(np.array(sorted_scores))
             
             title_str  = "Cluster cond" if title_append is None else "Cluster cond" + ": " + title_append
             ##fh = handle_lookup["cluster"]
-            fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+            try:
+                fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+            except Exception, e:
+                pdb.set_trace()
+                print 1
+                
 
         if save_str is not None:
             pylab.savefig(save_str)
@@ -369,18 +396,18 @@ class DPMB_State():
 
 
 class Vector():
-    def __init__(self,cluster,data=None):
+    def __init__(self,random_state,cluster,data=None):
         if cluster is None:
             raise Exception("creating a vector without a cluster")
         
         self.cluster = cluster
         if data is None:
             # reconstitute theta from the sufficient statistics for the cluster right now
+            N_cluster = len(cluster.vector_list)
             num_heads_vec = cluster.column_sums
-            N_cluster = cluster.count()
             betas_vec = self.cluster.state.betas
-            thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
-            self.data = [nr.binomial(1, theta) for theta in thetas]
+            thetas = (num_heads_vec + betas_vec) / (N_cluster + 2.0 * betas_vec)
+            self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
         else:
             self.data = data
 
@@ -388,25 +415,25 @@ class Cluster():
     def __init__(self, state):
         self.state = state
         self.column_sums = np.zeros(self.state.num_cols)
-        self.vector_list = []
+        self.vector_list = od()
         
     def count(self):
         return len(self.vector_list)
 
     def assign_vector(self,vector):
-        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(scoreDelta)
         ##
-        self.vector_list.append(vector)
+        self.vector_list[vector] = None
         self.column_sums += vector.data
         vector.cluster = self
         
     def deassign_vector(self,vector):
         vector.cluster = None
         self.column_sums -= vector.data
-        self.vector_list.remove(vector)
+        self.vector_list.pop(vector)
         ##
-        scoreDelta,alpha_term,data_term = hf.cluster_vector_joint(vector,self,self.state)
+        scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
         self.state.modifyScore(-scoreDelta)
         if self.count() == 0:  ##must remove (self) cluster if necessary
             self.state.cluster_list.remove(self)

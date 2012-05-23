@@ -3,6 +3,9 @@ import copy
 import time
 from threading import Thread
 import datetime
+from numpy import array
+import sets
+import os
 ##
 import numpy as np
 import pylab
@@ -11,6 +14,12 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
+import Cloudless.examples.DPMB.PDPMB_State as pds
+reload(pds)
+import Cloudless.examples.DPMB.PDPMB as pdm
+reload(pdm)
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
 import Cloudless
 reload(Cloudless)
 import Cloudless.memo
@@ -222,7 +231,10 @@ def infer(run_spec):
     problem = gen_problem(dataset_spec)
     verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
-    data_subset_indices = run_spec.get("data_subset_indices",None)
+    num_nodes = run_spec.get("num_nodes",1)
+    hypers_every_N = run_spec.get("hypers_every_N",1)
+    time_seatbelt = run_spec.get("time_seatbelt",None)
+    ari_seatbelt = run_spec.get("ari_seatbelt",None)
     #
     if verbose_state:
         print "doing run: "
@@ -232,24 +244,37 @@ def infer(run_spec):
             else:
                 print "   " + str(k) + " ---- " + str(v)
     #
+    state_kwargs = {}
+    model_kwargs = {}
     print "initializing"
-    inference_state = ds.DPMB_State(dataset_spec["gen_seed"],
-                                    dataset_spec["num_cols"],
-                                    dataset_spec["num_rows"],
-                                    # these could be the state at the end of an inference run
-                                    init_alpha=run_spec["infer_init_alpha"],
-                                    init_betas=run_spec["infer_init_betas"],
-                                    init_z=run_spec["infer_init_z"],
-                                    # 
-                                    init_x = problem["xs"],
-                                    decanon_indices=decanon_indices,
-                                    data_subset_indices=data_subset_indices)
-    #
+    if num_nodes == 1:
+        state_type = ds.DPMB_State
+        model_type = dm.DPMB
+        state_kwargs = {"decanon_indices":decanon_indices}
+    else:
+        state_type = pds.PDPMB_State
+        model_type = pdm.PDPMB
+        state_kwargs = {"num_nodes":num_nodes}
+        model_kwargs = {"hypers_every_N":hypers_every_N}
+
+    inference_state = state_type(dataset_spec["gen_seed"],
+                                 dataset_spec["num_cols"],
+                                 dataset_spec["num_rows"],
+                                 init_alpha=run_spec["infer_init_alpha"],
+                                 init_betas=run_spec["infer_init_betas"],
+                                 init_z=run_spec["infer_init_z"],
+                                 init_x = problem["xs"],
+                                 **state_kwargs
+                                 )
+
     print "...initialized"
-    transitioner = dm.DPMB(inf_seed = run_spec["infer_seed"],
-                           state = inference_state,
-                           infer_alpha = run_spec["infer_do_alpha_inference"],
-                           infer_beta = run_spec["infer_do_betas_inference"])
+    transitioner = model_type(
+        inf_seed = run_spec["infer_seed"],
+        state = inference_state,
+        infer_alpha = run_spec["infer_do_alpha_inference"],
+        infer_beta = run_spec["infer_do_betas_inference"],
+        **model_kwargs
+        )
     #
     summaries = []
     summaries.append(
@@ -260,13 +285,6 @@ def infer(run_spec):
     #
     print "saved initialization"
     #
-    time_seatbelt = None
-    ari_seatbelt = None
-    if "time_seatbelt" in run_spec:
-        time_seatbelt = run_spec["time_seatbelt"]
-    if "ari_seatbelt" in run_spec:
-        ari_seatbelt = run_spec["ari_seatbelt"]
-    #
     last_valid_zs = None
     decanon_indices = None
     for i in range(run_spec["num_iters"]):
@@ -274,7 +292,7 @@ def infer(run_spec):
             time_seatbelt=time_seatbelt
             ,ari_seatbelt=ari_seatbelt
             ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
-        print "finished doing iteration" + str(i)
+        hf.printTS("finished doing iteration" + str(i))
         next_summary = transitioner.extract_state_summary(
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
@@ -284,19 +302,20 @@ def infer(run_spec):
             summaries[-1]["failed_info"] = next_summary
             break
         summaries.append(next_summary)
-        print "finished saving iteration" + str(i)
-        last_valid_zs = transitioner.state.getZIndices()
-        decanon_indices = transitioner.state.get_decanonicalizing_indices()
+        hf.printTS("finished saving iteration" + str(i))
+        if hasattr(transitioner.state,"getZIndices"):
+            last_valid_zs = transitioner.state.getZIndices()
+            decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs
     summaries[-1]["decanon_indices"] = decanon_indices
     return summaries
 
-def extract_problems_from_memo(asyncmemo):
-    from numpy import array
+def extract_dataset_specs_from_memo(asyncmemo):
     ALL_RUN_SPECS = [eval(key)[0] for key in asyncmemo.memo.keys()]
-    ALL_PROBLEM_STRS = dict(zip([str(run_spec["problem"]) for run_spec in ALL_RUN_SPECS],np.repeat(None,len(ALL_RUN_SPECS)))).keys()
-    ALL_PROBLEMS = [eval(problem_str) for problem_str in ALL_PROBLEM_STRS]
-    return ALL_PROBLEMS
+    ALL_DATASET_SPEC_STRS = [str(runspec["dataset_spec"]) for runspec in ALL_RUN_SPECS]
+    import sets
+    ALL_DATASET_SPECS = [eval(spec_str) for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
+    return ALL_DATASET_SPECS
 
 def pickle_asyncmemoize(asyncmemo,file_str):
     with open(file_str,"wb") as fh:
@@ -327,17 +346,111 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
         print "Done all jobs, memo pickled"
         return True
 
-def plot_measurement(memoized_infer, which_measurement, target_problem, by_time = True
-                     ,run_spec_filter=None,save_str=None,title_str=None,ylabel_str=None,legend_args=None
+def runspec_to_plotspec_bak(runspec):
+    linespec = {}
+    legendstr = ""
+    # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
+    if runspec["infer_do_alpha_inference"] and runspec["infer_do_betas_inference"]:
+        linespec["color"] = "red"
+        legendstr += "inf_a=T,inf_b=T"
+    elif runspec["infer_do_alpha_inference"] and not runspec["infer_do_betas_inference"]:
+        linespec["color"] = "green"
+        legendstr += "inf_a=T,inf_b=F"
+    elif not runspec["infer_do_alpha_inference"] and runspec["infer_do_betas_inference"]:
+        linespec["color"] = "magenta"
+        legendstr += "inf_a=F,inf_b=T"
+    else:
+        linespec["color"] = "blue"
+        legendstr += "inf_a=F,inf_b=F"
+    # linestyle for initialization
+    init_z = runspec["infer_init_z"]
+    if init_z == 1:
+        linespec["linestyle"] = "-"
+        legendstr += ";init=P"
+    elif init_z == "N":
+        linespec["linestyle"] = "--"
+        legendstr += ";init=N"
+    elif init_z == None:
+        linespec["linestyle"] = "-."
+        legendstr += ";init=1"
+    else:
+        raise Exception("invalid init_z" + str(init_z))
+    #
+    return linespec,legendstr
+
+def speclist_to_plotspecs(speclist,keylist):
+    # take a list of keys that you want know unique combinations of
+    colors = ["black","brown","green","red","blue","orange"]
+    linestyles = ["-","--","-."]
+    #
+    legendstrs = []
+    for spec in speclist:
+        curr_legendstr_list = []
+        for key in keylist:
+            value = spec.get(key,"ERR")
+            curr_legendstr_list.append(key+"="+str(value))
+        legendstrs.append(";".join(curr_legendstr_list))
+    #
+    unique_legendstrs = np.sort(list(sets.Set(legendstrs)))
+    legendstrs_lookup = dict(zip(unique_legendstrs,range(len(unique_legendstrs))))
+    #
+    linespecs = []
+    for legendstr in legendstrs:
+        legendstr_idx = legendstrs_lookup[legendstr]
+        linespec = {}
+        linespec["color"] = colors[legendstr_idx % len(colors)]
+        linespec["linestyle"] = linestyles[(legendstr_idx / len(colors)) % len(linestyles)]
+        linespecs.append(linespec)
+    #
+    return linespecs,legendstrs
+
+def runspec_to_plotspec(runspec):
+    linespec = {}
+    legendstr = ""
+    num_nodes = runspec.get("num_nodes",1)
+    every_N = runspec.get("hypers_every_N",1)
+    legendstr = "K="+str(num_nodes)
+    if num_nodes == 1:
+        linespec["color"] = "black"
+    elif every_N == 1:
+        linespec["color"] = "green"
+        legendstr += ";every_N=1"
+    elif every_N < num_nodes:
+        linespec["color"] = "red"
+        legendstr += ";1<every_N<K"
+    elif every_N == num_nodes:
+        linespec["color"] = "blue"
+        legendstr += ";every_N==K"
+    elif every_N > num_nodes:
+        linespec["color"] = "orange"
+        legendstr += ";every_N>K"
+    else:
+        linespec["color"] = "yellow"
+        legendstr += ";every_N???K"
+    linespec["linestyle"] = "-"
+    return linespec,legendstr
+
+def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
+                     ,by_time=True,run_spec_filter=None,save_str=None
+                     ,title_str=None,ylabel_str=None,legend_args=None
                      ,do_legend=True):
+
+    h_line = None
+    if which_measurement == "predictive":
+        problem = gen_problem(target_dataset_spec)
+        h_line = np.mean(problem["test_lls_under_gen"])
+    run_spec_filter = run_spec_filter if run_spec_filter is not None else (lambda x: True)
+    title_str = title_str if title_str is not None else ""
+    ylabel_str = ylabel_str if ylabel_str is not None else ""
+    legend_args = legend_args if legend_args is not None else {"ncol":2,"prop":{"size":"medium"}}
+
     matching_runs = []
     matching_summaries = []
-    #
     for (args, summaries) in memoized_infer.iter():
         run_spec = args[0]
-        if run_spec_filter is not None and not run_spec_filter(run_spec):
+        if not run_spec_filter(run_spec):
             continue
-        if str(run_spec["problem"]) == str(target_problem): ##FIXME: This is a hack, it should work without making str
+        if str(run_spec["dataset_spec"]) == str(target_dataset_spec):
             matching_runs.append(run_spec)
             matching_summaries.append(summaries)
     #
@@ -350,112 +463,106 @@ def plot_measurement(memoized_infer, which_measurement, target_problem, by_time 
             print res["failures"][0][1]
         raise Exception("No data to plot with these characteristics!")
     #
-    matching_measurements = []
-    matching_linespecs = []
-    matching_legendstrs = []
-    for (run, summary) in zip(matching_runs, matching_summaries):
-        try:
-            matching_measurements.append(extract_measurement(which_measurement, summary))
-        except Exception, e:
-            print e
-        #
-        linespec = {}
-        legendstr = ""
-        # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
-        if run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
-            linespec["color"] = "red"
-            legendstr += "inf_a=T,inf_b=T"
-        elif run["infer_do_alpha_inference"] and not run["infer_do_betas_inference"]:
-            linespec["color"] = "green"
-            legendstr += "inf_a=T,inf_b=F"
-        elif not run["infer_do_alpha_inference"] and run["infer_do_betas_inference"]:
-            linespec["color"] = "magenta"
-            legendstr += "inf_a=F,inf_b=T"
-        else:
-            linespec["color"] = "blue"
-            legendstr += "inf_a=F,inf_b=F"
-        # linestyle for initialization
-        init_z = run["infer_init_z"]
-        if init_z == 1:
-            linespec["linestyle"] = "-"
-            legendstr += ";init=P"
-        elif init_z == "N":
-            linespec["linestyle"] = "--"
-            legendstr += ";init=N"
-        elif init_z == None:
-            linespec["linestyle"] = "-."
-            legendstr += ";init=1"
-        else:
-            raise Exception("invalid init_z" + str(init_z))
-        #
-        matching_linespecs.append(linespec)
-        matching_legendstrs.append(legendstr)
-    # FIXME: enable plots. still need to debug timing ***urgent***
 
-    # unique_legendstrs = np.unique(matching_legendstrs)
-    # unique_linespecs = []
-    # for unique_legendstr in unique_legendstrs:
-    #     unique_linespecs.append(matching_linespecs.index(
+    matching_measurements = [extract_measurement(which_measurement,summary) 
+                             for summary in matching_summaries]
+    matching_linespecs,matching_legendstrs = speclist_to_plotspecs(matching_runs,["num_nodes","hypers_every_N"])
+
+    # matching_measurements = []
+    # matching_linespecs = []
+    # matching_legendstrs = []
+    # for (run, summary) in zip(matching_runs, matching_summaries):
+    #     matching_measurements.append(extract_measurement(which_measurement, summary))
+    #     linespec,legendstr = runspec_to_plotspec(run)
+    #     matching_linespecs.append(linespec)
+    #     matching_legendstrs.append(legendstr)
 
     pylab.figure()
     if do_legend:
         pylab.subplot(211)
     line_list = []
-    if by_time:
-        for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+    for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+        if by_time:
             xs = extract_time_elapsed_vs_iterations(summary)
-            fh = pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
-            pylab.xlabel("time (seconds)")
-            line_list.append(fh[0])
-    else:
-        for measurement,linespec in zip(matching_measurements,matching_linespecs):
-            fh = pylab.plot(measurement,color=linespec["color"], linestyle=linespec["linestyle"])
-            pylab.xlabel("iter")
-            line_list.append(fh[0])
-    #
-    if title_str is not None:
-        if type(title_str) is str:
-            pylab.title(title_str)
+            xlabel = "time (seconds)"
         else:
-            pylab.title(title_str[0])
-    if ylabel_str is not None:
-        pylab.ylabel(ylabel_str)
+            xs = range(len(summary))
+            xlabel = "iter"
+        fh = pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
+        line_list.append(fh[0])
+        if h_line is not None:
+            xlim = fh[0].get_axes().get_xlim()
+            pylab.hlines(h_line,*xlim,color="red",linewidth=3)
+
+    unique_legendstrs = []
+    unique_lines = []
+    legendstr_set = sets.Set()
+    for legendstr,line in zip(matching_legendstrs,line_list):
+        if legendstr not in legendstr_set:
+            legendstr_set.add(legendstr)
+            unique_legendstrs.append(legendstr)
+            unique_lines.append(line)
+    unique_lines = np.array(unique_lines)[np.argsort(unique_legendstrs)]
+    unique_legendstrs = np.sort(unique_legendstrs)
+
+    pylab.xlabel(xlabel)
+    pylab.title(title_str)
+    pylab.ylabel(ylabel_str)
     if do_legend:
         pylab.subplot(212)
-        if legend_args is None:
-            legend_args = {"ncol":2,"prop":{"size":"medium"}}
-        pylab.legend(line_list,matching_legendstrs,**legend_args)
+        pylab.legend(unique_lines,unique_legendstrs,**legend_args)
     ##pylab.subplots_adjust(hspace=.4)
     if save_str is not None:
         pylab.savefig(save_str)
+    pylab.close()
 
-def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True):
+def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True,save_dir=None):
     temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
     which_measurements = ["ari"] if which_measurements is None else which_measurements
+    save_dir = save_dir if save_dir is not None else os.path.expanduser("~/")
+    legend_args = {"ncol":1,"markerscale":2}
     #
-    for problem_idx,target_problem in enumerate(extract_problems_from_memo(memoized_infer)):
-        cluster_str = "clusters" + str(target_problem["dataset_spec"]["gen_z"][1]) ##
-        col_str = "cols" + str(target_problem["dataset_spec"]["num_cols"])
-        row_str = "rows" + str(target_problem["dataset_spec"]["num_rows"])
+    for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
+        cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1]) ## FIXME : presumes dataset_spec is always balanced
+        col_str = "cols" + str(target_dataset_spec["num_cols"])
+        row_str = "rows" + str(target_dataset_spec["num_rows"])
         config_str = "_".join([col_str,row_str,cluster_str])    
         #
         for which_measurement in which_measurements:
             try:
-                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter
-                                    ,save_str="_".join([which_measurement,config_str,"time.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
-                plot_measurement(memoized_infer, which_measurement, target_problem, run_spec_filter=run_spec_filter, by_time=False
-                                    ,save_str="_".join([which_measurement,config_str,"iter.png"]),title_str=[config_str,which_measurement],ylabel_str=which_measurement
-                                    ,legend_args={"ncol":2,"markerscale":2},do_legend=do_legend)
+                # by time
+                plot_measurement(memoized_infer
+                                 , which_measurement
+                                 , target_dataset_spec
+                                 , run_spec_filter=run_spec_filter
+                                 , by_time=True
+                                 , save_str=os.path.join(save_dir
+                                                         ,"_".join([which_measurement,config_str,"time.png"]))
+                                 , title_str=config_str
+                                 , ylabel_str=which_measurement
+                                 , legend_args=legend_args
+                                 , do_legend=do_legend)
+                # by iter
+                plot_measurement(memoized_infer
+                                 , which_measurement
+                                 , target_dataset_spec
+                                 , run_spec_filter=run_spec_filter
+                                 , by_time=False
+                                 , save_str=os.path.join(save_dir,
+                                                         "_".join([which_measurement,config_str,"iter.png"]))
+                                 , title_str=config_str
+                                 , ylabel_str=which_measurement
+                                 , legend_args=legend_args
+                                 , do_legend=do_legend)
             except Exception, e:
                 print e
-    #plot_measurement(memoized_infer, "predictive", target_problem)
 
 def extract_measurement(which_measurement, one_runs_data):
     # measurement can be:
-    # "predictive" FIXME
     if np.in1d(which_measurement,["num_clusters","ari","alpha","score"])[0]:
         return [summary[which_measurement] for summary in one_runs_data]
+    elif which_measurement == "predictive":
+        return [np.mean(summary["test_lls"]) for summary in one_runs_data]
     elif which_measurement == "mean_beta":
         return [np.mean(summary["betas"]) for summary in one_runs_data]
     else:
@@ -470,3 +577,32 @@ def extract_time_elapsed_vs_iterations(summary_seq):
         cumsum += iter_sum
         out.append(cumsum)    
     return out
+
+
+####
+
+def gen_default_run_spec():
+    dataset_spec = {}
+    dataset_spec["gen_seed"] = 0
+    dataset_spec["num_cols"] = 16
+    dataset_spec["num_rows"] = 32*32
+    dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
+    dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
+    dataset_spec["gen_z"] = ("balanced", 32)
+    dataset_spec["N_test"] = 128
+    ##
+    run_spec = {}
+    run_spec["dataset_spec"] = dataset_spec
+    run_spec["num_iters"] = 1000
+    run_spec["num_nodes"] = 1
+    run_spec["infer_seed"] = 0
+    run_spec["infer_init_alpha"] = 3.0
+    run_spec["infer_init_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
+    run_spec["infer_do_alpha_inference"] = True
+    run_spec["infer_do_betas_inference"] = True
+    run_spec["infer_init_z"] = None
+    run_spec["time_seatbelt"] = 1200
+    run_spec["ari_seatbelt"] = None
+    run_spec["verbose_state"] = False
+    #
+    return run_spec

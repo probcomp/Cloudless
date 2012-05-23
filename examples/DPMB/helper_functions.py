@@ -1,28 +1,53 @@
 import datetime,sys,pdb
 ##
+from numpy.random import RandomState
 import pylab
 import matplotlib
 import numpy as np
-import numpy.random as nr
 import scipy.special as ss
 ##
 import DPMB_State as ds
 
-# FIXME: do generate_from_prior test (to make Ryan happy)
+import pyximport
+pyximport.install()
+import pyx_functions as pf
 
+def transition_single_z(vector,random_state):
+    cluster = vector.cluster
+    state = cluster.state
+    #
+    vector.cluster.deassign_vector(vector)
+
+    score_vec,draw = pf.calculate_cluster_conditional(
+        state,vector,random_state.uniform())
+
+    # FIXME : printing score_vec to be able to compare 
+    # optimized and non-optimized output for correctness
+    if False:
+        if type(score_vec) == list:
+            print score_vec
+        else:
+            print score_vec.tolist()
+
+    cluster = None
+    if draw == len(state.cluster_list):
+        cluster = state.generate_cluster_assignment(force_new = True)
+    else:
+        cluster = state.cluster_list[draw]
+    cluster.assign_vector(vector)
+    
 ####################
 # PROBABILITY FUNCTIONS
-def renormalize_and_sample(logpstar_vec,verbose=False):
-    p_vec = log_conditional_to_norm_prob(logpstar_vec)
-    randv = nr.random()
-    for (i, p) in enumerate(p_vec):
-        if randv < p:
-            if verbose:
-                print " - hash of seed is " + str(hash(str(nr.get_state())))
-                print " - draw,probs: ",i,np.array(np.log(p_vec)).round(2)
-            return i
-        else:
-            randv = randv - p
+
+# deprecated : use pyx_functions optimized version instead
+# def renormalize_and_sample(random_state,logpstar_vec):
+#     p_vec = log_conditional_to_norm_prob(logpstar_vec)
+#     randv = random_state.uniform()
+#     for (i, p) in enumerate(p_vec):
+#         if randv < p:
+#             return i
+#         else:
+#             randv = randv - p
 
 def log_conditional_to_norm_prob(logp_list):
     maxv = max(logp_list)
@@ -32,49 +57,76 @@ def log_conditional_to_norm_prob(logp_list):
     return np.exp(logp_vec)
 
 def cluster_vector_joint(vector,cluster,state):
-    # FIXME: Is np.log(0.5) correct? (Probably, since it comes from symmetry plus beta_d < 1.0.) How does
-    # this relate to the idea that we mix out of all-in-one by first finding the prior over zs (by first
-    # washing out the effect of the data, by raising the betas so high that all clusters are nearly perfectly
-    # likely to be noisy)
     alpha = state.alpha
     numVectors = len(state.get_all_vectors())
-    if cluster is None or cluster.count() == 0:
-        ##if the cluster would be empty without the vector, then its a special case
+    if cluster is None or len(cluster.vector_list) == 0:
         alpha_term = np.log(alpha) - np.log(numVectors-1+alpha)
         data_term = state.num_cols*np.log(.5)
-        retVal =  alpha_term + data_term
     else:
         boolIdx = np.array(vector.data,dtype=type(True))
-        alpha_term = np.log(cluster.count()) - np.log(numVectors-1+alpha)
+        alpha_term = np.log(len(cluster.vector_list)) - np.log(numVectors-1+alpha)
         numerator1 = boolIdx * np.log(cluster.column_sums + state.betas)
-        numerator2 = (~boolIdx) * np.log(cluster.count() - cluster.column_sums + state.betas)
-        denominator = np.log(cluster.count() + 2*state.betas)
+        numerator2 = (~boolIdx) * np.log(len(cluster.vector_list) \
+                                             - cluster.column_sums + state.betas)
+        denominator = np.log(len(cluster.vector_list) + 2*state.betas)
         data_term = (numerator1 + numerator2 - denominator).sum()
-        retVal = alpha_term + data_term
-    if not np.isfinite(retVal):
-        pdb.set_trace()
-    if hasattr(state,"print_predictive") and state.print_predictive:
-        mean_p = np.exp(numerator1 + numerator2 - denominator).mean().round(2) if "numerator1" in locals() else .5
-        print retVal.round(2),alpha_term.round(2),data_term.round(2),state.vector_list.index(vector),state.cluster_list.index(cluster),mean_p
-    if hasattr(state,"debug_predictive") and state.debug_predictive:
-        pdb.set_trace()
-        temp = 1 ## if this isn't here, debug start in return and can't see local variables?
+    retVal = alpha_term + data_term
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    lnProdGammas = sum([ss.gammaln(cluster.count()) for cluster in state.cluster_list])
-    lnPdf = lambda alpha: (ss.gammaln(alpha) + len(state.cluster_list)*np.log(alpha)
-                           - ss.gammaln(alpha+len(state.vector_list)) + lnProdGammas)
+    # lnProdGammas = sum([ss.gammaln(len(cluster.vector_list)) 
+    #                     for cluster in state.cluster_list])
+    lnPdf = lambda alpha: ss.gammaln(alpha) \
+        + len(state.cluster_list)*np.log(alpha) \
+        - ss.gammaln(alpha+len(state.vector_list))
     return lnPdf
 
 def create_beta_lnPdf(state,col_idx):
     S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
-    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] for cluster in state.cluster_list]
+    R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
+                  for cluster in state.cluster_list]
     beta_d = state.betas[col_idx]
     lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
-                                - ss.gammaln(S+R+2*beta_d) for S,R in zip(S_list,R_list)])
+                                - ss.gammaln(S+R+2*beta_d) 
+                                for S,R in zip(S_list,R_list)])
     return lnPdf
+
+def slice_sample_alpha(state,init=None):
+    logprob = create_alpha_lnPdf(state)
+    lower = state.alpha_min
+    upper = state.alpha_max
+    init = state.alpha if init is None else init
+    slice = np.log(state.random_state.uniform()) + logprob(init)
+    while True:
+        a = state.random_state.uniform()*(upper-lower) + lower
+        if slice < logprob(a):
+            break;
+        elif a < init:
+            lower = a
+        elif a > init:
+            upper = a
+        else:
+            raise Exception('Slice sampler for alpha shrank to zero.')
+    return a
+
+def slice_sample_beta(state,col_idx,init=None):
+    logprob = create_beta_lnPdf(state,col_idx)
+    lower = state.beta_min
+    upper = state.beta_max
+    init = state.betas[col_idx] if init is None else init
+    slice = np.log(state.random_state.uniform()) + logprob(init)
+    while True:
+        a = state.random_state.uniform()*(upper-lower) + lower
+        if slice < logprob(a):
+            break;
+        elif a < init:
+            lower = a
+        elif a > init:
+            upper = a
+        else:
+            raise Exception('Slice sampler for beta shrank to zero.')
+    return a
 
 def calc_alpha_conditional(state):
     ##save original value, should be invariant
@@ -97,46 +149,41 @@ def calc_beta_conditional(state,col_idx):
     lnPdf = create_beta_lnPdf(state,col_idx)
     grid = state.get_beta_grid()
     logp_list = []
-    ##
     original_beta = state.betas[col_idx]
-    for test_beta in grid:
-        state.removeBetaD(lnPdf,col_idx)
-        state.setBetaD(lnPdf,col_idx,test_beta)
-        logp_list.append(state.score)
-    ##put everything back how you found it
-    state.removeBetaD(lnPdf,col_idx)
-    state.setBetaD(lnPdf,col_idx,original_beta)
     ##
+    state.removeBetaD(lnPdf,col_idx)
+
+    logp_arr = pf.calc_beta_conditional_helper(
+        state,grid,col_idx)
+    logp_list = logp_arr.tolist()[0]
+    ##
+    state.setBetaD(lnPdf,col_idx,original_beta)
     return logp_list,lnPdf,grid
 
 def calculate_cluster_conditional(state,vector):
     ##vector should be unassigned
-    ##new_cluster is auto appended to cluster list
-    ##and pops off when vector is deassigned
-
-    # FIXME: if there is already an empty cluster (either because deassigning didn't clear it out,
-    #        or for some other reason), then we'll have a problem here. maybe a crash, maybe just
-    #        incorrect probabilities.
-    new_cluster = ds.Cluster(state)
-    state.cluster_list.append(new_cluster)
-    ##
     conditionals = []
-    for cluster in state.cluster_list:
-        cluster.assign_vector(vector)
-        conditionals.append(state.score)
-        cluster.deassign_vector(vector)
-    ##
+    for cluster in state.cluster_list + [None]:
+        scoreDelta,alpha_term,data_term = cluster_vector_joint(
+            vector,cluster,state)
+        conditionals.append(scoreDelta + state.score)
+    return conditionals
+
+def calculate_node_conditional(pstate,cluster):
+    conditionals = pstate.mus
     return conditionals
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
-    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) - ss.gammaln(clusters*points_per_cluster+alpha) for alpha in range(1,max_alpha)])
+    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) 
+                       - ss.gammaln(clusters*points_per_cluster+alpha) 
+                       for alpha in range(1,max_alpha)])
     return mle
 
-def mhSample(initVal,nSamples,lnPdf,sampler):
+def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
     samples = [initVal]
     priorSample = initVal
     for counter in range(nSamples):
-        unif = nr.rand()
+        unif = random_state.uniform()
         proposal = sampler(priorSample)
         thresh = np.exp(lnPdf(proposal) - lnPdf(priorSample)) ## presume symmetric
         if np.isfinite(thresh) and unif < min(1,thresh):
@@ -148,10 +195,12 @@ def mhSample(initVal,nSamples,lnPdf,sampler):
 
 ####################
 # UTILITY FUNCTIONS
-def plot_data(data,fh=None,h_lines=None,title_str=None,interpolation="nearest",**kwargs):
+def plot_data(data,fh=None,h_lines=None,title_str=None
+              ,interpolation="nearest",**kwargs):
     if fh is None:
         fh = pylab.figure()
-    pylab.imshow(data,interpolation=interpolation,cmap=matplotlib.cm.binary,**kwargs)
+    pylab.imshow(data,interpolation=interpolation
+                 ,cmap=matplotlib.cm.binary,**kwargs)
     if h_lines is not None:
         xlim = fh.get_axes()[0].get_xlim()
         pylab.hlines(h_lines-.5,*xlim,color="red",linewidth=3)
@@ -164,7 +213,8 @@ def bar_helper(x,y,fh=None,v_line=None,title_str=None,which_id=0):
         fh = pylab.figure()
     pylab.bar(x,y,width=min(np.diff(x)))
     if v_line is not None:
-        pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim(),color="red",linewidth=3)
+        pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim()
+                     ,color="red",linewidth=3)
     if title_str is not None:
         pylab.ylabel(title_str)
     return fh
@@ -174,21 +224,29 @@ def printTS(printStr):
     sys.stdout.flush()
 
 def listCount(listIn):
-    return dict([(currValue,sum(np.array(listIn)==currValue)) for currValue in np.unique(listIn)])
+    return dict([(currValue,sum(np.array(listIn)==currValue)) 
+                 for currValue in np.unique(listIn)])
 
-
+def delta_since(start_dt):
+    try: ##older datetime modules don't have .total_seconds()
+        delta = (datetime.datetime.now()-start_dt).total_seconds()
+    except Exception, e:
+        delta = (datetime.datetime.now()-start_dt).seconds()
+    return delta
+    
 ####################
 # SEED FUNCTIONS
-def set_seed(seed):
+def generate_random_state(seed):
+    random_state = RandomState()
     if type(seed) == tuple:
-        nr.set_state(seed)
+        random_state.set_state(seed)
     elif type(seed) == int:
-        nr.seed(seed)
+        random_state.seed(seed)
+    elif type(seed) == RandomState:
+        random_state = seed
     else:
-        raise Exception("Bad argument to set_seed: " + str(seed)) 
-
-def get_seed():
-    return nr.get_state()
+        raise Exception("Bad argument to generate_random_state: " + str(seed)) 
+    return random_state
 
 ####################
 # ARI FUNCTIONS
