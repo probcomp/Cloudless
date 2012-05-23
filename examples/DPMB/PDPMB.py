@@ -16,6 +16,11 @@ reload(dm)
 #
 import pdb
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+
+
 class PDPMB():
     def __init__(self,inf_seed,state,infer_alpha
                  ,infer_beta,hypers_every_N=1):
@@ -67,7 +72,8 @@ class PDPMB():
         self.state.cluster_list = self.state.get_cluster_list()
         #
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
-        alpha_idx = hf.renormalize_and_sample(self.random_state, logp_list)
+        alpha_idx = pf.renormalize_and_sample(
+            np.array(logp_list),self.random_state.uniform())
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         # empty everything that was just used to mimic DPMB_State
@@ -86,7 +92,8 @@ class PDPMB():
                 break
 
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
-            beta_idx = hf.renormalize_and_sample(self.random_state, logp_list)
+            beta_idx = pf.renormalize_and_sample(
+                np.array(logp_list),self.random_state.uniform())
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
         # empty everything that was just used to mimic DPMB_State
@@ -97,7 +104,8 @@ class PDPMB():
 
     def transition_single_node_assignment(self, cluster):
         node_log_prob_list = hf.calculate_node_conditional(self.state,cluster)
-        draw = hf.renormalize_and_sample(self.random_state, node_log_prob_list)
+        draw = pf.renormalize_and_sample(
+            np.array(node_log_prob_list),self.random_state.uniform())
         to_state = self.state.model_list[draw].state
         self.state.move_cluster(cluster,to_state)
 
@@ -190,7 +198,7 @@ class PDPMB():
             ,"betas":self.state.betas.copy()
             ,"score":psuedo_state.score
             ,"num_clusters":len(psuedo_state.cluster_list)
-            ,"cluster_counts":[cluster.count() 
+            ,"cluster_counts":[len(cluster.vector_list)
                                for cluster in psuedo_state.cluster_list]
             ,"timing":self.state.get_timing()
             ,"inf_seed":self.random_state.get_state()
