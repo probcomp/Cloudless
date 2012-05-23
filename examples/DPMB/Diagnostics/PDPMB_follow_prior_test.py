@@ -131,10 +131,11 @@ if True:
 
         if do_plots:
             save_str = "state_"+str(true_iter_num)+"_parent"
-            pmodel.state.plot(show=False,save_str=save_str)
-            for model_idx,model in enumerate(pmodel.state.model_list):
-                save_str = "state_"+str(true_iter_num)+"_child_"+str(model_idx)
-                pmodel.state.model_list[model_idx].state.plot(show=False,save_str=save_str)
+            if False:
+                pmodel.state.plot(show=False,save_str=save_str)
+                for model_idx,model in enumerate(pmodel.state.model_list):
+                    save_str = "state_"+str(true_iter_num)+"_child_"+str(model_idx)
+                    pmodel.state.model_list[model_idx].state.plot(show=False,save_str=save_str)
             #
             pylab.figure()
             pylab.subplot(411)
