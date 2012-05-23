@@ -407,10 +407,7 @@ class Vector():
             N_cluster = cluster.count()
             betas_vec = self.cluster.state.betas
             thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
-            # FIXME : why does changing from list to array change results?
-            # self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
-            self.data = [random_state.binomial(1, theta) for theta in thetas]
-            # self.data = np.array(self.data)
+            self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
         else:
             self.data = data
 
