@@ -16,6 +16,10 @@ reload(hf)
 ##
 import pdb
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+
 
 class PDPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows
@@ -68,7 +72,8 @@ class PDPMB_State():
         # deal out data to states
         node_data_indices = [[] for node_idx in range(self.num_nodes)]
         for data_idx in range(len(self.vector_list)):
-            draw = hf.renormalize_and_sample(self.random_state,np.log(self.mus))
+            draw = pf.renormalize_and_sample(
+                np.log(self.mus),self.random_state.uniform())
             node_data_indices[draw].append(data_idx)
         # now create the child states
         self.model_list = []
