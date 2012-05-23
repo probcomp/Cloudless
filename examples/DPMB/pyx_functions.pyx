@@ -17,7 +17,7 @@ cdef extern from "math.h":
     double lgamma(double)
 
 @cython.boundscheck(False)
-cdef int renormalize_and_sample(
+cpdef int renormalize_and_sample(
     np.ndarray[np.float64_t,ndim=1] conditionals
     ,double randv):
     #
