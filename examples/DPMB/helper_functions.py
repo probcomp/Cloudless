@@ -25,7 +25,7 @@ def transition_single_z(vector,random_state):
 
     # FIXME : printing score_vec to be able to compare 
     # optimized and non-optimized output for correctness
-    if True:
+    if False:
         if type(score_vec) == list:
             print score_vec
         else:
