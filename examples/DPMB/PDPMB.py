@@ -101,19 +101,18 @@ class PDPMB():
         to_state = self.state.model_list[draw].state
         self.state.move_cluster(cluster,to_state)
 
-    def get_cluster_list_list(self):
-        cluster_list_list = [] #all the clusters in the model
+    def get_global_cluster_list(self):
+        global_cluster_list = [] #all the clusters in the model
         for model in self.state.model_list:
-            cluster_list_list.append(model.state.cluster_list[:])
-        return cluster_list_list
+            global_cluster_list.extend(model.state.cluster_list[:])
+        return global_cluster_list
 
     def transition_node_assignments(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
-        cluster_list_list = self.get_cluster_list_list()
+        global_cluster_list = self.get_global_cluster_list()
 
-        for cluster_list in cluster_list_list[:]:
-            for cluster in cluster_list[:]:
-                self.transition_single_node_assignment(cluster)
+        for cluster in global_cluster_list[:]:
+            self.transition_single_node_assignment(cluster)
 
         self.state.timing["nodes"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["nodes"]
