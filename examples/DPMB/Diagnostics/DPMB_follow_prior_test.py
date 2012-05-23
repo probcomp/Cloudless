@@ -89,7 +89,7 @@ if True and "model" not in locals():
     INIT_BETAS = None
     INIT_X = None
     EVERY_N = 1
-    NUM_ITERS = 7000
+    NUM_ITERS = 4000
     ALPHA_MIN = 1E-2
     ALPHA_MAX = 1E4
     state = ds.DPMB_State(
@@ -113,9 +113,12 @@ if True and "model" not in locals():
 if True:
     for iter_num in range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
+        print "true_iter_num : " + str(true_iter_num)
 
-        save_str = "state_"+str(true_iter_num)+"_0"
-        model.state.plot(show=False,save_str=save_str)
+        do_plots = true_iter_num % 100 == 0
+        if do_plots:
+            save_str = "state_"+str(true_iter_num)+"_0"
+            model.state.plot(show=False,save_str=save_str)
 
         transition_func_list = [model.transition_beta,model.transition_z,model.transition_alpha]
         transition_func_list = nr.permutation(transition_func_list)
@@ -123,8 +126,9 @@ if True:
             func_str = re.findall("method DPMB.(\w+)",str(transition_func_handle))[0]
             print func_str
             transition_func_handle()
-            save_str = "state_"+str(true_iter_num)+"_"+str(func_idx+1)+"_"+str(func_str)
-            model.state.plot(show=False,save_str=save_str,title_append=func_str)
+            if do_plots:
+                save_str = "state_"+str(true_iter_num)+"_"+str(func_idx+1)+"_"+str(func_str)
+                model.state.plot(show=False,save_str=save_str,title_append=func_str)
 
         # model.transition(random_order=True)
         # model.state.plot()
@@ -156,24 +160,27 @@ if True:
 
         print "Time delta: ",datetime.datetime.now()-start_ts
 
-        pylab.figure()
-        pylab.subplot(411)
-        pylab.hist(np.log10(chain_alpha_list),normed=True)
-        pylab.title("alpha (log10)")
-        pylab.subplot(412)
-        pylab.hist(np.log10(chain_beta_0_list),normed=True)
-        pylab.title("beta_0 (log10)")
-        pylab.subplot(413)
-        pylab.hist(chain_cluster_0_count_list,normed=True)
-        pylab.title("chain_cluster_0_count_list")
-        pylab.subplot(414)
-        pylab.hist(chain_num_clusters_list,normed=True)
-        pylab.title("num_clusters")
-        #
-        pylab.subplots_adjust(hspace=.5)
-        pylab.savefig("hist_" + str(true_iter_num))
-        # temp = raw_input("blocking: ---- ")
+        if do_plots:
+            pylab.figure()
+            pylab.subplot(411)
+            pylab.hist(np.log10(chain_alpha_list),normed=True)
+            pylab.title("alpha (log10)")
+            pylab.subplot(412)
+            pylab.hist(np.log10(chain_beta_0_list),normed=True)
+            pylab.title("beta_0 (log10)")
+            pylab.subplot(413)
+            pylab.hist(chain_cluster_0_count_list,normed=True)
+            pylab.title("chain_cluster_0_count_list")
+            pylab.subplot(414)
+            pylab.hist(chain_num_clusters_list,normed=True)
+            pylab.title("num_clusters")
+            #
+            pylab.subplots_adjust(hspace=.5)
+            pylab.savefig("hist_" + str(true_iter_num))
+            # temp = raw_input("blocking: ---- ")
+        
         pylab.close('all')
+
         gc.collect()
 
     import cPickle
