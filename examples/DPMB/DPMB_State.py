@@ -403,10 +403,10 @@ class Vector():
         self.cluster = cluster
         if data is None:
             # reconstitute theta from the sufficient statistics for the cluster right now
+            N_cluster = len(cluster.vector_list)
             num_heads_vec = cluster.column_sums
-            N_cluster = cluster.count()
             betas_vec = self.cluster.state.betas
-            thetas = [float(num_heads_d + beta_d) / float(N_cluster + 2.0 * beta_d) for (num_heads_d, beta_d) in zip(num_heads_vec, betas_vec)]
+            thetas = (num_heads_vec + betas_vec) / (N_cluster + 2.0 * betas_vec)
             self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
         else:
             self.data = data
