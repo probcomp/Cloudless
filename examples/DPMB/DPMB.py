@@ -59,7 +59,7 @@ class DPMB():
         ##
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
         alpha_idx = pf.renormalize_and_sample(
-            logp_list,self.random_state.uniform())
+            np.array(logp_list),self.random_state.uniform())
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
@@ -77,7 +77,7 @@ class DPMB():
 
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
             beta_idx = pf.renormalize_and_sample(
-                logp_list,self.random_state.uniform())
+                np.array(logp_list),self.random_state.uniform())
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
