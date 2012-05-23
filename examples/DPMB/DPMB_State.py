@@ -110,13 +110,13 @@ class DPMB_State():
         elif force_last:
             draw = max(0,len(self.cluster_list) - 1)
         else:
-            unnorm_vec = [cluster.count() 
+            unnorm_vec = [len(cluster.vector_list) 
                           for cluster in self.cluster_list
                           ] + [self.alpha]
-            draw = hf.renormalize_and_sample(
+            draw = pf.renormalize_and_sample(
                 #FIXME : should this be model's inference random_state
                 #        after initial state generation?
-                self.random_state, np.log(unnorm_vec))
+                np.log(unnorm_vec),self.random_state.uniform())
 
         if draw == len(self.cluster_list):
             # create a new cluster and assign it
