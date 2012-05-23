@@ -74,13 +74,15 @@ class PDPMB_State():
         self.model_list = []
         gen_seed_list = [int(x) for x in self.random_state.tomaxint(num_nodes)]
         inf_seed_list = [int(x) for x in self.random_state.tomaxint(num_nodes)]
+
+        temp_vector_list = list(self.vector_list)
         for state_idx,(gen_seed,inf_seed) in enumerate(
             zip(gen_seed_list,inf_seed_list)):
 
             node_data = []
             alpha_factor = 1.0 / self.num_nodes
             for index in node_data_indices[state_idx]:
-                node_data.append(self.vector_list[index].data)
+                node_data.append(temp_vector_list[index].data)
 
             state = ds.DPMB_State(gen_seed=gen_seed
                                   ,num_cols=self.num_cols
@@ -123,7 +125,7 @@ class PDPMB_State():
 
     def removeAlpha(self,lnPdf):
         self.alpha = None
-        self.score = None
+        self.score = 0.0
 
     def setAlpha(self,lnPdf,test_alpha):
         self.alpha = test_alpha
@@ -136,7 +138,7 @@ class PDPMB_State():
 
     def removeBetaD(self,lnPdf,col_idx):
         self.betas[col_idx] = None
-        self.score = None
+        self.score = 0.0
         
     def setBetaD(self,lnPdf,col_idx,beta_val):
         beta_val = np.clip(beta_val,self.clip_beta[0],self.clip_beta[1])
@@ -179,7 +181,7 @@ class PDPMB_State():
     def pop_cluster(self,cluster):
         data_list = []
         state = cluster.state
-        for vector in cluster.vector_list[:]:
+        for vector in list(cluster.vector_list)[:]:
             data_list.append(vector.data)
             state.remove_vector(vector)
         return data_list

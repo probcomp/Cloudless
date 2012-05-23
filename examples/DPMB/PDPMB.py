@@ -91,6 +91,7 @@ class PDPMB():
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
         # empty everything that was just used to mimic DPMB_State
         self.state.cluster_list = None
+        self.state.score = None
         self.state.timing["betas"] = hf.delta_since(start_dt)
         self.state.timing["run_sum"] += self.state.timing["betas"]
 
