@@ -23,7 +23,7 @@ reload(pdm)
 #   number of datapoints in cluster 0 (how to determine vector 0?
 #   total number of clusters
 
-run_spec = rf.gen_run_spec()
+run_spec = rf.gen_default_run_spec()
 dataset_spec = run_spec["dataset_spec"]
 
 if False:
@@ -78,7 +78,7 @@ if True and "pmodel" not in locals():
 
     start_ts = datetime.datetime.now()
     EVERY_N = 1
-    NUM_ITERS = 1000
+    NUM_ITERS = 10000
     INIT_X = None
     NUM_COLS = 8
     NUM_ROWS = 32
@@ -86,7 +86,7 @@ if True and "pmodel" not in locals():
     ALPHA_MAX = 1E4
     ALPHA_MIN = 1E-1
     pstate = pds.PDPMB_State(
-        gen_seed=0
+        gen_seed=1
         ,num_cols=NUM_COLS
         ,num_rows=NUM_ROWS
         ,num_nodes=NUM_NODES
@@ -97,7 +97,7 @@ if True and "pmodel" not in locals():
         ,alpha_min = ALPHA_MIN
         )
     pmodel = pdm.PDPMB(
-        inf_seed=0
+        inf_seed=1
         ,state=pstate
         ,infer_alpha = True
         ,infer_beta = True)
@@ -111,8 +111,9 @@ if True and "pmodel" not in locals():
 
 if True:
 
-    for iter_num in range(200): # range(NUM_ITERS):
+    for iter_num in range(NUM_ITERS):
         true_iter_num = len(chain_alpha_list)
+        do_plots = true_iter_num % 100 == 0
         print "iter num : " + str(true_iter_num)
         pmodel.transition_x()
         pmodel.transition()
@@ -128,33 +129,35 @@ if True:
 
         data_size_list.append([len(model.state.vector_list) for model in pmodel.state.model_list])
 
-        save_str = "state_"+str(true_iter_num)+"_parent"
-        pmodel.state.plot(show=False,save_str=save_str)
-        for model_idx,model in enumerate(pmodel.state.model_list):
-            save_str = "state_"+str(true_iter_num)+"_child_"+str(model_idx)
-            pmodel.state.model_list[model_idx].state.plot(show=False,save_str=save_str)
+        if do_plots:
+            save_str = "state_"+str(true_iter_num)+"_parent"
+            pmodel.state.plot(show=False,save_str=save_str)
+            for model_idx,model in enumerate(pmodel.state.model_list):
+                save_str = "state_"+str(true_iter_num)+"_child_"+str(model_idx)
+                pmodel.state.model_list[model_idx].state.plot(show=False,save_str=save_str)
+            #
+            pylab.figure()
+            pylab.subplot(411)
+            pylab.hist(np.log10(chain_alpha_list),normed=True)
+            pylab.title("alpha (log10)")
+            #
+            pylab.subplot(412)
+            pylab.hist(np.log10(chain_beta_0_list),normed=True)
+            pylab.title("beta_0 (log10)")
+            #
+            pylab.subplot(413)
+            pylab.title("num_iters: " + str(true_iter_num))
+            # pylab.hist(chain_cluster_0_count_list,normed=True)
+            # pylab.title("chain_cluster_0_count_list")
+            # pylab.savefig("chain_cluster_0_count_list.png")
+            #
+            pylab.subplot(414)
+            pylab.hist(chain_num_clusters_list,normed=True)
+            pylab.title("num_clusters")
+            #
+            pylab.subplots_adjust(hspace=.5)
+            pylab.savefig("pdpmb_hist_" + str(true_iter_num))
 
-        pylab.figure()
-        pylab.subplot(411)
-        pylab.hist(np.log10(chain_alpha_list),normed=True)
-        pylab.title("alpha (log10)")
-        #
-        pylab.subplot(412)
-        pylab.hist(np.log10(chain_beta_0_list),normed=True)
-        pylab.title("beta_0 (log10)")
-        #
-        pylab.subplot(413)
-        pylab.title("num_iters: " + str(true_iter_num))
-        # pylab.hist(chain_cluster_0_count_list,normed=True)
-        # pylab.title("chain_cluster_0_count_list")
-        # pylab.savefig("chain_cluster_0_count_list.png")
-        #
-        pylab.subplot(414)
-        pylab.hist(chain_num_clusters_list,normed=True)
-        pylab.title("num_clusters")
-        #
-        pylab.subplots_adjust(hspace=.5)
-        pylab.savefig("pdpmb_hist_" + str(true_iter_num))
         pylab.close('all')
         gc.collect()
 
