@@ -11,6 +11,10 @@ reload(hf)
 ##
 import pdb
 
+import pyximport
+pyximport.install()
+import pyx_functions as pf
+
 
 class DPMB():
     def __init__(self,inf_seed,state,infer_alpha,infer_beta):
@@ -54,7 +58,8 @@ class DPMB():
             return # don't transition
         ##
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
-        alpha_idx = hf.renormalize_and_sample(self.random_state, logp_list)
+        alpha_idx = pf.renormalize_and_sample(
+            logp_list,self.random_state.uniform())
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
@@ -71,7 +76,8 @@ class DPMB():
                 break
 
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
-            beta_idx = hf.renormalize_and_sample(self.random_state, logp_list)
+            beta_idx = pf.renormalize_and_sample(
+                logp_list,self.random_state.uniform())
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
@@ -109,7 +115,7 @@ class DPMB():
         # debug print out states:
         if self.state.verbose:
             # print " --- " + str(self.state.getZIndices())
-            print "     " + str([cluster.count() 
+            print "     " + str([len(cluster.vector_list) 
                                  for cluster in self.state.cluster_list])
         ##
         self.state.timing["zs"] = hf.delta_since(start_dt)
@@ -198,7 +204,7 @@ class DPMB():
             ,"betas":self.state.betas.copy()
             ,"score":self.state.score
             ,"num_clusters":len(self.state.cluster_list)
-            ,"cluster_counts":[cluster.count() 
+            ,"cluster_counts":[len(cluster.vector_list) 
                                for cluster in self.state.cluster_list]
             ,"timing":self.state.get_timing()
             ,"inf_seed":self.random_state.get_state()
