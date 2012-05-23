@@ -14,6 +14,8 @@ import pyximport
 pyximport.install()
 import pyx_functions as pf
 
+from collections import OrderedDict as od
+
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
@@ -37,7 +39,7 @@ class DPMB_State():
         ##
         self.score = 0.0 #initially empty score
         self.cluster_list = [] #all the Cluster s in the model
-        self.vector_list = {} #contains all added (possibly unassigned) vectors, in order
+        self.vector_list = od() #contains all added (possibly unassigned) vectors, in order
         
         # now deal with init_z and init_x specs:
 
@@ -416,7 +418,7 @@ class Cluster():
     def __init__(self, state):
         self.state = state
         self.column_sums = np.zeros(self.state.num_cols)
-        self.vector_list = {}
+        self.vector_list = od()
         
     def count(self):
         return len(self.vector_list)
