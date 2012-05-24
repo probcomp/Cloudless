@@ -16,6 +16,7 @@ base_dir = "/usr/local/Cloudless/examples/DPMB/Diagnostics/"
 pkl_file_str = "bigger_mixed_pickled_jobs.pkl"
 
 if len(sys.argv) > 1:
+    base_dir = ""
     pkl_file_str = sys.argv[1]
 
 which_measurements=["predictive","ari","num_clusters","score"]
