@@ -47,7 +47,7 @@ class DPMB_State():
         #        results for the convergence of the sampler
         #        Gibbs-type will require a special test for init_x not None and
         #        init_z is None (have data but not cluster assignments)
-        for R in range(num_rows):
+        for R in xrange(num_rows):
             cluster = None
             if init_z is None:
                 cluster = self.generate_cluster_assignment()
@@ -59,8 +59,7 @@ class DPMB_State():
                 num_clusters = init_z[1]
                 mod_val = num_rows / num_clusters
                 if mod_val == 0 : 
-                    import pdb
-                    pdb.set_trace()
+                    raise Exception("num_rows not integer multiple of num_clusters")
                 if R % mod_val == 0:
                     # create a new cluster
                     cluster = self.generate_cluster_assignment(force_new=True)
@@ -172,7 +171,7 @@ class DPMB_State():
         xs = []
         lls = []
         #
-        for i in range(N_test):
+        for i in xrange(N_test):
             test_vec = self.generate_vector()
             xs.append(test_vec.data)
             self.remove_vector(test_vec)
@@ -370,7 +369,7 @@ class DPMB_State():
             # it is missing
 
             # move the scores according to the ordering we've found
-            sorted_scores = [0 for x in range(len(score_vec))]
+            sorted_scores = [0 for x in xrange(len(score_vec))]
             for (i, cluster) in enumerate(self.cluster_list):
                 sorted_scores[cluster_ids[cluster]] = score_vec[i]
                 
