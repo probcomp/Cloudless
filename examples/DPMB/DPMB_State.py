@@ -259,25 +259,26 @@ class DPMB_State():
 
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
-        self.modifyScore(-scoreDelta)
+        self.score += -scoreDelta
 
     def setAlpha(self,lnPdf,alpha):
         scoreDelta = lnPdf(alpha)
-        self.modifyScore(scoreDelta)        
+        self.score += scoreDelta
         self.alpha = alpha
 
     def removeBetaD(self,lnPdf,colIdx):
         scoreDelta = lnPdf(self.betas[colIdx])
-        self.modifyScore(-scoreDelta)        
+        self.score += -scoreDelta
 
     def setBetaD(self,lnPdf,colIdx,newBetaD):
         newBetaD = np.clip(newBetaD,self.clip_beta[0],self.clip_beta[1])
         scoreDelta = lnPdf(newBetaD)
-        self.modifyScore(scoreDelta)        
+        self.score += scoreDelta
         self.betas[colIdx] = newBetaD
 
-    def modifyScore(self,scoreDelta):
-        self.score += scoreDelta
+    # directly modify score to avoid function overhead
+    # def modifyScore(self,scoreDelta):
+    #     self.score += scoreDelta
 
     def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
         if len(self.cluster_list) == 0:
@@ -421,7 +422,7 @@ class Cluster():
 
     def assign_vector(self,vector):
         scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
-        self.state.modifyScore(scoreDelta)
+        self.state.score += scoreDelta
         ##
         self.vector_list[vector] = None
         self.column_sums += vector.data
@@ -433,7 +434,7 @@ class Cluster():
         self.vector_list.pop(vector)
         ##
         scoreDelta,alpha_term,data_term = pf.cluster_vector_joint(vector,self,self.state)
-        self.state.modifyScore(-scoreDelta)
-        if self.count() == 0:  ##must remove (self) cluster if necessary
+        self.state.score += -scoreDelta
+        if len(self.vector_list) == 0: # must remove (self) cluster if necessary
             self.state.cluster_list.remove(self)
             self.state = None
