@@ -347,7 +347,8 @@ class DPMB_State():
             # calculate the conditional
             cluster.deassign_vector(vector)
 
-            score_vec = hf.calculate_cluster_conditional(self,vector)
+            score_vec = pf.calculate_cluster_conditional(
+                self,vector,self.random_state.uniform())
             # score_vec is a list of scores, in the order of cluster_list.
             
             if cluster.state is None: ##handle singleton

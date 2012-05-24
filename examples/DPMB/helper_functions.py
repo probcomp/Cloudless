@@ -160,14 +160,15 @@ def calc_beta_conditional(state,col_idx):
     state.setBetaD(lnPdf,col_idx,original_beta)
     return logp_list,lnPdf,grid
 
-def calculate_cluster_conditional(state,vector):
-    ##vector should be unassigned
-    conditionals = []
-    for cluster in state.cluster_list + [None]:
-        scoreDelta,alpha_term,data_term = cluster_vector_joint(
-            vector,cluster,state)
-        conditionals.append(scoreDelta + state.score)
-    return conditionals
+# deprecated, use pyx_functions version
+# def calculate_cluster_conditional(state,vector):
+#     ##vector should be unassigned
+#     conditionals = []
+#     for cluster in state.cluster_list + [None]:
+#         scoreDelta,alpha_term,data_term = cluster_vector_joint(
+#             vector,cluster,state)
+#         conditionals.append(scoreDelta + state.score)
+#     return conditionals
 
 def calculate_node_conditional(pstate,cluster):
     conditionals = pstate.mus
