@@ -19,6 +19,7 @@ reload(rf)
 
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
+parser.add_argument('--num_cols',default=16,type=int)
 parser.add_argument('--num_rows',default=64*64,type=int)
 parser.add_argument('--num_clusters',default=64,type=int)
 parser.add_argument('--num_iters',default=1000,type=int)
@@ -38,6 +39,7 @@ if args.remote:
 
 run_spec = rf.gen_default_run_spec()
 run_spec["dataset_spec"]["num_rows"] = args.num_rows
+run_spec["dataset_spec"]["num_cols"] = args.num_cols
 run_spec["dataset_spec"]["gen_z"] = ("balanced",args.num_clusters)
 run_spec["num_iters"] = args.num_iters
 run_spec["num_nodes"] = args.num_nodes
