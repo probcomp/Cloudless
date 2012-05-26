@@ -6,6 +6,7 @@ import matplotlib.pylab as pylab
 import datetime
 import re
 import gc
+import argparse
 #
 import Cloudless
 reload(Cloudless)
@@ -19,15 +20,25 @@ if False:
     Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
     Cloudless.base.remote_exec('reload(rf)')
 
+parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
+parser.add_argument('--num_rows',default=64*64,type=int)
+parser.add_argument('--num_clusters',default=64,type=int)
+parser.add_argument('--num_iters',default=1000,type=int)
+parser.add_argument('--num_nodes',default=5,type=int)
+parser.add_argument('--time_seatbelt',default=60,type=int)
+args = parser.parse_args()
+
 pkl_file_str = "test_predictive_pickled_jobs.pkl"
 
 ALL_RUN_SPECS = []
 #
 run_spec = rf.gen_default_run_spec()
-run_spec["dataset_spec"]["num_rows"] = 64*64
-run_spec["dataset_spec"]["gen_z"] = ("balanced",64)
-run_spec["num_iters"] = 5
-run_spec["time_seatbelt"] = 600
+run_spec["dataset_spec"]["num_rows"] = args.num_rows
+run_spec["dataset_spec"]["gen_z"] = ("balanced",args.num_clusters)
+run_spec["num_iters"] = args.num_iters
+run_spec["num_nodes"] = args.num_nodes
+run_spec["hypers_every_N"] = args.num_nodes
+run_spec["time_seatbelt"] = args.time_seatbelt
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
 
