@@ -26,9 +26,9 @@ cpdef int renormalize_and_sample(
     cdef double logZ
     cdef int draw
     #
-    maxv = conditionals.max()
+    maxv = conditionals.max() # one less pass if this is passed in
     scaled = conditionals - maxv
-    logZ = reduce(np.logaddexp, scaled)
+    logZ = reduce(np.logaddexp, scaled) # should this be done in c?
     draw = 0
     while True:
         randv -= exp(scaled[draw] - logZ)
