@@ -37,9 +37,8 @@ if args.remote:
     Cloudless.base.remote_exec('reload(rf)')
 
 
-run_spec = rf.gen_default_run_spec()
+run_spec = rf.gen_default_run_spec(args.num_cols)
 run_spec["dataset_spec"]["num_rows"] = args.num_rows
-run_spec["dataset_spec"]["num_cols"] = args.num_cols
 run_spec["dataset_spec"]["gen_z"] = ("balanced",args.num_clusters)
 run_spec["num_iters"] = args.num_iters
 run_spec["num_nodes"] = args.num_nodes

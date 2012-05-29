@@ -581,10 +581,10 @@ def extract_time_elapsed_vs_iterations(summary_seq):
 
 ####
 
-def gen_default_run_spec():
+def gen_default_run_spec(num_cols=16):
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 16
+    dataset_spec["num_cols"] = num_cols
     dataset_spec["num_rows"] = 32*32
     dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
