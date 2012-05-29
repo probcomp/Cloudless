@@ -20,10 +20,10 @@ reload(rf)
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
 parser.add_argument('--num_cols',default=16,type=int)
-parser.add_argument('--num_rows',default=64*64,type=int)
-parser.add_argument('--num_clusters',default=64,type=int)
+parser.add_argument('--num_rows',default=32*32,type=int)
+parser.add_argument('--num_clusters',default=32,type=int)
 parser.add_argument('--num_iters',default=1000,type=int)
-parser.add_argument('--num_nodes',default=5,type=int)
+parser.add_argument('--num_nodes',default=1,type=int)
 parser.add_argument('--time_seatbelt',default=60,type=int)
 parser.add_argument('--pkl_file_str',default=os.path.expanduser("~/test_predictive_pickled_jobs.pkl"),type=str)
 parser.add_argument('--remote',action='store_true')
@@ -44,6 +44,7 @@ run_spec["num_iters"] = args.num_iters
 run_spec["num_nodes"] = args.num_nodes
 run_spec["hypers_every_N"] = args.num_nodes
 run_spec["time_seatbelt"] = args.time_seatbelt
+run_spec["infer_init_z"] = 1
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
 
@@ -55,3 +56,16 @@ memoized_infer(run_spec)
 
 rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
 rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
+
+import pylab
+cluster_counts = []
+z_diff_times = []
+for summary in memoized_infer.memo.values()[0][1:]:
+    micro_z_timing = summary["timing"]["micro_z_timing"]
+    cluster_counts.extend(micro_z_timing["cluster_counts"][1:])
+    z_diff_times.extend(np.diff(micro_z_timing["z_cumulative_time"]))
+
+pylab.plot(cluster_counts,z_diff_times,'x')
+pylab.xlabel("num_clusters")
+pylab.ylabel("single-z scan time (seconds)")
+pylab.savefig("scan_time_scatter")
