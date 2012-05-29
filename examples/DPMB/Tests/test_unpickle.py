@@ -25,7 +25,5 @@ memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, ov
 rf.unpickle_asyncmemoize(memoized_infer,os.path.join(base_dir,pkl_file_str))
 
 summaries = memoized_infer.memo.values()[0]
-for summary in summaries:
-    print summary["timing"]
 
 rf.try_plots(memoized_infer,which_measurements=which_measurements)
