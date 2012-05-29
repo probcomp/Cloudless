@@ -35,7 +35,9 @@ def transition_single_z(vector,random_state):
     else:
         cluster = state.cluster_list[draw]
     cluster.assign_vector(vector)
-    
+    #
+    return len(score_vec)-1
+
 ####################
 # PROBABILITY FUNCTIONS
 

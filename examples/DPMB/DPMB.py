@@ -103,14 +103,16 @@ class DPMB():
     def transition_z(self,time_seatbelt=None):
         if self.state.verbose:
             print "PRE transition_z score: ",self.state.score
+        micro_z_timing = {"z_cumulative_time":[],"cluster_counts":[]}
         start_dt = datetime.datetime.now()
-
-        for vector in self.random_state.permutation(list(self.state.get_all_vectors())):
+        permuted_vectors = self.random_state.permutation(list(self.state.get_all_vectors()))
+        for vector in permuted_vectors:
+            num_clusters = hf.transition_single_z(vector,self.random_state)
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
+            micro_z_timing["z_cumulative_time"].append(delta_t)
+            micro_z_timing["cluster_counts"].append(num_clusters)
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
-            
-            hf.transition_single_z(vector,self.random_state)
 
         # debug print out states:
         if self.state.verbose:
@@ -119,8 +121,9 @@ class DPMB():
                                  for cluster in self.state.cluster_list])
         ##
         self.state.timing["zs"] = hf.delta_since(start_dt)
+        self.state.timing["micro_z_timing"] = micro_z_timing
         self.state.timing["run_sum"] += self.state.timing["zs"]
-
+        
     def transition_x(self):
         # regenerate new vector values, preserving the exact same clustering
         # create a new state, where you force init_z to be the current markov_chain, but you don't pass in init_x
