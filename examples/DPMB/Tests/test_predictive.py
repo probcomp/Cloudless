@@ -65,7 +65,27 @@ for summary in memoized_infer.memo.values()[0][1:]:
     cluster_counts.extend(micro_z_timing["cluster_counts"][1:])
     z_diff_times.extend(np.diff(micro_z_timing["z_cumulative_time"]))
 
+cluster_counts = np.array(cluster_counts)
+z_diff_times = np.array(z_diff_times)
+
+num_cols = args.num_cols
+pylab.figure()
 pylab.plot(cluster_counts,z_diff_times,'x')
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
-pylab.savefig("scan_time_scatter")
+pylab.savefig("scatter_scan_times_num_cols_"+str(num_cols))
+
+cutoff = cluster_counts.max()/3
+pylab.figure()
+pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
+pylab.xlabel("num_clusters")
+pylab.ylabel("single-z scan time (seconds)")
+pylab.colorbar()
+pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_lt_"+str(cutoff))
+#
+pylab.figure()
+pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
+pylab.xlabel("num_clusters")
+pylab.ylabel("single-z scan time (seconds)")
+pylab.colorbar()
+pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_gt_"+str(cutoff))
