@@ -406,9 +406,12 @@ class Vector():
             # reconstitute theta from the sufficient statistics for the cluster right now
             N_cluster = len(cluster.vector_list)
             num_heads_vec = cluster.column_sums
+            binomial = random_state.binomial
             betas_vec = self.cluster.state.betas
-            thetas = (num_heads_vec + betas_vec) / (N_cluster + 2.0 * betas_vec)
-            self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
+            # thetas = (num_heads_vec + betas_vec) / (N_cluster + 2.0 * betas_vec)
+            # self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
+            self.data = pf.create_data_array(
+                N_cluster,num_heads_vec,betas_vec,binomial)
         else:
             self.data = data
 
