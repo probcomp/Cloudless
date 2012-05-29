@@ -17,6 +17,19 @@ cdef extern from "math.h":
     double lgamma(double)
 
 @cython.boundscheck(False)
+def create_data_array(
+    int N_cluster,
+    np.ndarray[np.float64_t,ndim=1] num_heads,
+    np.ndarray[np.float64_t,ndim=1] betas,
+    gen_func):
+    cdef int num_thetas = len(betas)
+    cdef int theta_idx
+    cdef np.ndarray[np.int32_t,ndim=1] data = np.ndarray((num_thetas,),dtype=int)
+    for theta_idx from 0 <= theta_idx < num_thetas:
+        data[theta_idx] = gen_func(1,(num_heads[theta_idx]+betas[theta_idx])/(N_cluster+2.0*betas[theta_idx]))
+    return data
+
+@cython.boundscheck(False)
 cpdef int renormalize_and_sample(
     np.ndarray[np.float64_t,ndim=1] conditionals
     ,double randv):
