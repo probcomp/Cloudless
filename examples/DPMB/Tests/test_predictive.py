@@ -8,6 +8,7 @@ import re
 import gc
 import argparse
 import os
+from scipy.stats import linregress
 #
 import Cloudless
 reload(Cloudless)
@@ -52,12 +53,15 @@ print "Created problem"
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
 print "Created memoizer"
 
-memoized_infer(run_spec)
+if os.path.isfile(args.pkl_file_str):
+    print "Using pickled results"
+    rf.unpickle_asyncmemoize(memoized_infer,args.pkl_file_str)
+else:
+    print "Running inference"
+    memoized_infer(run_spec)
+    rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
+    rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
 
-rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
-rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
-
-import pylab
 cluster_counts = []
 z_diff_times = []
 for summary in memoized_infer.memo.values()[0][1:]:
@@ -68,18 +72,46 @@ for summary in memoized_infer.memo.values()[0][1:]:
 cluster_counts = np.array(cluster_counts)
 z_diff_times = np.array(z_diff_times)
 
+box_input = {}
+for cluster_count,diff_time in zip(cluster_counts,z_diff_times):
+    box_input.setdefault(cluster_count,[]).append(diff_time)
+
+median_times = []
+for cluster_count in np.sort(box_input.keys()):
+    median_times.append(np.median(box_input[cluster_count]))
+
+slope,intercept,r_value,p_value,stderr = linregress(
+    np.sort(box_input.keys())
+    ,median_times)
+title_str = "slope = " + ("%.3g" % slope) \
+    + "; intercept = " + ("%.3g" % intercept) \
+    + "; R^2 = " + ("%.5g" % r_value**2)
+
 num_cols = args.num_cols
 num_rows = args.num_rows
+cutoff = cluster_counts.max()/3
+box_every_n = max(1,len(box_input)/10)
 
 pylab.figure()
 pylab.plot(cluster_counts,z_diff_times,'x')
+pylab.title(title_str)
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
 pylab.savefig("scatter_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows))
-
-cutoff = cluster_counts.max()/3
+#
+pylab.figure()
+pylab.boxplot(box_input.values()[::box_every_n]
+              ,positions=box_input.keys()[::box_every_n]
+              ,sym="")
+pylab.title(title_str)
+pylab.xlabel("num_clusters")
+pylab.ylabel("single-z scan time (seconds)")
+pylab.savefig("boxplot_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows))
+pylab.close()
+#
 pylab.figure()
 pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
+pylab.title(title_str)
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
 pylab.colorbar()
@@ -87,7 +119,9 @@ pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_r
 #
 pylab.figure()
 pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
+pylab.title(title_str)
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
 pylab.colorbar()
 pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff))
+
