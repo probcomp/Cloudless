@@ -1,7 +1,8 @@
 from numpy import array
+from scipy.stats import linregress
 
 for run_spec_str,summaries in memoized_infer.memo.iteritems():
-    run_spec = eval(run_spec_str)
+    run_spec = eval(run_spec_str)[0]
     num_cols = run_spec["dataset_spec"]["num_cols"]
     num_rows = run_spec["dataset_spec"]["num_rows"]
 
@@ -66,3 +67,4 @@ for run_spec_str,summaries in memoized_infer.memo.iteritems():
     pylab.colorbar()
     pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff))
 
+    pylab.close('all')
