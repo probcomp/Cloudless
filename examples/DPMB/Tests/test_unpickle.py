@@ -24,6 +24,6 @@ which_measurements=["predictive","ari","num_clusters","score"]
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
 rf.unpickle_asyncmemoize(memoized_infer,os.path.join(base_dir,pkl_file_str))
 
-summaries = memoized_infer.memo.values()[0]
+# summaries = memoized_infer.memo.values()[0]
 
-rf.try_plots(memoized_infer,which_measurements=which_measurements)
+# rf.try_plots(memoized_infer,which_measurements=which_measurements)
