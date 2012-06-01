@@ -6,6 +6,7 @@ import datetime
 from numpy import array
 import sets
 import os
+import gzip
 ##
 import numpy as np
 import pylab
@@ -318,12 +319,20 @@ def extract_dataset_specs_from_memo(asyncmemo):
     return ALL_DATASET_SPECS
 
 def pickle_asyncmemoize(asyncmemo,file_str):
-    with open(file_str,"wb") as fh:
+    if file_str[-3:] == ".gz":
+        my_open = gzip.open
+    else:
+        my_open = open
+    with my_open(file_str,"wb") as fh:
         cPickle.dump(asyncmemo.memo,fh)
 
 def unpickle_asyncmemoize(asyncmemo,file_str):
     from numpy import array
-    with open(file_str,"rb") as fh:
+    if file_str[-3:] == ".gz":
+        my_open = gzip.open
+    else:
+        my_open = open
+    with my_open(file_str,"rb") as fh:
         pickled_memo = cPickle.load(fh)
     #
     ALL_RUN_SPECS = [eval(run_spec)[0] for run_spec in pickled_memo.keys()]
