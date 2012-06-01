@@ -62,16 +62,18 @@ def main():
     file_str = sys.argv[1]
     mime_type = sys.argv[2] if len(sys.argv) > 2 else "text/plain"
     ##
-    auth_file_str = "/home/dlovell/google_docs_auth"
+    auth_file_str = os.path.expanduser("~/google_docs_auth")
     auth_dict = {} ##for keyword args email,password
     with open(auth_file_str) as fh:
         exec fh in auth_dict
         temp = auth_dict.pop("__builtins__") ##pop prints otherwise
-        client = Docs_helper(**auth_dict)
-    mh_folder = client.get_collection("MH")
+        email = auth_dict["email"]
+        password = auth_dict["password"]
+        client = Docs_helper(email=email,password=password)
+    folder = client.get_collection(auth_dict.get("default_folder","MH"))
     if not os.path.isfile(file_str):
         exit()
-    client.push_file(file_str,mime_type,collection=mh_folder,replace=True)
+    client.push_file(file_str,mime_type,collection=folder,replace=True)
 
 if __name__ == "__main__":
     main()
