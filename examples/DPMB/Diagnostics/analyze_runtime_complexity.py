@@ -22,7 +22,7 @@ for num_cols in [64,128,256]:
         run_spec = rf.gen_default_run_spec(num_cols)
         run_spec["dataset_spec"]["num_rows"] = num_rows
         run_spec["dataset_spec"]["gen_z"] = ("balanced",256)
-        run_spec["time_seatbelt"] = 1800
+        run_spec["time_seatbelt"] = 60*60*5
         run_spec["infer_init_z"] = 1
         ALL_RUN_SPECS.append(run_spec)
 
