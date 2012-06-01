@@ -293,7 +293,7 @@ def infer(run_spec):
             time_seatbelt=time_seatbelt
             ,ari_seatbelt=ari_seatbelt
             ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
-        hf.printTS("finished doing iteration" + str(i))
+        hf.printTS("finished doing iteration " + str(i))
         next_summary = transitioner.extract_state_summary(
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
@@ -303,7 +303,7 @@ def infer(run_spec):
             summaries[-1]["failed_info"] = next_summary
             break
         summaries.append(next_summary)
-        hf.printTS("finished saving iteration" + str(i))
+        hf.printTS("finished saving iteration " + str(i))
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
