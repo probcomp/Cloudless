@@ -59,21 +59,30 @@ class Docs_helper():
         self.client.download_resource(my_resource,dest_path)
 
 def main():
-    file_str = sys.argv[1]
-    mime_type = sys.argv[2] if len(sys.argv) > 2 else "text/plain"
-    ##
-    auth_file_str = os.path.expanduser("~/google_docs_auth")
-    auth_dict = {} ##for keyword args email,password
-    with open(auth_file_str) as fh:
-        exec fh in auth_dict
-        temp = auth_dict.pop("__builtins__") ##pop prints otherwise
-        email = auth_dict["email"]
-        password = auth_dict["password"]
-        client = Docs_helper(email=email,password=password)
-    folder = client.get_collection(auth_dict.get("default_folder","MH"))
-    if not os.path.isfile(file_str):
+    import argparse
+    #
+    parser = argparse.ArgumentParser(description='A script that can programatically interact with google docs') 
+    parser.add_argument('--file_str',required=True,type=str)
+    parser.add_argument('--auth_file',default=os.path.expanduser("~/google_docs_auth"),type=str)
+    parser.add_argument('--email',default=None,type=str)
+    parser.add_argument('--password',default=None,type=str)
+    parser.add_argument('--folder',default="MH",type=str)
+    parser.add_argument('--replace',action='store_true')
+    parser.add_argument('--mime_type',default="text/plain",type=str)
+    args = parser.parse_args()
+    if not os.path.isfile(args.file_str):
+        print "Files doesn't exists: file_str: " + str(args.file_str) 
         exit()
-    client.push_file(file_str,mime_type,collection=folder,replace=True)
+    #
+    auth_dict = {}
+    if os.path.isfile(args.auth_file):
+        exec open(args.auth_file) in auth_dict
+    email = args.email if args.email is not None else auth_dict["email"]
+    password = args.password if args.password is not None else auth_dict["password"]
+    #
+    client = Docs_helper(email=email,password=password)
+    collection = client.get_collection(args.folder)
+    client.push_file(args.file_str,args.mime_type,collection=collection,replace=args.replace)
 
 if __name__ == "__main__":
     main()
