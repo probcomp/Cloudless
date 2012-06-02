@@ -62,7 +62,7 @@ def main():
     import argparse
     #
     parser = argparse.ArgumentParser(description='A script that can programatically interact with google docs') 
-    parser.add_argument('--file_str',required=True,type=str)
+    parser.add_argument('file_strs',nargs="+",type=str)
     parser.add_argument('--auth_file',default=os.path.expanduser("~/google_docs_auth"),type=str)
     parser.add_argument('--email',default=None,type=str)
     parser.add_argument('--password',default=None,type=str)
@@ -70,8 +70,8 @@ def main():
     parser.add_argument('--replace',action='store_true')
     parser.add_argument('--mime_type',default="text/plain",type=str)
     args = parser.parse_args()
-    if not os.path.isfile(args.file_str):
-        print "Files doesn't exists: file_str: " + str(args.file_str) 
+    if not os.path.isfile(args.file_strs[0]):
+        print "Files doesn't exists: file_str: " + str(args.file_strs) 
         exit()
     #
     auth_dict = {}
@@ -82,7 +82,8 @@ def main():
     #
     client = Docs_helper(email=email,password=password)
     collection = client.get_collection(args.folder)
-    client.push_file(args.file_str,args.mime_type,collection=collection,replace=args.replace)
+    for file_str in args.file_strs:
+        client.push_file(file_str,args.mime_type,collection=collection,replace=args.replace)
 
 if __name__ == "__main__":
     main()
