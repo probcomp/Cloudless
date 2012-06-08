@@ -49,21 +49,20 @@ class DPMB_State():
             self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
 
     def gibbs_type_init(self, num_rows, init_x):
-        # ? permute x ?
+        # FIXME : permute init_x ?
 
-        # create the first cluster with data
-        cluster = self.generate_cluster_assignment(force_new=True)
-        vector = self.generate_vector(data = init_x[0], cluster = cluster)
-
-        # allocate each additional vector according to cluster_conditional
+        # allocate each vector according to cluster_conditional
         # with the guts of hf.transition_single_z
-        for R in xrange(1,num_rows):
-
-            # must pass a non-None cluster, but nothing is done with it
+        for R in xrange(num_rows):
+            
+            # dummmy cluster necessary for generation, auto-popped when deassigned
+            cluster = self.generate_cluster_assignment(force_new=True)
             vector = self.generate_vector(data = init_x[R], cluster = cluster)
+            cluster.deassign_vector(vector)
 
+            unif = self.random_state.uniform()
             score_vec,draw = pf.calculate_cluster_conditional(
-                self,vector,self.random_state.uniform())
+                self,vector,unif)
             cluster = None
             if draw == len(self.cluster_list):
                 cluster = self.generate_cluster_assignment(force_new = True)
@@ -372,8 +371,7 @@ class DPMB_State():
             # calculate the conditional
             cluster.deassign_vector(vector)
 
-            score_vec = pf.calculate_cluster_conditional(
-                self,vector,self.random_state.uniform())
+            score_vec = pf.calculate_cluster_conditional(self,vector,None)
             # score_vec is a list of scores, in the order of cluster_list.
             
             if cluster.state is None: ##handle singleton
