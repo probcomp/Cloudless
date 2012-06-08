@@ -38,15 +38,41 @@ class DPMB_State():
         self.initialize_betas(init_betas)
         ##
         self.score = 0.0 #initially empty score
-        self.cluster_list = [] #all the Cluster s in the model
+        self.cluster_list = [] #all the Clusters in the model
         self.vector_list = od() #contains all added (possibly unassigned) vectors, in order
         
         # now deal with init_z and init_x specs:
+        if (init_z is None) and (init_x is not None):
+            # can no longer initialize to cluster prior with specified data
+            self.gibbs_type_init(num_rows,init_x)
+        else:
+            self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
 
-        # FIXME: address issue of Gibbs-type initialization, e.g. to get sharper
-        #        results for the convergence of the sampler
-        #        Gibbs-type will require a special test for init_x not None and
-        #        init_z is None (have data but not cluster assignments)
+    def gibbs_type_init(self, num_rows, init_x):
+        # ? permute x ?
+
+        # create the first cluster with data
+        cluster = self.generate_cluster_assignment(force_new=True)
+        vector = self.generate_vector(data = init_x[0], cluster = cluster)
+
+        # allocate each additional vector according to cluster_conditional
+        # with the guts of hf.transition_single_z
+        for R in xrange(1,num_rows):
+
+            # must pass a non-None cluster, but nothing is done with it
+            vector = self.generate_vector(data = init_x[R], cluster = cluster)
+
+            score_vec,draw = pf.calculate_cluster_conditional(
+                self,vector,self.random_state.uniform())
+            cluster = None
+            if draw == len(self.cluster_list):
+                cluster = self.generate_cluster_assignment(force_new = True)
+            else:
+                cluster = self.cluster_list[draw]
+            cluster.assign_vector(vector)
+
+    def non_gibbs_type_init(self, num_rows, init_z, init_x, decanon_indices):
+
         for R in xrange(num_rows):
             cluster = None
             if init_z is None:
@@ -85,7 +111,6 @@ class DPMB_State():
             for index in decanon_indices:
                 new_cluster_list.append(self.cluster_list[index])
             self.cluster_list = new_cluster_list
-            
 
     def initialize_alpha(self,init_alpha):
         if init_alpha is not None:
