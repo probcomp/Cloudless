@@ -10,6 +10,9 @@ class CloudlessSetup(ClusterSetup):
          # TODO: Shouldn't depend on manually refrencing python2.7; will break
          #       in later versions
          # NOTE: node includes master
+          # master.apt_install("python-gdata")
+          # import os
+          # os.system("starcluster put mycluster --user sgeadmin ~/google_docs_auth /home/sgeadmin/")
           for node in nodes:
                log.info("Installing Cloudless on %s" % node.alias)
                node.ssh.execute('git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git')
