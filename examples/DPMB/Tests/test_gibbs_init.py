@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 #
 import Cloudless.examples.DPMB.DPMB as dm
@@ -20,7 +22,7 @@ state_1 = ds.DPMB_State(
     , num_cols = num_cols
     , num_rows = num_rows
     , init_alpha = 1
-    , init_betas = None
+    , init_betas = np.repeat(.1,num_cols)
     , init_z = ("balanced",4)
 )
 state_1.plot(save_str="balanced_state")
