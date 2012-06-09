@@ -16,7 +16,7 @@ if True:
     Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
     Cloudless.base.remote_exec('reload(rf)')
 
-pkl_file_str = os.path.expanduser("~/even_bigger_mixed_pickled_jobs.pkl")
+pkl_file_str = os.path.expanduser("~/gibbs_init_mixed_pickled_jobs.pkl")
 which_measurements=["predictive","ari","num_clusters","score"]
 
 NUM_CLUSTERS = 512
