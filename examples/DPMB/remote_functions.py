@@ -211,7 +211,7 @@ def gen_problem(dataset_spec):
     problem = {}
     problem["dataset_spec"] = dataset_spec
     problem["zs"] = state.getZIndices()
-    problem["xs"] = state.getXValues()
+    problem["xs"] = state.random_state.permutation(state.getXValues())
     test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
