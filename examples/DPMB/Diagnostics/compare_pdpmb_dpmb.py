@@ -42,7 +42,7 @@ def gen_default_run_spec():
     run_spec["infer_do_betas_inference"] = True
     run_spec["infer_init_z"] = None
     run_spec["hypers_every_N"] = 1
-    run_spec["time_seatbelt"] = 300
+    run_spec["time_seatbelt"] = 150
     run_spec["ari_seatbelt"] = None
     run_spec["verbose_state"] = False
     #
