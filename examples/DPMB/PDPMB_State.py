@@ -47,7 +47,7 @@ class PDPMB_State():
         #         will also do seed operations
 
         # generate the data from a DPMB_State
-        state = ds.DPMB_State(gen_seed=gen_seed
+        master_state = ds.DPMB_State(gen_seed=gen_seed
                               ,num_cols=self.num_cols
                               ,num_rows=num_rows
                               ,init_alpha = init_alpha
@@ -61,7 +61,7 @@ class PDPMB_State():
                               ,grid_N=self.grid_N
                               )
 
-        self.vector_list = state.vector_list
+        self.vector_list = master_state.vector_list
         ##
         # note: no score modification here, because of uniform hyperpriors
         self.initialize_alpha(init_alpha)
@@ -70,31 +70,36 @@ class PDPMB_State():
         self.score = 0.0 #initially empty score
 
         # deal out data to states
-        node_data_indices = [[] for node_idx in range(self.num_nodes)]
-        for data_idx in range(len(self.vector_list)):
+        node_cluster_indices = [[] for node_idx in range(self.num_nodes)]
+        for cluster_idx in range(len(master_state.cluster_list)):
             draw = pf.renormalize_and_sample(
                 np.log(self.mus),self.random_state.uniform())
-            node_data_indices[draw].append(data_idx)
+            node_cluster_indices[draw].append(cluster_idx)
         # now create the child states
         self.model_list = []
         gen_seed_list = [int(x) for x in self.random_state.tomaxint(num_nodes)]
         inf_seed_list = [int(x) for x in self.random_state.tomaxint(num_nodes)]
 
-        temp_vector_list = list(self.vector_list)
         for state_idx,(gen_seed,inf_seed) in enumerate(
             zip(gen_seed_list,inf_seed_list)):
 
-            node_data = []
+            node_xs = []
+            node_zs = []
+            for cluster_idx_idx,cluster_idx in enumerate(
+                node_cluster_indices[state_idx]):
+                for vector in master_state.cluster_list[cluster_idx].vector_list:
+                    node_xs.append(vector.data)
+                    node_zs.append(cluster_idx_idx)
+
             alpha_factor = 1.0 / self.num_nodes
-            for index in node_data_indices[state_idx]:
-                node_data.append(temp_vector_list[index].data)
 
             state = ds.DPMB_State(gen_seed=gen_seed
                                   ,num_cols=self.num_cols
-                                  ,num_rows=len(node_data)
+                                  ,num_rows=len(node_xs)
                                   ,init_alpha = self.alpha * alpha_factor
                                   ,init_betas = self.betas
-                                  ,init_x = node_data
+                                  ,init_x = node_xs
+                                  ,init_z = node_zs
                                   ,alpha_min=self.alpha_min * alpha_factor
                                   ,alpha_max=self.alpha_max * alpha_factor
                                   ,beta_min=self.beta_min
