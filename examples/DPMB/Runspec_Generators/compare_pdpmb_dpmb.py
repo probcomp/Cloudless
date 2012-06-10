@@ -1,7 +1,7 @@
 import numpy as np
 
 NUM_CLUSTERS = 32
-VECTORS_PER_CLUSTER = 32
+VECTORS_PER_CLUSTER = 256
 def gen_default_run_spec():
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
@@ -23,15 +23,15 @@ def gen_default_run_spec():
     run_spec["infer_do_betas_inference"] = True
     run_spec["infer_init_z"] = None
     run_spec["hypers_every_N"] = 1
-    run_spec["time_seatbelt"] = 120
+    run_spec["time_seatbelt"] = 60
     run_spec["ari_seatbelt"] = None
     run_spec["verbose_state"] = False
     #
     return run_spec
 
-NUM_RUNS = 3
-NUM_DATASETS = 3
-NUM_NODES_LIST = [1,4,16]
+NUM_RUNS = 2
+NUM_DATASETS = 2
+NUM_NODES_LIST = [1] # [1,4,16]
 HYPERS_EVERY_N_LIST = [4,16]
 #
 ALL_RUN_SPECS = []
