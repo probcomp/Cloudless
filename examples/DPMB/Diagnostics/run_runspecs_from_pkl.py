@@ -59,6 +59,7 @@ def report():
     memoized_infer.report_status()
 
 def plot():
+    which_measurements=["predictive","ari","num_clusters","score"]
     rf.try_plots(memoized_infer,which_measurements=which_measurements)
 
 def pickle():
