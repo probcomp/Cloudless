@@ -52,6 +52,7 @@ run_spec["num_nodes"] = args.num_nodes
 run_spec["hypers_every_N"] = args.num_nodes
 run_spec["time_seatbelt"] = args.time_seatbelt
 run_spec["infer_init_z"] = None if args.balanced == -1 else ("balanced",args.balanced)
+run_spec["N_test"] = max(64,run_spec["dataset_spec"]["num_rows"]/16)
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
 
