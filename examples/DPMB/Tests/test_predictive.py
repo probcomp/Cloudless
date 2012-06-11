@@ -20,9 +20,10 @@ reload(rf)
 
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
-parser.add_argument('--num_cols',default=16,type=int)
+parser.add_argument('--num_cols',default=256,type=int)
 parser.add_argument('--num_rows',default=32*32,type=int)
 parser.add_argument('--num_clusters',default=32,type=int)
+parser.add_argument('--beta_d',default=3.0,type=float)
 parser.add_argument('--balanced',default=-1,type=int)
 parser.add_argument('--num_iters',default=1000,type=int)
 parser.add_argument('--num_nodes',default=1,type=int)
@@ -38,18 +39,22 @@ if args.remote:
     Cloudless.base.remote_exec('import Cloudless.examples.DPMB_remote_functions as rf')
     Cloudless.base.remote_exec('reload(rf)')
 
-
-run_spec = rf.gen_default_run_spec(args.num_cols)
+run_spec = rf.gen_default_run_spec(
+    num_clusters = args.num_clusters,
+    vectors_per_cluster = args.num_rows/args.num_clusters,
+    num_cols = args.num_cols,
+    beta_d = args.beta_d
+    )
 run_spec["dataset_spec"]["num_rows"] = args.num_rows
 run_spec["dataset_spec"]["gen_z"] = ("balanced",args.num_clusters)
 run_spec["num_iters"] = args.num_iters
 run_spec["num_nodes"] = args.num_nodes
 run_spec["hypers_every_N"] = args.num_nodes
 run_spec["time_seatbelt"] = args.time_seatbelt
-run_spec["infer_init_z"] = 1 if args.balanced == -1 else ("balanced",args.balanced)
+run_spec["infer_init_z"] = None if args.balanced == -1 else ("balanced",args.balanced)
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
-# memoized_infer.memo.values()[0][1]["timing"]["micro_z_timing"]["cluster_counts"][0]
+
 # now request the inference
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
 print "Created memoizer"
@@ -62,6 +67,9 @@ else:
     memoized_infer(run_spec)
     rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
     rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
+
+gibbs_init_dur = memoized_infer.memo.values()[0][0]["timing"]["init"]
+print "gibbs_init_dur: " + str(gibbs_init_dur)
 
 cluster_counts = []
 z_diff_times = []
@@ -98,7 +106,8 @@ pylab.plot(cluster_counts,z_diff_times,'x')
 pylab.title(title_str)
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
-pylab.savefig("scatter_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows))
+fig_str = "scatter_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
+pylab.savefig(os.path.expanduser("~/"+fig_str))
 #
 pylab.figure()
 pylab.boxplot(box_input.values()[::box_every_n]
@@ -107,22 +116,31 @@ pylab.boxplot(box_input.values()[::box_every_n]
 pylab.title(title_str)
 pylab.xlabel("num_clusters")
 pylab.ylabel("single-z scan time (seconds)")
-pylab.savefig("boxplot_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows))
+fig_str = "boxplot_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
+pylab.savefig(os.path.expanduser("~/"+fig_str))
 pylab.close()
 #
-pylab.figure()
-pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
-pylab.title(title_str)
-pylab.xlabel("num_clusters")
-pylab.ylabel("single-z scan time (seconds)")
-pylab.colorbar()
-pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_lt_"+str(cutoff))
+try:
+    pylab.figure()
+    pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
+    pylab.title(title_str)
+    pylab.xlabel("num_clusters")
+    pylab.ylabel("single-z scan time (seconds)")
+    pylab.colorbar()
+    fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_lt_"+str(cutoff)
+    pylab.savefig(os.path.expanduser("~/"+fig_str))
+except Exception, e:
+    print e
 #
-pylab.figure()
-pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
-pylab.title(title_str)
-pylab.xlabel("num_clusters")
-pylab.ylabel("single-z scan time (seconds)")
-pylab.colorbar()
-pylab.savefig("hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff))
+try:
+    pylab.figure()
+    pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
+    pylab.title(title_str)
+    pylab.xlabel("num_clusters")
+    pylab.ylabel("single-z scan time (seconds)")
+    pylab.colorbar()
+    fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff)
+    pylab.savefig(os.path.expanduser("~/"+fig_str))
+except Exception, e:
+    print e
 
