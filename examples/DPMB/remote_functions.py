@@ -38,7 +38,11 @@ def arr_copy(arr_or_other):
     if arr_or_other is None or type(arr_or_other) is int:
         return arr_or_other
     elif type(arr_or_other) == tuple: # only inf_seed
-        seed_copy = (arr_or_other[0],arr_or_other[1].copy(),arr_or_other[2],arr_or_other[3],arr_or_other[4])
+        seed_copy = (arr_or_other[0]
+                     , arr_or_other[1].copy()
+                     , arr_or_other[2]
+                     , arr_or_other[3]
+                     , arr_or_other[4])
         return seed_copy
     else:
         return np.array(arr_or_other).copy()
@@ -103,12 +107,14 @@ class Chunked_Job(Thread):
 
     def acquire_lock(self):
         if self.lock is not None:
-            print str(datetime.datetime.now()) + " :: acquiring lock :: " + str(self)
+            print str(datetime.datetime.now()) \
+                + " :: acquiring lock :: " + str(self)
             self.lock.acquire()
 
     def release_lock(self):
         if self.lock is not None:
-            print str(datetime.datetime.now()) + " :: releasing lock :: " + str(self)
+            print str(datetime.datetime.now()) \
+                + " :: releasing lock :: " + str(self)
             self.lock.release()
         
     def evolve_chain(self):
@@ -134,7 +140,9 @@ class Chunked_Job(Thread):
             
     def pull_down_jobs(self):
         list_len_delta = len(self.child_jobspec_list) - len(self.child_job_list)
-        assert list_len_delta <= 1,"Chunked_Job.pull_down_jobs: child_jobspec_list got too far ahead of child_job_list"
+        assert list_len_delta <= 1 \
+            , "Chunked_Job.pull_down_jobs: " \
+            "child_jobspec_list got too far ahead of child_job_list"
         if list_len_delta == 1:
             print "pull_down_jobs: list_len_delta==1 : " + str(self)
             self.acquire_lock()
@@ -151,7 +159,8 @@ class Chunked_Job(Thread):
             # self.asyncmemo.advance()
             job_value = self.asyncmemo(current_jobspec)
             self.release_lock()
-            print "pull_down_jobs: job_value is None : "  + str(job_value is None) + str(self)
+            print "pull_down_jobs: job_value is None : " \
+                + str(job_value is None) + str(self)
             if job_value is None: # still working
                 return False
             else:
@@ -164,8 +173,9 @@ class Chunked_Job(Thread):
         self.consolidate_jobs()
         self.check_failure(self.get_current_jobspec())
         #
+        # subtract 1 for initial state
         remaining_iters = (self.parent_jobspec["num_iters"]
-                           - (len(self.consolidated_data)-1)) # subtract 1 for initial state
+                           - (len(self.consolidated_data)-1))
         self.next_chunk_size = min(self.chunk_iter,remaining_iters)
         #
         if self.next_chunk_size == 0:
@@ -199,7 +209,8 @@ class Chunked_Job(Thread):
         return self.failed
         
 def gen_problem(dataset_spec):
-    # generate a state, initialized according to the generation parameters from dataset spec,
+    # generate a state
+    # initialized according to the generation parameters from dataset spec
     # containing all the training data only
     state = ds.DPMB_State(dataset_spec["gen_seed"],
                           dataset_spec["num_cols"],
@@ -210,7 +221,8 @@ def gen_problem(dataset_spec):
                           init_x = None)
     problem = {}
     problem["dataset_spec"] = dataset_spec
-    permutation_sequence = state.random_state.permutation(range(dataset_spec["num_rows"]))
+    permutation_sequence = state.random_state.permutation(
+        range(dataset_spec["num_rows"]))
     zs = state.getZIndices()
     xs = state.getXValues()
     problem["zs"] = [zs[perm_idx] for perm_idx in permutation_sequence]
@@ -323,7 +335,8 @@ def extract_dataset_specs_from_memo(asyncmemo):
     ALL_RUN_SPECS = [eval(key)[0] for key in asyncmemo.memo.keys()]
     ALL_DATASET_SPEC_STRS = [str(runspec["dataset_spec"]) for runspec in ALL_RUN_SPECS]
     import sets
-    ALL_DATASET_SPECS = [eval(spec_str) for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
+    ALL_DATASET_SPECS = [eval(spec_str)
+                         for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
     return ALL_DATASET_SPECS
 
 def pickle_asyncmemoize(asyncmemo,file_str):
@@ -344,9 +357,16 @@ def unpickle_asyncmemoize(asyncmemo,file_str):
         pickled_memo = cPickle.load(fh)
     #
     ALL_RUN_SPECS = [eval(run_spec)[0] for run_spec in pickled_memo.keys()]
-    new_memo = dict(zip([str((run_spec,)) for run_spec in ALL_RUN_SPECS],pickled_memo.values()))
-    new_args = dict(zip([str((run_spec,)) for run_spec in ALL_RUN_SPECS],[(run_spec,) for run_spec in ALL_RUN_SPECS]))
-    # FIXME: action through setting asyncmemo elements, perhaps should return these for caller to set?
+    new_memo = dict(zip(
+            [str((run_spec,)) for run_spec in ALL_RUN_SPECS]
+            , pickled_memo.values()
+            ))
+    new_args = dict(zip(
+            [str((run_spec,)) for run_spec in ALL_RUN_SPECS]
+            , [(run_spec,) for run_spec in ALL_RUN_SPECS]
+            ))
+    # FIXME: action through setting asyncmemo elements
+    #        perhaps should return these for caller to set?
     asyncmemo.memo = new_memo
     asyncmemo.args = new_args
     return ALL_RUN_SPECS
@@ -357,7 +377,7 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
         print "Not done, not pickling"
         return False
     else:
-        temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
+        memoized_infer.advance()
         with open(file_str,"wb") as fh:
             cPickle.dump(memoized_infer.memo,fh)
         print "Done all jobs, memo pickled"
@@ -366,7 +386,6 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
 def runspec_to_plotspec_bak(runspec):
     linespec = {}
     legendstr = ""
-    # for now, red if both hyper inference, black otherwise FIXME expand out all 4 bit options
     if runspec["infer_do_alpha_inference"] and runspec["infer_do_betas_inference"]:
         linespec["color"] = "red"
         legendstr += "inf_a=T,inf_b=T"
@@ -416,7 +435,9 @@ def speclist_to_plotspecs(speclist,keylist):
         legendstr_idx = legendstrs_lookup[legendstr]
         linespec = {}
         linespec["color"] = colors[legendstr_idx % len(colors)]
-        linespec["linestyle"] = linestyles[(legendstr_idx / len(colors)) % len(linestyles)]
+        linespec["linestyle"] = linestyles[
+            (legendstr_idx / len(colors)) % len(linestyles)
+            ]
         linespecs.append(linespec)
     #
     return linespecs,legendstrs
@@ -456,10 +477,14 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
     if which_measurement == "predictive":
         problem = gen_problem(target_dataset_spec)
         h_line = np.mean(problem["test_lls_under_gen"])
-    run_spec_filter = run_spec_filter if run_spec_filter is not None else (lambda x: True)
+    run_spec_filter = run_spec_filter \
+        if run_spec_filter is not None \
+        else (lambda x: True)
     title_str = title_str if title_str is not None else ""
     ylabel_str = ylabel_str if ylabel_str is not None else ""
-    legend_args = legend_args if legend_args is not None else {"ncol":2,"prop":{"size":"medium"}}
+    legend_args = legend_args \
+        if legend_args is not None \
+        else {"ncol":2,"prop":{"size":"medium"}}
 
     matching_runs = []
     matching_summaries = []
@@ -483,29 +508,28 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
 
     matching_measurements = [extract_measurement(which_measurement,summary) 
                              for summary in matching_summaries]
-    matching_linespecs,matching_legendstrs = speclist_to_plotspecs(matching_runs,["num_nodes","hypers_every_N"])
-
-    # matching_measurements = []
-    # matching_linespecs = []
-    # matching_legendstrs = []
-    # for (run, summary) in zip(matching_runs, matching_summaries):
-    #     matching_measurements.append(extract_measurement(which_measurement, summary))
-    #     linespec,legendstr = runspec_to_plotspec(run)
-    #     matching_linespecs.append(linespec)
-    #     matching_legendstrs.append(legendstr)
+    matching_linespecs,matching_legendstrs = speclist_to_plotspecs(
+        matching_runs
+        , ["num_nodes","hypers_every_N"]
+        )
 
     pylab.figure()
     if do_legend:
         pylab.subplot(211)
     line_list = []
-    for measurement, summary, linespec in zip(matching_measurements, matching_summaries, matching_linespecs):
+    for measurement, summary, linespec \
+            in zip(matching_measurements, matching_summaries, matching_linespecs):
         if by_time:
             xs = extract_time_elapsed_vs_iterations(summary)
             xlabel = "time (seconds)"
         else:
             xs = range(len(summary))
             xlabel = "iter"
-        fh = pylab.plot(xs, measurement, color = linespec["color"], linestyle = linespec["linestyle"])
+        fh = pylab.plot(
+            xs
+            , measurement
+            , color = linespec["color"]
+            , linestyle = linespec["linestyle"])
         line_list.append(fh[0])
         if h_line is not None:
             xlim = fh[0].get_axes().get_xlim()
@@ -540,7 +564,8 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
     legend_args = {"ncol":1,"markerscale":2}
     #
     for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
-        cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1]) ## FIXME : presumes dataset_spec is always balanced
+        # FIXME : presumes dataset_spec is always balanced
+        cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1])
         col_str = "cols" + str(target_dataset_spec["num_cols"])
         row_str = "rows" + str(target_dataset_spec["num_rows"])
         config_str = "_".join([col_str,row_str,cluster_str])    
@@ -548,29 +573,33 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
         for which_measurement in which_measurements:
             try:
                 # by time
-                plot_measurement(memoized_infer
-                                 , which_measurement
-                                 , target_dataset_spec
-                                 , run_spec_filter=run_spec_filter
-                                 , by_time=True
-                                 , save_str=os.path.join(save_dir
-                                                         ,"_".join([which_measurement,config_str,"time.png"]))
-                                 , title_str=config_str
-                                 , ylabel_str=which_measurement
-                                 , legend_args=legend_args
-                                 , do_legend=do_legend)
+                plot_measurement(
+                    memoized_infer
+                    , which_measurement
+                    , target_dataset_spec
+                    , run_spec_filter=run_spec_filter
+                    , by_time=True
+                    , save_str=os.path.join(
+                        save_dir
+                        ,"_".join([which_measurement,config_str,"time.png"]))
+                    , title_str=config_str
+                    , ylabel_str=which_measurement
+                    , legend_args=legend_args
+                    , do_legend=do_legend)
                 # by iter
-                plot_measurement(memoized_infer
-                                 , which_measurement
-                                 , target_dataset_spec
-                                 , run_spec_filter=run_spec_filter
-                                 , by_time=False
-                                 , save_str=os.path.join(save_dir,
-                                                         "_".join([which_measurement,config_str,"iter.png"]))
-                                 , title_str=config_str
-                                 , ylabel_str=which_measurement
-                                 , legend_args=legend_args
-                                 , do_legend=do_legend)
+                plot_measurement(
+                    memoized_infer
+                    , which_measurement
+                    , target_dataset_spec
+                    , run_spec_filter=run_spec_filter
+                    , by_time=False
+                    , save_str=os.path.join(
+                        save_dir,
+                        "_".join([which_measurement,config_str,"iter.png"]))
+                    , title_str=config_str
+                    , ylabel_str=which_measurement
+                    , legend_args=legend_args
+                    , do_legend=do_legend)
             except Exception, e:
                 print e
 
