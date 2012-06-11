@@ -210,8 +210,13 @@ def gen_problem(dataset_spec):
                           init_x = None)
     problem = {}
     problem["dataset_spec"] = dataset_spec
-    problem["zs"] = state.getZIndices()
-    problem["xs"] = state.random_state.permutation(state.getXValues())
+    permutation_sequence = state.random_state.permutation(range(dataset_spec["num_rows"]))
+    zs = state.getZIndices()
+    xs = state.getXValues()
+    problem["zs"] = [zs[perm_idx] for perm_idx in permutation_sequence]
+    problem["xs"] = [xs[perm_idx] for perm_idx in permutation_sequence]
+    # problem["zs"] = state.getZIndices()
+    # problem["xs"] = state.getXValues()
     test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
@@ -258,6 +263,7 @@ def infer(run_spec):
         state_kwargs = {"num_nodes":num_nodes}
         model_kwargs = {"hypers_every_N":hypers_every_N}
 
+    init_start_ts = datetime.datetime.now()
     inference_state = state_type(dataset_spec["gen_seed"],
                                  dataset_spec["num_cols"],
                                  dataset_spec["num_rows"],
@@ -267,6 +273,7 @@ def infer(run_spec):
                                  init_x = problem["xs"],
                                  **state_kwargs
                                  )
+    init_delta_seconds = hf.delta_since(init_start_ts)
 
     print "...initialized"
     transitioner = model_type(
@@ -283,6 +290,7 @@ def infer(run_spec):
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
             ,test_xs=problem["test_xs"]))
+    summaries[-1]["timing"]["init"] = init_delta_seconds
     #
     print "saved initialization"
     #
@@ -526,7 +534,7 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
     pylab.close()
 
 def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_legend=True,save_dir=None):
-    temp = [(k,v) for k,v in memoized_infer.iter()] ##FIXME : how better to ensure memo pullis it down?
+    memoized_infer.advance()
     which_measurements = ["ari"] if which_measurements is None else which_measurements
     save_dir = save_dir if save_dir is not None else os.path.expanduser("~/")
     legend_args = {"ncol":1,"markerscale":2}
