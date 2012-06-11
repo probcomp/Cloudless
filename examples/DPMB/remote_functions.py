@@ -208,7 +208,7 @@ class Chunked_Job(Thread):
         self.release_lock()
         return self.failed
         
-def gen_problem(dataset_spec):
+def gen_problem(dataset_spec,permute=True):
     # generate a state
     # initialized according to the generation parameters from dataset spec
     # containing all the training data only
@@ -221,14 +221,29 @@ def gen_problem(dataset_spec):
                           init_x = None)
     problem = {}
     problem["dataset_spec"] = dataset_spec
-    permutation_sequence = state.random_state.permutation(
-        range(dataset_spec["num_rows"]))
-    zs = state.getZIndices()
-    xs = state.getXValues()
-    problem["zs"] = [zs[perm_idx] for perm_idx in permutation_sequence]
-    problem["xs"] = [xs[perm_idx] for perm_idx in permutation_sequence]
-    # problem["zs"] = state.getZIndices()
-    # problem["xs"] = state.getXValues()
+    if permute:
+        permutation_sequence = state.random_state.permutation(
+            range(dataset_spec["num_rows"]))
+        temp_zs = state.getZIndices()
+        temp_xs = state.getXValues()
+        problem["xs"] = [temp_xs[perm_idx] for perm_idx in permutation_sequence]
+        temp_zs = [temp_zs[perm_idx] for perm_idx in permutation_sequence]
+
+        # Must canonicalize zs
+        z_indices = []
+        next_id = 0
+        cluster_ids = {}
+        for v in temp_zs:
+            if v not in cluster_ids:
+                cluster_ids[v] = next_id
+                next_id += 1
+            z_indices.append(cluster_ids[v])
+
+        problem["zs"] = z_indices
+
+    else:
+        problem["zs"] = state.getZIndices()
+        problem["xs"] = state.getXValues()
     test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
