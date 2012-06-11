@@ -646,27 +646,29 @@ def extract_time_elapsed_vs_iterations(summary_seq):
 
 ####
 
-def gen_default_run_spec(num_cols=16):
+def gen_default_run_spec(num_clusters, vectors_per_cluster
+                         , num_cols=256, beta_d=3.0):
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = num_cols
-    dataset_spec["num_rows"] = 32*32
+    dataset_spec["num_rows"] = num_clusters*vectors_per_cluster
     dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
-    dataset_spec["gen_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
-    dataset_spec["gen_z"] = ("balanced", 32)
-    dataset_spec["N_test"] = 128
-    ##
+    dataset_spec["gen_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
+    dataset_spec["gen_z"] = ("balanced", num_clusters)
+    dataset_spec["N_test"] =  max(64,dataset_spec["num_rows"]/16)
+    #
     run_spec = {}
     run_spec["dataset_spec"] = dataset_spec
-    run_spec["num_iters"] = 1000
+    run_spec["num_iters"] = 10
     run_spec["num_nodes"] = 1
     run_spec["infer_seed"] = 0
     run_spec["infer_init_alpha"] = 3.0
-    run_spec["infer_init_betas"] = np.repeat(0.1, dataset_spec["num_cols"])
+    run_spec["infer_init_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
     run_spec["infer_do_alpha_inference"] = True
     run_spec["infer_do_betas_inference"] = True
     run_spec["infer_init_z"] = None
-    run_spec["time_seatbelt"] = 1200
+    run_spec["hypers_every_N"] = 1
+    run_spec["time_seatbelt"] = 60
     run_spec["ari_seatbelt"] = None
     run_spec["verbose_state"] = False
     #
