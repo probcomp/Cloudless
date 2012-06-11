@@ -17,7 +17,7 @@ reload(Cloudless.memo)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
-
+default_save_dir = os.path.expanduser("~/Run/")
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
 parser.add_argument('--num_cols',default=256,type=int)
@@ -30,12 +30,12 @@ parser.add_argument('--num_nodes',default=1,type=int)
 parser.add_argument('--time_seatbelt',default=60,type=int)
 parser.add_argument(
     '--save_dir',
-    default=os.path.expanduser("~/Run/"),
+    default=default_save_dir,
     type=str,
     )
 parser.add_argument(
     '--pkl_file_str',
-    default=os.path.expanduser("~/Run/test_predictive_pickled_jobs.pkl"),
+    default=os.path.join(default_save_dir,"test_predictive_pickled_jobs.pkl"),
     type=str,
     )
 parser.add_argument('--remote',action='store_true')
