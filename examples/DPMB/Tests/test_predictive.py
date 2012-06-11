@@ -18,6 +18,7 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
 default_save_dir = os.path.expanduser("~/Run/")
+default_pkl_file_str = "test_predictive_pickled_jobs.pkl"
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
 parser.add_argument('--num_cols',default=256,type=int)
@@ -35,13 +36,14 @@ parser.add_argument(
     )
 parser.add_argument(
     '--pkl_file_str',
-    default=os.path.join(default_save_dir,"test_predictive_pickled_jobs.pkl"),
+    default=default_pkl_file_str,
     type=str,
     )
 parser.add_argument('--remote',action='store_true')
 #
 args = parser.parse_args()
-
+pkl_file_str = os.path.join(args.save_dir,args.pkl_file_str) \
+    if args.pkl_file_str == default_pkl_file_str else args.pkl_file_str
 
 if args.remote:
     Cloudless.base.remote_mode()
@@ -69,9 +71,9 @@ print "Created problem"
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
 print "Created memoizer"
 
-if os.path.isfile(args.pkl_file_str):
+if os.path.isfile(pkl_file_str):
     print "Using pickled results"
-    rf.unpickle_asyncmemoize(memoized_infer,args.pkl_file_str)
+    rf.unpickle_asyncmemoize(memoized_infer,pkl_file_str)
 else:
     print "Running inference"
     memoized_infer(run_spec)
@@ -80,7 +82,7 @@ else:
         which_measurements=["predictive","ari","num_clusters","score"],
         save_dir=args.save_dir,
         )
-    rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
+    rf.pickle_if_done(memoized_infer,file_str=pkl_file_str)
 
 gibbs_init_dur = memoized_infer.memo.values()[0][0]["timing"]["init"]
 print "gibbs_init_dur: " + str(gibbs_init_dur)
