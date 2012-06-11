@@ -488,11 +488,15 @@ def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
 
     matching_runs = []
     matching_summaries = []
+    target_dataset_spec_copy = target_dataset_spec.copy()
+    target_dataset_spec_copy.pop("gen_seed")
     for (args, summaries) in memoized_infer.iter():
         run_spec = args[0]
         if not run_spec_filter(run_spec):
             continue
-        if str(run_spec["dataset_spec"]) == str(target_dataset_spec):
+        run_spec_copy = run_spec["dataset_spec"].copy()
+        run_spec_copy.pop("gen_seed")
+        if str(run_spec_copy) == str(target_dataset_spec_copy):
             matching_runs.append(run_spec)
             matching_summaries.append(summaries)
     #
