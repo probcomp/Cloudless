@@ -7,6 +7,7 @@ from numpy import array
 import sets
 import os
 import gzip
+from scipy.stats import linregress
 ##
 import numpy as np
 import pylab
@@ -643,11 +644,78 @@ def extract_time_elapsed_vs_iterations(summary_seq):
         out.append(cumsum)    
     return out
 
+def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
+    save_dir = os.path.expanduser("~/") if save_dir is None else save_dir
+
+    box_input = {}
+    for cluster_count,diff_time in zip(cluster_counts,z_diff_times):
+        box_input.setdefault(cluster_count,[]).append(diff_time)
+
+    median_times = []
+    for cluster_count in np.sort(box_input.keys()):
+        median_times.append(np.median(box_input[cluster_count]))
+
+    slope,intercept,r_value,p_value,stderr = linregress(
+        np.sort(box_input.keys())
+        ,median_times)
+    title_str = "slope = " + ("%.3g" % slope) \
+        + "; intercept = " + ("%.3g" % intercept) \
+        + "; R^2 = " + ("%.5g" % r_value**2)
+
+    num_cols = args.num_cols
+    num_rows = args.num_rows
+    cutoff = cluster_counts.max()/3
+    box_every_n = max(1,len(box_input)/10)
+
+    pylab.figure()
+    pylab.plot(cluster_counts,z_diff_times,'x')
+    pylab.title(title_str)
+    pylab.xlabel("num_clusters")
+    pylab.ylabel("single-z scan time (seconds)")
+    fig_str = "scatter_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
+    pylab.savefig(os.path.join(save_dir,fig_str))
+    #
+    pylab.figure()
+    pylab.boxplot(box_input.values()[::box_every_n]
+                  ,positions=box_input.keys()[::box_every_n]
+                  ,sym="")
+    pylab.title(title_str)
+    pylab.xlabel("num_clusters")
+    pylab.ylabel("single-z scan time (seconds)")
+    fig_str = "boxplot_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
+    pylab.savefig(os.path.join(save_dir,fig_str))
+    pylab.close()
+    #
+    try:
+        pylab.figure()
+        pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
+        pylab.title(title_str)
+        pylab.xlabel("num_clusters")
+        pylab.ylabel("single-z scan time (seconds)")
+        pylab.colorbar()
+        fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_lt_"+str(cutoff)
+        pylab.savefig(os.path.join(save_dir,fig_str))
+    except Exception, e:
+        print e
+    #
+    try:
+        pylab.figure()
+        pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
+        pylab.title(title_str)
+        pylab.xlabel("num_clusters")
+        pylab.ylabel("single-z scan time (seconds)")
+        pylab.colorbar()
+        fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff)
+        pylab.savefig(os.path.join(save_dir,fig_str))
+    except Exception, e:
+        print e
+
 
 ####
 
-def gen_default_run_spec(num_clusters, vectors_per_cluster
-                         , num_cols=256, beta_d=3.0):
+def gen_default_run_spec(num_clusters, vectors_per_cluster,
+                         num_cols=256, beta_d=3.0
+                         ):
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
     dataset_spec["num_cols"] = num_cols

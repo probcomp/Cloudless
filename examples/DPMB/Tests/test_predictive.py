@@ -28,7 +28,16 @@ parser.add_argument('--balanced',default=-1,type=int)
 parser.add_argument('--num_iters',default=1000,type=int)
 parser.add_argument('--num_nodes',default=1,type=int)
 parser.add_argument('--time_seatbelt',default=60,type=int)
-parser.add_argument('--pkl_file_str',default=os.path.expanduser("~/test_predictive_pickled_jobs.pkl"),type=str)
+parser.add_argument(
+    '--save_dir',
+    default=os.path.expanduser("~/Run/"),
+    type=str,
+    )
+parser.add_argument(
+    '--pkl_file_str',
+    default=os.path.expanduser("~/Run/test_predictive_pickled_jobs.pkl"),
+    type=str,
+    )
 parser.add_argument('--remote',action='store_true')
 #
 args = parser.parse_args()
@@ -66,7 +75,11 @@ if os.path.isfile(args.pkl_file_str):
 else:
     print "Running inference"
     memoized_infer(run_spec)
-    rf.try_plots(memoized_infer,which_measurements=["predictive","ari","num_clusters","score"])
+    rf.try_plots(
+        memoized_infer,
+        which_measurements=["predictive","ari","num_clusters","score"],
+        save_dir=args.save_dir,
+        )
     rf.pickle_if_done(memoized_infer,file_str=args.pkl_file_str)
 
 gibbs_init_dur = memoized_infer.memo.values()[0][0]["timing"]["init"]
@@ -82,66 +95,9 @@ for summary in memoized_infer.memo.values()[0][1:]:
 cluster_counts = np.array(cluster_counts)
 z_diff_times = np.array(z_diff_times)
 
-box_input = {}
-for cluster_count,diff_time in zip(cluster_counts,z_diff_times):
-    box_input.setdefault(cluster_count,[]).append(diff_time)
-
-median_times = []
-for cluster_count in np.sort(box_input.keys()):
-    median_times.append(np.median(box_input[cluster_count]))
-
-slope,intercept,r_value,p_value,stderr = linregress(
-    np.sort(box_input.keys())
-    ,median_times)
-title_str = "slope = " + ("%.3g" % slope) \
-    + "; intercept = " + ("%.3g" % intercept) \
-    + "; R^2 = " + ("%.5g" % r_value**2)
-
-num_cols = args.num_cols
-num_rows = args.num_rows
-cutoff = cluster_counts.max()/3
-box_every_n = max(1,len(box_input)/10)
-
-pylab.figure()
-pylab.plot(cluster_counts,z_diff_times,'x')
-pylab.title(title_str)
-pylab.xlabel("num_clusters")
-pylab.ylabel("single-z scan time (seconds)")
-fig_str = "scatter_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
-pylab.savefig(os.path.expanduser("~/"+fig_str))
-#
-pylab.figure()
-pylab.boxplot(box_input.values()[::box_every_n]
-              ,positions=box_input.keys()[::box_every_n]
-              ,sym="")
-pylab.title(title_str)
-pylab.xlabel("num_clusters")
-pylab.ylabel("single-z scan time (seconds)")
-fig_str = "boxplot_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)
-pylab.savefig(os.path.expanduser("~/"+fig_str))
-pylab.close()
-#
-try:
-    pylab.figure()
-    pylab.hexbin(cluster_counts[cluster_counts<cutoff],z_diff_times[cluster_counts<cutoff])
-    pylab.title(title_str)
-    pylab.xlabel("num_clusters")
-    pylab.ylabel("single-z scan time (seconds)")
-    pylab.colorbar()
-    fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_lt_"+str(cutoff)
-    pylab.savefig(os.path.expanduser("~/"+fig_str))
-except Exception, e:
-    print e
-#
-try:
-    pylab.figure()
-    pylab.hexbin(cluster_counts[cluster_counts>cutoff],z_diff_times[cluster_counts>cutoff])
-    pylab.title(title_str)
-    pylab.xlabel("num_clusters")
-    pylab.ylabel("single-z scan time (seconds)")
-    pylab.colorbar()
-    fig_str = "hexbin_scan_times_num_cols_"+str(num_cols)+"_num_rows_"+str(num_rows)+"_gt_"+str(cutoff)
-    pylab.savefig(os.path.expanduser("~/"+fig_str))
-except Exception, e:
-    print e
-
+rf.timing_plots(
+    cluster_counts,
+    z_diff_times,
+    args,
+    save_dir=args.save_dir,
+    )
