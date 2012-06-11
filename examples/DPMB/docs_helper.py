@@ -1,6 +1,8 @@
 #!python
-import gdata,gdata.docs.client as gdc
-import os,sys
+import gdata
+import gdata.docs.client as gdc
+import os
+import sys
 ##general documentation
 ##http://gdata-python-client.googlecode.com/hg/pydocs/gdata.docs.html
 ##how to find a collection
@@ -44,7 +46,10 @@ class Docs_helper():
             except Exception,e:
                 pass ##most likely, there was no file
 
-        mediaResource = gdata.data.MediaSource(content_type=content_type,file_path=file_path,file_name=file_name)
+        mediaResource = gdata.data.MediaSource(
+            content_type=content_type
+            , file_path=file_path
+            , file_name=file_name)
         myResource = gdata.docs.data.Resource(title=docs_name)
         self.client.create_resource(myResource,media=mediaResource
                                ,collection=collection)
@@ -61,9 +66,12 @@ class Docs_helper():
 def main():
     import argparse
     #
-    parser = argparse.ArgumentParser(description='A script that can programatically interact with google docs') 
+    parser = argparse.ArgumentParser(
+        description='A script that can programatically interact with google docs')
     parser.add_argument('file_strs',nargs="+",type=str)
-    parser.add_argument('--auth_file',default=os.path.expanduser("~/google_docs_auth"),type=str)
+    parser.add_argument('--auth_file'
+                        , default=os.path.expanduser("~/google_docs_auth")
+                        , type=str)
     parser.add_argument('--email',default=None,type=str)
     parser.add_argument('--password',default=None,type=str)
     parser.add_argument('--folder',default="MH",type=str)
@@ -83,7 +91,10 @@ def main():
     client = Docs_helper(email=email,password=password)
     collection = client.get_collection(args.folder)
     for file_str in args.file_strs:
-        client.push_file(file_str,args.mime_type,collection=collection,replace=args.replace)
+        client.push_file(file_str
+                         , args.mime_type
+                         , collection=collection
+                         , replace=args.replace)
 
 if __name__ == "__main__":
     main()
