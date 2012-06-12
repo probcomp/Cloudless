@@ -26,7 +26,6 @@ args = parser.parse_args()
 run_spec = rf.gen_runspec_from_argparse(args)
 plot_problem = rf.gen_problem(
     run_spec["dataset_spec"],
-    permute=False,
     save_str="generative_state",
     )
 problem = rf.gen_problem(run_spec["dataset_spec"])
