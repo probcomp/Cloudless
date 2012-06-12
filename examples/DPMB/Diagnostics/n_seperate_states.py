@@ -17,7 +17,8 @@ import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
-
+import Cloudless
+reload(Cloudless)
 
 parser = rf.gen_default_arg_parser()
 parser.add_argument('--plot_states',action='store_true')
@@ -145,3 +146,16 @@ for iter_idx in range(run_spec["num_iters"]):
         decanon_indices = transitioner.state.get_decanonicalizing_indices()
 master_summaries[-1]["last_valid_zs"] = last_valid_zs
 master_summaries[-1]["decanon_indices"] = decanon_indices
+
+
+# stuff an AsyncMemoize to create plots
+memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
+memoized_infer.memo[str((run_spec,))] = master_summaries
+memoized_infer.args[str((run_spec,))] = (run_spec,)
+
+rf.pickle_if_done(memoized_infer,file_str="n_seperate_states_results.pkl")
+rf.try_plots(
+    memoized_infer,
+    which_measurements=["predictive","ari","num_clusters","score"],
+    save_dir="./"
+    )
