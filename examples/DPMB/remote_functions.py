@@ -210,7 +210,7 @@ class Chunked_Job(Thread):
         self.release_lock()
         return self.failed
         
-def gen_problem(dataset_spec,permute=True):
+def gen_problem(dataset_spec,permute=True,save_str=None):
     # generate a state
     # initialized according to the generation parameters from dataset spec
     # containing all the training data only
@@ -221,6 +221,9 @@ def gen_problem(dataset_spec,permute=True):
                           init_betas=dataset_spec["gen_betas"],
                           init_z=dataset_spec["gen_z"],
                           init_x = None)
+    if save_str is not None:
+        state.plot(save_str=save_str)
+    
     problem = {}
     problem["dataset_spec"] = dataset_spec
     if permute:
