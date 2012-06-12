@@ -18,7 +18,7 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
 default_save_dir = os.path.expanduser("~/Run/")
-default_pkl_file_str = "test_predictive_pickled_jobs.pkl"
+default_pkl_file_str = "test_predictive_pickled_jobs.pkl.gz"
 # load up some arguments
 parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
 parser.add_argument('--num_cols',default=256,type=int)
