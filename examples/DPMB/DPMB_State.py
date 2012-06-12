@@ -415,6 +415,7 @@ class DPMB_State():
 
         if save_str is not None:
             pylab.savefig(save_str)
+            pylab.close()
 
         return fh1,fh2,fh3,fh4
 
