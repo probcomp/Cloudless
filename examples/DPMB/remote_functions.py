@@ -1,16 +1,17 @@
-import cPickle
+import argparse
 import copy
+import cPickle
+import datetime
+import gzip
+import os
+import sets
 import time
 from threading import Thread
-import datetime
-from numpy import array
-import sets
-import os
-import gzip
-from scipy.stats import linregress
 ##
 import numpy as np
 import pylab
+from numpy import array
+from scipy.stats import linregress
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
@@ -334,7 +335,8 @@ def infer(run_spec):
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
             ,test_xs=problem["test_xs"])
-        hf.printTS("time elapsed: " + ("%.1f" % next_summary["timing"].get("run_sum",0)))
+        time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
+        hf.printTS("time elapsed: " + time_elapsed_str)
         if transition_return is not None:
             summaries[-1]["break"] = transition_return
             summaries[-1]["failed_info"] = next_summary
@@ -741,3 +743,53 @@ def gen_default_run_spec(num_clusters, vectors_per_cluster,
     run_spec["verbose_state"] = False
     #
     return run_spec
+
+def gen_runspec_from_argparse(parser):
+
+    run_spec = gen_default_run_spec(
+        num_clusters = parser.num_clusters,
+        vectors_per_cluster = parser.num_rows/parser.num_clusters,
+        num_cols = parser.num_cols,
+        beta_d = parser.beta_d
+        )
+    run_spec["dataset_spec"]["num_rows"] = parser.num_rows
+    run_spec["dataset_spec"]["gen_z"] = ("balanced",parser.num_clusters)
+    run_spec["num_iters"] = parser.num_iters
+    run_spec["num_nodes"] = parser.num_nodes
+    run_spec["hypers_every_N"] = parser.num_nodes
+    run_spec["time_seatbelt"] = parser.time_seatbelt
+    run_spec["infer_init_z"] = None \
+        if parser.balanced == -1 \
+        else ("balanced",parser.balanced)
+    run_spec["N_test"] = max(64,run_spec["dataset_spec"]["num_rows"]/16)
+
+    return run_spec
+
+def gen_default_arg_parser():
+
+    default_save_dir = os.path.expanduser("~/Run/")
+    default_pkl_file_str = "test_predictive_pickled_jobs.pkl.gz"
+    # load up some arguments
+    parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
+    parser.add_argument('--num_cols',default=256,type=int)
+    parser.add_argument('--num_rows',default=32*32,type=int)
+    parser.add_argument('--num_clusters',default=32,type=int)
+    parser.add_argument('--beta_d',default=3.0,type=float)
+    parser.add_argument('--balanced',default=-1,type=int)
+    parser.add_argument('--num_iters',default=1000,type=int)
+    parser.add_argument('--num_nodes',default=1,type=int)
+    parser.add_argument('--time_seatbelt',default=60,type=int)
+    parser.add_argument(
+        '--save_dir',
+        default=default_save_dir,
+        type=str,
+        )
+    parser.add_argument(
+        '--pkl_file_str',
+        default=default_pkl_file_str,
+        type=str,
+        )
+    parser.add_argument('--remote',action='store_true')
+    args = parser.parse_args()
+
+    return args
