@@ -18,7 +18,11 @@ reload(hf)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
-args = rf.gen_default_arg_parser()
+
+parser = rf.gen_default_arg_parser()
+parser.add_argument('--plot_states',action='store_true')
+args = parser.parse_args()
+#
 run_spec = rf.gen_runspec_from_argparse(args)
 problem = rf.gen_problem(run_spec["dataset_spec"])
 print "Created problem"
@@ -89,7 +93,7 @@ print "saved initialization"
 
 last_valid_zs = None
 decanon_indices = None
-for i in range(run_spec["num_iters"]):
+for iter_idx in range(run_spec["num_iters"]):
     # never actually transition transitioner
     # only inference_state.model_list elements
 
@@ -102,8 +106,18 @@ for i in range(run_spec["num_iters"]):
     # check for seatbelt violations in any of the individual states
     if len(filter(None,transitioner_return_list)) > 0:
         break
-    hf.printTS("finished doing iteration " + str(i))
+    hf.printTS("finished doing iteration " + str(iter_idx))
 
+    # plot states?
+    if args.plot_states:
+        for node_idx,node in enumerate(inference_state.model_list):
+            save_str = "_".join([
+                    "child_state_idx",
+                    str(node_idx),
+                    "iter_idx",
+                    str(iter_idx)
+                    ])
+            node.state.plot(save_str=save_str)
     # get node summaries
     node_summaries_element = []
     for node in inference_state.model_list:
@@ -121,7 +135,7 @@ for i in range(run_spec["num_iters"]):
     time_elapsed_str = "%.1f" % time_elapsed
     hf.printTS("time elapsed: " + time_elapsed_str)
     master_summaries.append(next_summary)
-    hf.printTS("finished saving iteration " + str(i))
+    hf.printTS("finished saving iteration " + str(iter_idx))
     if hasattr(transitioner.state,"getZIndices"):
         last_valid_zs = transitioner.state.getZIndices()
         decanon_indices = transitioner.state.get_decanonicalizing_indices()
