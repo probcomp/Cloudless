@@ -334,6 +334,7 @@ def infer(run_spec):
             true_zs=problem["zs"]
             ,verbose_state=verbose_state
             ,test_xs=problem["test_xs"])
+        hf.printTS("time elapsed: " + ("%.1f" % next_summary["timing"].get("run_sum",0)))
         if transition_return is not None:
             summaries[-1]["break"] = transition_return
             summaries[-1]["failed_info"] = next_summary
@@ -394,8 +395,7 @@ def pickle_if_done(memoized_infer,file_str="pickled_jobs.pkl"):
         return False
     else:
         memoized_infer.advance()
-        with open(file_str,"wb") as fh:
-            cPickle.dump(memoized_infer.memo,fh)
+        pickle_asyncmemoize(memoized_infer,file_str)
         print "Done all jobs, memo pickled"
         return True
 
