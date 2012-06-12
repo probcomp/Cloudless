@@ -790,6 +790,4 @@ def gen_default_arg_parser():
         type=str,
         )
     parser.add_argument('--remote',action='store_true')
-    args = parser.parse_args()
-
-    return args
+    return parser
