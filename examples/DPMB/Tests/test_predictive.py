@@ -1,14 +1,8 @@
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
-import numpy.random as nr
-import matplotlib.pylab as pylab
-import datetime
-import re
-import gc
 import argparse
 import os
-from scipy.stats import linregress
 #
 import Cloudless
 reload(Cloudless)
