@@ -1,15 +1,26 @@
 #!python
-import gdata
-import gdata.docs.client as gdc
 import os
 import sys
-##general documentation
+#
+import gdata
+import gdata.docs.client as gdc
+#
+import settings
+reload(settings)
+
+##general gdata documentation
 ##http://gdata-python-client.googlecode.com/hg/pydocs/gdata.docs.html
 ##how to find a collection
 ##http://stackoverflow.com/questions/10054604/google-docs-api-with-python
 
 class Docs_helper():
-    def __init__(self,email,password):
+    def __init__(self,email,password,auth_file=None):
+        auth_dict = {}
+        if auth_file is not None and os.path.isfile(auth_file):
+            exec open(auth_file) in auth_dict
+        email = auth_dict.get("email",email)
+        password = auth_dict.get("password",password)
+        #
         self.client = gdc.DocsClient()
         self.client.ClientLogin(email,password,"writely")
 
@@ -69,32 +80,38 @@ def main():
     parser = argparse.ArgumentParser(
         description='A script that can programatically interact with google docs')
     parser.add_argument('file_strs',nargs="+",type=str)
-    parser.add_argument('--auth_file'
-                        , default=os.path.expanduser("~/google_docs_auth")
-                        , type=str)
     parser.add_argument('--email',default=None,type=str)
     parser.add_argument('--password',default=None,type=str)
-    parser.add_argument('--folder',default="MH",type=str)
+    parser.add_argument(
+        '--auth_file',
+        default=settings.auth_file,
+        type=str,
+        )
+    parser.add_argument(
+        '--folder',
+        default=settings.gdocs_folder_default,
+        type=str,
+        )
     parser.add_argument('--replace',action='store_true')
     parser.add_argument('--mime_type',default="text/plain",type=str)
     args = parser.parse_args()
-    if not os.path.isfile(args.file_strs[0]):
-        print "Files doesn't exists: file_str: " + str(args.file_strs) 
-        exit()
     #
-    auth_dict = {}
-    if os.path.isfile(args.auth_file):
-        exec open(args.auth_file) in auth_dict
-    email = args.email if args.email is not None else auth_dict["email"]
-    password = args.password if args.password is not None else auth_dict["password"]
-    #
-    client = Docs_helper(email=email,password=password)
+    client = Docs_helper(
+        email=args.email,
+        password=args.password,
+        auth_file=args.auth_file,
+        )
     collection = client.get_collection(args.folder)
     for file_str in args.file_strs:
-        client.push_file(file_str
-                         , args.mime_type
-                         , collection=collection
-                         , replace=args.replace)
+        if not os.path.isfile(file_str):
+            print "Files doesn't exists: file_str: " + file_str
+            continue
+        client.push_file(
+            file_str,
+            args.mime_type,
+            collection=collection,
+            replace=args.replace,
+            )
 
 if __name__ == "__main__":
     main()

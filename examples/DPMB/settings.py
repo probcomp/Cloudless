@@ -19,3 +19,6 @@ verbose = True
 linuxBaseDir = "/usr/local/"
 windowsBaseDir = "c:/"
 dataDirSuffix = "dpmb.data/"
+
+auth_file = os.path.expanduser("~/mh_gdocs_auth")
+gdocs_folder_default = "MH"
