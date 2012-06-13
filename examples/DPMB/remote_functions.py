@@ -880,12 +880,14 @@ def gen_runspec_from_argparse(parser):
 
     return run_spec
 
-def gen_default_arg_parser():
+def gen_default_arg_parser(description=None):
+
+    description = "" if description is None else description
 
     default_save_dir = os.path.expanduser("~/Run/")
-    default_pkl_file_str = "test_predictive_pickled_jobs.pkl.gz"
+    default_pkl_file_str = "pickled_jobs.pkl.gz"
     # load up some arguments
-    parser = argparse.ArgumentParser(description='A test run that plots predictive, among other things')
+    parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--num_cols',default=256,type=int)
     parser.add_argument('--num_rows',default=32*32,type=int)
     parser.add_argument('--num_clusters',default=32,type=int)
@@ -904,5 +906,4 @@ def gen_default_arg_parser():
         default=default_pkl_file_str,
         type=str,
         )
-    parser.add_argument('--remote',action='store_true')
     return parser

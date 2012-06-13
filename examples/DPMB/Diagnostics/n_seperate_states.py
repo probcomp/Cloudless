@@ -20,8 +20,10 @@ reload(rf)
 import Cloudless
 reload(Cloudless)
 
-parser = rf.gen_default_arg_parser()
+parser = rf.gen_default_arg_parser(
+    'A test run that plots predictive, among other things')
 parser.add_argument('--plot_states',action='store_true')
+parser.add_argument('--remote',action='store_true')
 args = parser.parse_args()
 #
 run_spec = rf.gen_runspec_from_argparse(args)
