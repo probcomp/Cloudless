@@ -885,7 +885,7 @@ def gen_default_arg_parser(description=None):
     description = "" if description is None else description
 
     default_save_dir = os.path.expanduser("~/Run/")
-    default_pkl_file_str = "pickled_jobs.pkl.gz"
+    default_pkl_file_str = os.join(default_save_dir,"pickled_jobs.pkl.gz")
     # load up some arguments
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--num_cols',default=256,type=int)
@@ -896,14 +896,7 @@ def gen_default_arg_parser(description=None):
     parser.add_argument('--num_iters',default=1000,type=int)
     parser.add_argument('--num_nodes',default=1,type=int)
     parser.add_argument('--time_seatbelt',default=60,type=int)
-    parser.add_argument(
-        '--save_dir',
-        default=default_save_dir,
-        type=str,
-        )
-    parser.add_argument(
-        '--pkl_file_str',
-        default=default_pkl_file_str,
-        type=str,
-        )
+    parser.add_argument('--save_dir',default=default_save_dir,type=str)
+    parser.add_argument('--pkl_file_str',default=default_pkl_file_str,type=str)
+
     return parser
