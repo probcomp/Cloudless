@@ -19,6 +19,7 @@ parser.add_argument('runspec_file_str',type=str)
 parser.add_argument('--time_seatbelt',default=-1,type=int)
 parser.add_argument('--pkl_file_str',default=os.path.expanduser("~/run_from_pkl_pickled_jobs.pkl.gz"),type=str)
 parser.add_argument('--infer_name',default="infer",type=str)
+parser.add_argument('--infer_func_str',default="rf.infer",type=str)
 parser.add_argument('--not_remote',action='store_true')
 args = parser.parse_args()
 #
@@ -27,6 +28,7 @@ pkl_file_str = args.pkl_file_str
 infer_name = args.infer_name
 time_seatbelt = args.time_seatbelt
 remote = not args.not_remote
+infer_func = eval(args.infer_func_str)
 
 try:
     with open(runspec_file_str,"rb") as fh:
@@ -44,7 +46,7 @@ if remote:
 memoized_infer = Cloudless.memo.AsyncMemoize(
     infer_name
     , ["run_spec"]
-    , rf.infer
+    , infer_func
     , override=False
     )
 print "Created memoizer"
