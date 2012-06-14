@@ -1,12 +1,12 @@
 import numpy as np
 
-NUM_CLUSTERS = 4
-VECTORS_PER_CLUSTER = 128
-beta_d = 1.0
+NUM_CLUSTERS = 256
+VECTORS_PER_CLUSTER = 1024
+beta_d = 3.0
 def gen_default_run_spec():
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
-    dataset_spec["num_cols"] = 8
+    dataset_spec["num_cols"] = 64
     dataset_spec["num_rows"] = NUM_CLUSTERS*VECTORS_PER_CLUSTER
     dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
     dataset_spec["gen_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
@@ -15,7 +15,7 @@ def gen_default_run_spec():
     #
     run_spec = {}
     run_spec["dataset_spec"] = dataset_spec
-    run_spec["num_iters"] = 10
+    run_spec["num_iters"] = 10000
     run_spec["num_nodes"] = 1
     run_spec["infer_seed"] = 0
     run_spec["infer_init_alpha"] = 3.0
@@ -24,7 +24,7 @@ def gen_default_run_spec():
     run_spec["infer_do_betas_inference"] = True
     run_spec["infer_init_z"] = None
     run_spec["hypers_every_N"] = 1
-    run_spec["time_seatbelt"] = 60
+    run_spec["time_seatbelt"] = 1200
     run_spec["ari_seatbelt"] = None
     run_spec["verbose_state"] = False
     #
@@ -32,7 +32,7 @@ def gen_default_run_spec():
 
 NUM_RUNS = 3
 NUM_DATASETS = 3
-NUM_NODES_LIST = [1] # [1,4,16]
+NUM_NODES_LIST = [1,4,16]
 HYPERS_EVERY_N_LIST = [4,16]
 #
 ALL_RUN_SPECS = []
@@ -47,3 +47,9 @@ for num_nodes in NUM_NODES_LIST:
                 run_spec["hypers_every_N"] = hypers_every_N \
                     if num_nodes != 1 else 1
                 ALL_RUN_SPECS.append(run_spec)
+
+# cd $PYTHONPATH
+# cd Cloudless/examples/DPMB/Runspec_Generators
+# python ../create_pickled_runspecs.py compare_pdpmb_dpmb.py compare_pdpmb_dpmb_runspec.pkl
+
+# python -i ../run_runspecs_from_pkl.py compare_pdpmb_dpmb_runspec.pkl --save_dir ~/compare_pdpmb_dpmb/ --pkl_file_str ~/compare_pdpmb_dpmb/saved_runs.pkl
