@@ -2,8 +2,6 @@ import numpy as np
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
-# python -i n_seperate_states.py --num_nodes 2 --num_clusters 8 --num_rows 32 --num_iters 15 --plot_states --num_cols 8 --beta_d 0.1
-
 
 NUM_RUNS = 2
 NUM_DATASETS = 2
@@ -25,11 +23,15 @@ for infer_seed in range(NUM_RUNS):
         run_spec["hypers_every_N"] = 4
         run_spec["infer_seed"] = infer_seed
         run_spec["dataset_spec"]["gen_seed"] = gen_seed
+        ALL_RUN_SPECS.append(run_spec)
 
-# cd $PYTHONPATH
-# cd Cloudless/examples/DPMB/Runspec_Generators
-# python ../create_pickled_runspecs.py test_predictive_separate.py test_predictive_separate_runspec.pkl
 
-# python -i ../run_runspecs_from_pkl.py test_predictive_separate_runspec.pkl --infer_name infer_separate --infer_func_str rf.infer_separate --save_dir ~/separate --pkl_file_str ~/separate/saved_runs.pkl
-# or 
-# python -i ../run_runspecs_from_pkl.py test_predictive_separate_runspec.pkl --infer_name infer --infer_func_str rf.infer --save_dir ~/not_seperate --pkl_file_str ~/not_separate/saved_runs.pkl
+# cd /usr/local/lib/python2.7/dist-packages/Cloudless/examples/DPMB/Runspec_Generators/
+# mkdir ~/separate
+# python ../create_pickled_runspecs.py predictive_separate.py ~/predictive_separate_runspec.pkl
+# python -i ../run_runspecs_from_pkl.py ~/predictive_separate_runspec.pkl --save_dir ~/separate/ --pkl_file_str ~/separate/saved_runs.pkl --infer_name infer_separate --infer_func_str rf.infer_separate
+
+# cd /usr/local/lib/python2.7/dist-packages/Cloudless/examples/DPMB/Runspec_Generators/
+# mkdir ~/not_separate
+# python ../create_pickled_runspecs.py predictive_separate.py ~/predictive_separate_runspec.pkl
+# python -i ../run_runspecs_from_pkl.py ~/predictive_separate_runspec.pkl --save_dir ~/not_separate/ --pkl_file_str ~/not_separate/saved_runs.pkl --infer_name infer_not_separate --infer_func_str rf.infer
