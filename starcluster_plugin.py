@@ -13,6 +13,12 @@ class CloudlessSetup(ClusterSetup):
           # master.apt_install("python-gdata")
           # import os
           # os.system("starcluster put mycluster --user sgeadmin ~/google_docs_auth /home/sgeadmin/")
+
+          master.ssh.execute('sudo swapoff /dev/xvda3')
+          master.ssh.execute('sudo umount /dev/xvdm')
+          master.ssh.execute('sudo mkswap /dev/xvdz')
+          master.ssh.execute('sudo swapon /dev/xvdz')
+
           for node in nodes:
                log.info("Installing Cloudless on %s" % node.alias)
                node.ssh.execute('git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git')
