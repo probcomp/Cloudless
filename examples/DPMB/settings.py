@@ -1,3 +1,5 @@
+import os
+
 ##data dimensions
 numColumns = 50
 numVectors = 2000
