@@ -604,12 +604,8 @@ def runspec_to_plotspec(runspec):
 def plot_measurement(memoized_infer, which_measurement, target_dataset_spec
                      ,by_time=True,run_spec_filter=None,save_str=None
                      ,title_str=None,ylabel_str=None,legend_args=None
-                     ,do_legend=True):
+                     ,do_legend=True,h_line=None):
 
-    h_line = None
-    if which_measurement == "predictive":
-        problem = gen_problem(target_dataset_spec)
-        h_line = np.mean(problem["test_lls_under_gen"])
     run_spec_filter = run_spec_filter \
         if run_spec_filter is not None \
         else (lambda x: True)
@@ -708,6 +704,11 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
         config_str = "_".join([col_str,row_str,cluster_str])    
         #
         for which_measurement in which_measurements:
+
+            if which_measurement == "predictive":
+                problem = gen_problem(target_dataset_spec)
+                h_line = np.mean(problem["test_lls_under_gen"])
+
             try:
                 # by time
                 plot_measurement(
@@ -722,7 +723,8 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
                     , title_str=config_str
                     , ylabel_str=which_measurement
                     , legend_args=legend_args
-                    , do_legend=do_legend)
+                    , do_legend=do_legend
+                    , h_line=h_line)
                 # by iter
                 plot_measurement(
                     memoized_infer
@@ -736,7 +738,8 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
                     , title_str=config_str
                     , ylabel_str=which_measurement
                     , legend_args=legend_args
-                    , do_legend=do_legend)
+                    , do_legend=do_legend
+                    , h_line=h_line)
             except Exception, e:
                 print e
 
