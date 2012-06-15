@@ -7,15 +7,17 @@ import argparse
 parser = argparse.ArgumentParser(description='Profile a script')
 parser.add_argument('script_to_profile',type=str)
 parser.add_argument('--num_lines',default=40,type=int)
+parser.add_argument('--refresh',action='store_true')
 args,unknown_args = parser.parse_known_args()
 
 script_to_profile = args.script_to_profile
 num_lines = args.num_lines
+refresh = args.refresh
 
 script_base = os.path.splitext(script_to_profile)[0]
 prof_file = script_base + ".prof"
 out_file = script_base+ ".out"
-if not os.path.isfile(prof_file):
+if refresh or not os.path.isfile(prof_file):
     cmd_str = ("python -m cProfile -o " + prof_file 
                + " " + script_to_profile  
                + " " + " ".join(unknown_args)
