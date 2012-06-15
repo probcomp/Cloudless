@@ -28,8 +28,11 @@ parser.add_argument(
     )
 args,unknown_args = parser.parse_known_args()
 
+pkl_file_str = args.pkl_file_str
+save_dir = args.save_dir
+
 memoized_infer = Cloudless.memo.AsyncMemoize("infer", ["run_spec"], rf.infer, override=False)
-rf.unpickle_asyncmemoize(memoized_infer,args.pkl_file_str)
+rf.unpickle_asyncmemoize(memoized_infer,pkl_file_str)
 
 def report():
     memoized_infer.report_status()
@@ -49,4 +52,7 @@ def pickle():
 
 def pickle_if_done():
     rf.pickle_if_done(memoized_infer,file_str=pkl_file_str)
+
+
+plot()
 
