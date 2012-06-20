@@ -236,7 +236,19 @@ def delta_since(start_dt):
     except Exception, e:
         delta = (datetime.datetime.now()-start_dt).seconds()
     return delta
-    
+
+def convert_rpa_representation(intarray):
+    num_cols = 32*len(intarray[0])
+    num_rows = len(intarray)
+    data = np.ndarray((num_rows,num_cols),dtype=np.int32)
+    for row_idx,row in enumerate(intarray):
+        binary_rep = []
+        for number in row:
+            string_rep = bin(number)[2:].zfill(32)
+            binary_rep.extend([int(value) for value in string_rep])
+        data[row_idx] = binary_rep
+    return data
+
 ####################
 # SEED FUNCTIONS
 def generate_random_state(seed):
