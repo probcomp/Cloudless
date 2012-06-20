@@ -249,6 +249,15 @@ def convert_rpa_representation(intarray):
         data[row_idx] = binary_rep
     return data
 
+def cifar_data_to_image(raw_data,filename=None):
+    image_data = raw_data.reshape((3,32,32)).T
+    fh = pylab.figure(figsize=(.5,.5))
+    pylab.imshow(image_data,interpolation='nearest')
+    if filename is not None:
+        pylab.savefig(filename)
+        pylab.close()
+    return fh
+
 ####################
 # SEED FUNCTIONS
 def generate_random_state(seed):
