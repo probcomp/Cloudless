@@ -696,6 +696,13 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
     save_dir = save_dir if save_dir is not None else os.path.expanduser("~/")
     legend_args = {"ncol":1,"markerscale":2}
     #
+    h_line=None
+    if len(filter(lambda x:x=="predictive",which_measurements)) > 0:
+        target_dataset_spec =  extract_dataset_specs_from_memo(memoized_infer)[0]
+        # FIXME : only process 1?
+        problem = gen_problem(target_dataset_spec)
+        h_line = np.mean(problem["test_lls_under_gen"])
+
     for target_dataset_spec in extract_dataset_specs_from_memo(memoized_infer):
         # FIXME : presumes dataset_spec is always balanced
         cluster_str = "clusters" + str(target_dataset_spec["gen_z"][1])
@@ -704,10 +711,6 @@ def try_plots(memoized_infer,which_measurements=None,run_spec_filter=None,do_leg
         config_str = "_".join([col_str,row_str,cluster_str])    
         #
         for which_measurement in which_measurements:
-
-            if which_measurement == "predictive":
-                problem = gen_problem(target_dataset_spec)
-                h_line = np.mean(problem["test_lls_under_gen"])
 
             try:
                 # by time
