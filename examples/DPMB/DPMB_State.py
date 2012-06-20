@@ -217,14 +217,14 @@ class DPMB_State():
         # FIXME: can't rely on perfect random seed tracking right now. a future pass should make states modified by a journal of operations,
         #        and encapsulate a random source, so that we can control its precise state (and reduce all nondeterminism down to the underlying
         #        nondeterminism of things like Python data structures).
-        return DPMB_State(self.gen_seed, self.num_cols, len(self.vector_list), self.alpha, self.betas, self.getZIndices(), self.getXValues(),
+        return DPMB_State(self.random_state, self.num_cols, len(self.vector_list), self.alpha, self.betas, self.getZIndices(), self.getXValues(),
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
 
     def get_flat_dictionary(self):
         ##init_* naming is used, but its not really init
         ##makes sense when needed for state creation
         ##but otherwise only if you want to resume inference
-        return {"gen_seed":self.gen_seed, "num_cols":self.num_cols, "num_rows": len(self.vector_list), "alpha":self.alpha
+        return {"gen_seed":self.random_state, "num_cols":self.num_cols, "num_rows": len(self.vector_list), "alpha":self.alpha
                 , "betas":self.betas.copy(), "zs":self.getZIndices(), "xs":self.getXValues()
                 , "alpha_min":self.alpha_min, "alpha_max":self.alpha_max, "beta_min":self.beta_min, "beta_max":self.beta_max
                 , "grid_N":self.grid_N} ## , "N_test":self.N_test} ## N_test isn't save, should it be?
