@@ -28,3 +28,13 @@ filename = os.path.join("Data","CIFAR10-codes.pkl")
 with open(filename) as fh:
   cifar = cPickle.load(fh)
 data = hf.convert_rpa_representation(cifar["codes"][:len(labels)])
+
+# write out to a pickle file
+filename = "cifar_10_problem.pkl"
+cifar = {
+    "zs":labels,
+    "xs":data,
+    "name":"cifar-10",
+}
+with open(filename,"wb") as fh:
+    cPickle.dump(cifar,fh)
