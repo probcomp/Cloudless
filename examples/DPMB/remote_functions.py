@@ -214,6 +214,18 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     # generate a state
     # initialized according to the generation parameters from dataset spec
     # containing all the training data only
+    problem = {}
+    problem["dataset_spec"] = dataset_spec
+
+    if "pkl_file" in dataset_spec:
+        with open(fh,dataset_spec["pkl_file"]) as fh:
+            pkl_data = cPickle.load(fh)
+        problem["xs"] = pkl_data["xs"]
+        problem["zs"] = pkl_data["zs"]
+        # may need to change cifar dataset creation to include test set
+        # and create a state with 'ground truth' to create test_lls 
+        return problem
+    
     state = ds.DPMB_State(dataset_spec["gen_seed"],
                           dataset_spec["num_cols"],
                           dataset_spec["num_rows"],
@@ -224,8 +236,6 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     if save_str is not None:
         state.plot(save_str=save_str)
     
-    problem = {}
-    problem["dataset_spec"] = dataset_spec
     if permute:
         permutation_sequence = state.random_state.permutation(
             range(dataset_spec["num_rows"]))
