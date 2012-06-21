@@ -13,8 +13,6 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
-# import pyximport
-# pyximport.install()
 import pyx_functions as pf
 reload(pf)
 #

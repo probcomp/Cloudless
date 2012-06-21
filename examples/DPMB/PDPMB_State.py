@@ -15,8 +15,6 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
-# import pyximport
-# pyximport.install()
 import pyx_functions as pf
 reload(pf)
 ##

@@ -9,8 +9,6 @@ import DPMB as dm
 reload(dm)
 import helper_functions as hf
 reload(hf)
-# import pyximport
-# pyximport.install()
 import pyx_functions as pf
 reload(pf)
 ##

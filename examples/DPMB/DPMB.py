@@ -9,8 +9,6 @@ import DPMB_State as ds
 reload(ds)
 import helper_functions as hf
 reload(hf)
-# import pyximport
-# pyximport.install()
 import pyx_functions as pf
 reload(pf)
 ##
