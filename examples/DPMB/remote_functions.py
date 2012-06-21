@@ -218,8 +218,7 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     problem["dataset_spec"] = dataset_spec
 
     if "pkl_file" in dataset_spec:
-        with open(fh,dataset_spec["pkl_file"]) as fh:
-            pkl_data = cPickle.load(fh)
+        pkl_data = unpickle(dataset_spec["pkl_file"])
         problem["xs"] = pkl_data["xs"]
         problem["zs"] = pkl_data["zs"]
         # may need to change cifar dataset creation to include test set
@@ -483,22 +482,29 @@ def extract_dataset_specs_from_memo(asyncmemo):
                          for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
     return ALL_DATASET_SPECS
 
-def pickle_asyncmemoize(asyncmemo,file_str):
+def pickle(var,file_str):
     if file_str[-3:] == ".gz":
         my_open = gzip.open
     else:
         my_open = open
     with my_open(file_str,"wb") as fh:
-        cPickle.dump(asyncmemo.memo,fh)
+        cPickle.dump(var,fh)
 
-def unpickle_asyncmemoize(asyncmemo,file_str):
+def unpickle(file_str):
     from numpy import array
     if file_str[-3:] == ".gz":
         my_open = gzip.open
     else:
         my_open = open
     with my_open(file_str,"rb") as fh:
-        pickled_memo = cPickle.load(fh)
+        var = cPickle.load(fh)
+    return var
+
+def pickle_asyncmemoize(asyncmemo,file_str):
+    pickle(asyncmemo.memo,file_str)
+
+def unpickle_asyncmemoize(asyncmemo,file_str):
+    pickled_memo = unpickle(file_str)
     #
     ALL_RUN_SPECS = [eval(run_spec)[0] for run_spec in pickled_memo.keys()]
     new_memo = dict(zip(
