@@ -2,10 +2,14 @@
 import os
 
 # resolve directories to use
+root_dir = None
+is_windows = None
 if os.sys.platform in {'cygwin':None,"win32":None}:
     root_dir = "c:" + os.path.sep
+    is_windows = True
 else:
     root_dir = os.path.join(os.path.sep,"usr","local")
+    is_window = False
 dpmb_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
 data_dir = os.path.join(dpmb_dir,"Data")
 
