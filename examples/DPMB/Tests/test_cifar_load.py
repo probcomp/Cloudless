@@ -1,0 +1,124 @@
+#!python
+import cPickle
+import os
+#
+import numpy as np
+#
+import Cloudless.examples.DPMB.settings as settings
+reload(settings)
+import Cloudless.examples.DPMB.remote_functions as rf
+reload(rf)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+
+beta_d = 2.0
+
+dataset_spec = {}
+dataset_spec["pkl_file"] = os.path.join(
+    settings.data_dir,settings.cifar_10_problem_file)
+dataset_spec["gen_seed"] = 0
+dataset_spec["num_cols"] = 256
+dataset_spec["num_rows"] = 50000
+dataset_spec["gen_alpha"] = 1.0
+dataset_spec["gen_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
+pkl_data = rf.unpickle(dataset_spec["pkl_file"])
+dataset_spec["gen_z"] = pkl_data["zs"]
+init_x = pkl_data["xs"]
+#
+problem = {}
+problem["xs"] = pkl_data["xs"]
+problem["zs"] = pkl_data["zs"]
+problem["test_xs"] = pkl_data["test_xs"]
+#
+state = ds.DPMB_State(dataset_spec["gen_seed"],
+                      dataset_spec["num_cols"],
+                      dataset_spec["num_rows"],
+                      init_alpha=dataset_spec["gen_alpha"],
+                      init_betas=dataset_spec["gen_betas"],
+                      init_z=dataset_spec["gen_z"],
+                      init_x = init_x)
+verbose_state = run_spec.get("verbose_state",False)
+decanon_indices = run_spec.get("decanon_indices",None)
+num_nodes = run_spec.get("num_nodes",1)
+hypers_every_N = run_spec.get("hypers_every_N",1)
+time_seatbelt = run_spec.get("time_seatbelt",None)
+ari_seatbelt = run_spec.get("ari_seatbelt",None)
+#
+if verbose_state:
+    print "doing run: "
+    for (k, v) in run_spec.items():
+        if k.find("seed") != -1:
+            print "   " + "hash(" + str(k) + ")" + " ---- " + str(hash(str(v)))
+        else:
+            print "   " + str(k) + " ---- " + str(v)
+#
+state_kwargs = {}
+model_kwargs = {}
+print "initializing"
+if num_nodes == 1:
+    state_type = ds.DPMB_State
+    model_type = dm.DPMB
+    state_kwargs = {"decanon_indices":decanon_indices}
+else:
+    state_type = pds.PDPMB_State
+    model_type = pdm.PDPMB
+    state_kwargs = {"num_nodes":num_nodes}
+    model_kwargs = {"hypers_every_N":hypers_every_N}
+
+init_start_ts = datetime.datetime.now()
+inference_state = state_type(dataset_spec["gen_seed"],
+                             dataset_spec["num_cols"],
+                             dataset_spec["num_rows"],
+                             init_alpha=run_spec["infer_init_alpha"],
+                             init_betas=run_spec["infer_init_betas"],
+                             init_z=run_spec["infer_init_z"],
+                             init_x = problem["xs"],
+                             **state_kwargs
+                             )
+init_delta_seconds = hf.delta_since(init_start_ts)
+
+print "...initialized"
+transitioner = model_type(
+    inf_seed = run_spec["infer_seed"],
+    state = inference_state,
+    infer_alpha = run_spec["infer_do_alpha_inference"],
+    infer_beta = run_spec["infer_do_betas_inference"],
+    **model_kwargs
+    )
+#
+summaries = []
+summaries.append(
+    transitioner.extract_state_summary(
+        true_zs=problem["zs"]
+        ,verbose_state=verbose_state
+        ,test_xs=problem["test_xs"]))
+summaries[-1]["timing"]["init"] = init_delta_seconds
+#
+print "saved initialization"
+#
+last_valid_zs = None
+decanon_indices = None
+for i in range(run_spec["num_iters"]):
+    transition_return = transitioner.transition(
+        time_seatbelt=time_seatbelt
+        ,ari_seatbelt=ari_seatbelt
+        ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
+    hf.printTS("finished doing iteration " + str(i))
+    next_summary = transitioner.extract_state_summary(
+        true_zs=problem["zs"]
+        ,verbose_state=verbose_state
+        ,test_xs=problem["test_xs"])
+    time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
+    hf.printTS("time elapsed: " + time_elapsed_str)
+    if transition_return is not None:
+        summaries[-1]["break"] = transition_return
+        summaries[-1]["failed_info"] = next_summary
+        break
+    summaries.append(next_summary)
+    hf.printTS("finished saving iteration " + str(i))
+    if hasattr(transitioner.state,"getZIndices"):
+        last_valid_zs = transitioner.state.getZIndices()
+        decanon_indices = transitioner.state.get_decanonicalizing_indices()
+summaries[-1]["last_valid_zs"] = last_valid_zs
+summaries[-1]["decanon_indices"] = decanon_indices
+return summaries
