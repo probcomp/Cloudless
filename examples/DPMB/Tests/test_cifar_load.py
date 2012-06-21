@@ -3,6 +3,8 @@ import cPickle
 import os
 import datetime
 #
+import matplotlib
+matplotlib.use('Agg')
 import numpy as np
 #
 import Cloudless.examples.DPMB.settings as settings
