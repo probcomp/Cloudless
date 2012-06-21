@@ -410,7 +410,7 @@ class DPMB_State():
             pylab.savefig(save_str)
             pylab.close()
 
-        return fh1,fh2,fh3,fh4
+        return fh,fh1,fh2,fh3,fh4
 
 
 class Vector():
