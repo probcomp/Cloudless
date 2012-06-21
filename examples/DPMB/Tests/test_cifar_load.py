@@ -1,6 +1,7 @@
 #!python
 import cPickle
 import os
+import datetime
 #
 import numpy as np
 #
@@ -8,8 +9,16 @@ import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
+import Cloudless.examples.DPMB.PDPMB_State as pds
+reload(pds)
+import Cloudless.examples.DPMB.PDPMB as pdm
+reload(pdm)
 
 beta_d = 2.0
 
@@ -37,6 +46,17 @@ state = ds.DPMB_State(dataset_spec["gen_seed"],
                       init_betas=dataset_spec["gen_betas"],
                       init_z=dataset_spec["gen_z"],
                       init_x = init_x)
+
+run_spec = {}
+run_spec["dataset_spec"] = dataset_spec
+run_spec["num_iters"] = 0
+run_spec["infer_seed"] = 0
+run_spec["infer_init_alpha"] = 1.0
+run_spec["infer_init_betas"] = dataset_spec["gen_betas"].copy()
+run_spec["infer_init_z"] = dataset_spec["gen_z"].copy()
+run_spec["infer_do_alpha_inference"] = True
+run_spec["infer_do_betas_inference"] = True
+
 verbose_state = run_spec.get("verbose_state",False)
 decanon_indices = run_spec.get("decanon_indices",None)
 num_nodes = run_spec.get("num_nodes",1)
@@ -121,4 +141,18 @@ for i in range(run_spec["num_iters"]):
         decanon_indices = transitioner.state.get_decanonicalizing_indices()
 summaries[-1]["last_valid_zs"] = last_valid_zs
 summaries[-1]["decanon_indices"] = decanon_indices
-return summaries
+
+def plot_full_state():
+    transitioner.transition_beta()
+    for beta_idx in xrange(len(inference_state.betas)):
+        save_str = "cifar_init_state_beta" + str(beta_idx) + "_vector" + str(beta_idx)
+        inference_state.plot(
+            which_plots=["alpha","beta","cluster"],
+            save_str=save_str,
+            show=False,
+            beta_idx=beta_idx,
+            vector_idx=beta_idx
+            )
+
+if False:
+    plot_full_state()
