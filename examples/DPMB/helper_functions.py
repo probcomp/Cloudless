@@ -9,9 +9,7 @@ import scipy.special as ss
 from numpy.random import RandomState
 ##
 import DPMB_State as ds
-reload(ds)
-# import pyximport
-# pyximport.install()
+# reload(ds) # reloading this causes an import loop of some sort
 import pyx_functions as pf
 reload(pf)
 
