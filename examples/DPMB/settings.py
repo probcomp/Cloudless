@@ -10,11 +10,11 @@ if os.sys.platform in {'cygwin':None,"win32":None}:
 else:
     root_dir = os.path.join(os.path.sep,"usr","local")
     is_window = False
-dpmb_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
-data_dir = os.path.join(dpmb_dir,"Data")
+base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
+data_dir = os.path.join(base_dir,"Data")
 
 # compile pyx_functions.pyx
-os.system('bash ' + os.path.join(dpmb_dir,"compile_pyx_functions.sh"))
+os.system('bash ' + os.path.join(base_dir,"compile_pyx_functions.sh"))
 
 # gdocs settings
 auth_file = os.path.expanduser("~/mh_gdocs_auth")
