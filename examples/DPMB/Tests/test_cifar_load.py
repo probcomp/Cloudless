@@ -118,33 +118,38 @@ print "saved initialization"
 #
 last_valid_zs = None
 decanon_indices = None
-for i in range(run_spec["num_iters"]):
-    transition_return = transitioner.transition(
-        time_seatbelt=time_seatbelt
-        ,ari_seatbelt=ari_seatbelt
-        ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
-    hf.printTS("finished doing iteration " + str(i))
-    next_summary = transitioner.extract_state_summary(
-        true_zs=problem["zs"]
-        ,verbose_state=verbose_state
-        ,test_xs=problem["test_xs"])
-    time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
-    hf.printTS("time elapsed: " + time_elapsed_str)
-    if transition_return is not None:
-        summaries[-1]["break"] = transition_return
-        summaries[-1]["failed_info"] = next_summary
-        break
-    summaries.append(next_summary)
-    hf.printTS("finished saving iteration " + str(i))
-    if hasattr(transitioner.state,"getZIndices"):
-        last_valid_zs = transitioner.state.getZIndices()
-        decanon_indices = transitioner.state.get_decanonicalizing_indices()
-summaries[-1]["last_valid_zs"] = last_valid_zs
-summaries[-1]["decanon_indices"] = decanon_indices
 
-def plot_full_state():
+
+def do_transitions(num_transitions):
+    for i in xrange(num_transitions):
+        transition_return = transitioner.transition(
+            time_seatbelt=time_seatbelt
+            ,ari_seatbelt=ari_seatbelt
+            ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
+        hf.printTS("finished doing iteration " + str(i))
+        next_summary = transitioner.extract_state_summary(
+            true_zs=problem["zs"]
+            ,verbose_state=verbose_state
+            ,test_xs=problem["test_xs"])
+        time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
+        hf.printTS("time elapsed: " + time_elapsed_str)
+        if transition_return is not None:
+            summaries[-1]["break"] = transition_return
+            summaries[-1]["failed_info"] = next_summary
+            break
+        summaries.append(next_summary)
+        hf.printTS("finished saving iteration " + str(i))
+        if hasattr(transitioner.state,"getZIndices"):
+            last_valid_zs = transitioner.state.getZIndices()
+            decanon_indices = transitioner.state.get_decanonicalizing_indices()
+    summaries[-1]["last_valid_zs"] = last_valid_zs
+    summaries[-1]["decanon_indices"] = decanon_indices
+
+def plot_full_state(which_betas=None):
+    if which_betas is None:
+        which_betas = xrange(len(inference_state.betas))
     transitioner.transition_beta()
-    for beta_idx in xrange(len(inference_state.betas)):
+    for beta_idx in which_betas:
         save_str = "cifar_init_state_beta" + str(beta_idx) + "_vector" + str(beta_idx)
         inference_state.plot(
             which_plots=["alpha","beta","cluster"],
