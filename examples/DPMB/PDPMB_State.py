@@ -16,8 +16,8 @@ reload(hf)
 ##
 import pdb
 
-import pyximport
-pyximport.install()
+# import pyximport
+# pyximport.install()
 import pyx_functions as pf
 
 

@@ -8,8 +8,8 @@ import scipy.special as ss
 ##
 import DPMB_State as ds
 
-import pyximport
-pyximport.install()
+# import pyximport
+# pyximport.install()
 import pyx_functions as pf
 
 def transition_single_z(vector,random_state):
