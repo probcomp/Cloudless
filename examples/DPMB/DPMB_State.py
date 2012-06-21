@@ -49,7 +49,6 @@ class DPMB_State():
             self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
 
     def gibbs_type_init(self, num_rows, init_x):
-        # FIXME : permute init_x ?
 
         # allocate each vector according to cluster_conditional
         # with the guts of hf.transition_single_z
@@ -162,9 +161,6 @@ class DPMB_State():
     # data=None, cluster=None: sample cluster from CRP, sample data from predictive of that cluster.
     # data=None, cluster=c: sample data from c's predictive and incorporate it into c
     # data=dvec, cluster=c: incorporate dvec into c
-    #
-    # FIXME: Support the case below for GIbbs-type initialization only:
-    # data=dvec, cluster=None: sample cluster from the conditional posterior given the data
     def generate_vector(self, data=None, cluster=None):
         if cluster is None:
             cluster = self.generate_cluster_assignment()
@@ -207,6 +203,7 @@ class DPMB_State():
         lls = []
         #
         for data in test_xs:
+            # FIXME : could I just generate once, modify vector.data for each test_x and run calculate_log_predictive?
             test_vec = self.generate_vector(data=data)
             self.remove_vector(test_vec)
             lls.append(self.calculate_log_predictive(test_vec))
@@ -214,9 +211,6 @@ class DPMB_State():
         return lls
                                                             
     def clone(self):
-        # FIXME: can't rely on perfect random seed tracking right now. a future pass should make states modified by a journal of operations,
-        #        and encapsulate a random source, so that we can control its precise state (and reduce all nondeterminism down to the underlying
-        #        nondeterminism of things like Python data structures).
         return DPMB_State(self.random_state, self.num_cols, len(self.vector_list), self.alpha, self.betas, self.getZIndices(), self.getXValues(),
                           self.alpha_min, self.alpha_max, self.beta_min, self.beta_max, self.grid_N)
 
