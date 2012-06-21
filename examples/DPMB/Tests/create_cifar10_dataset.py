@@ -40,7 +40,6 @@ train_data = hf.convert_rpa_representation(cifar["codes"][:len(train_labels)])
 test_data = hf.convert_rpa_representation(cifar["codes"][-len(test_labels):])
 
 # write out to a pickle file
-filename = "cifar_10_problem.pkl"
 cifar = {
     "zs":train_labels,
     "xs":train_data,
@@ -48,5 +47,6 @@ cifar = {
     "test_xs":test_data,
     "name":"cifar-10",
 }
+filename = os.path.join(settings.data_dir,settings.cifar_10_problem_file)
 with open(filename,"wb") as fh:
     cPickle.dump(cifar,fh)
