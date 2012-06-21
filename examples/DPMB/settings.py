@@ -14,7 +14,12 @@ base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
 data_dir = os.path.join(base_dir,"Data")
 
 # compile pyx_functions.pyx
-os.system('bash ' + os.path.join(base_dir,"compile_pyx_functions.sh"))
+os.system(
+    " ".join([
+    'bash',
+    os.path.join(base_dir,"compile_pyx_functions.sh"),
+    base_dir,
+    ]))
 
 # gdocs settings
 auth_file = os.path.expanduser("~/mh_gdocs_auth")
