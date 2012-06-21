@@ -1,11 +1,11 @@
 #!python
-
+import datetime
+import sets
+import sys
+#
 import numpy as np
 import scipy.special as ss
 import pylab
-import sys
-import datetime
-import sets
 #
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
@@ -13,12 +13,12 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
-#
-import pdb
-
 # import pyximport
 # pyximport.install()
 import pyx_functions as pf
+reload(pf)
+#
+import pdb
 
 
 class PDPMB():

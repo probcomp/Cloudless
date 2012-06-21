@@ -1,16 +1,20 @@
-import datetime,sys,pdb
+import datetime
+import sys
+import pdb
 ##
-from numpy.random import RandomState
 import pylab
 import matplotlib
 import numpy as np
 import scipy.special as ss
+from numpy.random import RandomState
 ##
 import DPMB_State as ds
-
+reload(ds)
 # import pyximport
 # pyximport.install()
 import pyx_functions as pf
+reload(pf)
+
 
 def transition_single_z(vector,random_state):
     cluster = vector.cluster

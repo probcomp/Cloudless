@@ -1,10 +1,11 @@
+import argparse
+import cPickle
+import os
+#
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
 import matplotlib.pylab as pylab
-import os
-import argparse
-import cPickle
 #
 import Cloudless
 reload(Cloudless)

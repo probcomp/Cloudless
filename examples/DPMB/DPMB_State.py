@@ -1,20 +1,21 @@
 #!python
+import sys
+#
 import numpy as np
 import pylab
-import sys
+from collections import OrderedDict as od
 #
 import DPMB as dm
 reload(dm)
 import helper_functions as hf
 reload(hf)
-##
-import pdb
-
 # import pyximport
 # pyximport.install()
 import pyx_functions as pf
+reload(pf)
+##
+import pdb
 
-from collections import OrderedDict as od
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None

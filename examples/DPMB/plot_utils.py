@@ -1,9 +1,10 @@
+import numpy as np
+import scipy.special as ss
+#
 import DPMB as dm
 reload(dm)
 import DPMB_State as ds
 reload(ds)
-import numpy as np
-import scipy.special as ss
     
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab

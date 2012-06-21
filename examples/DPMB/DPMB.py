@@ -1,19 +1,20 @@
 #!python
 import datetime
+import sys
+#
 import numpy as np
 import scipy.special as ss
-import sys
 #
 import DPMB_State as ds
 reload(ds)
 import helper_functions as hf
 reload(hf)
-##
-import pdb
-
 # import pyximport
 # pyximport.install()
 import pyx_functions as pf
+reload(pf)
+##
+import pdb
 
 
 class DPMB():
