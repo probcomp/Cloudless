@@ -297,13 +297,14 @@ class DPMB_State():
     # def modifyScore(self,scoreDelta):
     #     self.score += scoreDelta
 
-    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,**kwargs):
+    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,beta_idx=0,vector_idx=0,**kwargs):
         if len(self.cluster_list) == 0:
             if save_str is not None:
                 pylab.figure()
                 pylab.savefig(save_str)
             return
-        which_plots = ["data","alpha","beta","cluster"] if which_plots is None else which_plots
+        if which_plots is None:
+            which_plots = ["data","alpha","beta","cluster"]
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))
         handle_lookup = dict(zip(which_plots,which_handles))
@@ -316,7 +317,7 @@ class DPMB_State():
         fh1 = None
         fh = pylab.figure()
         pylab.subplot(411)
-        if "data" in which_plots or True:
+        if "data" in which_plots:
             ##sort by attributed state and then gen_state if available
             if gen_state is not None:
                 mult_factor = np.round(np.log10(len(gen_state["phis"])))
@@ -346,8 +347,7 @@ class DPMB_State():
 
         fh3 = None
         pylab.subplot(413)
-        if "beta" in which_plots or True:
-            beta_idx = 0
+        if "beta" in which_plots:
             logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
             norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
             title_str  = "Beta" if title_append is None else "Beta" + ": " + title_append
@@ -356,8 +356,8 @@ class DPMB_State():
             
         fh4 = None
         pylab.subplot(414)
-        if ("cluster" in which_plots or True) and len(self.vector_list)>1:
-            vector = list(self.vector_list)[0]
+        if ("cluster" in which_plots) and len(self.vector_list)>1:
+            vector = list(self.vector_list)[vector_idx]
             cluster = vector.cluster
             cluster_idx = self.getZIndices()[list(self.vector_list).index(vector)] ##ALWAYS GO THROUGH getZIndices
             ##
