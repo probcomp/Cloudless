@@ -6,6 +6,7 @@ import datetime
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
+import pandas
 #
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
