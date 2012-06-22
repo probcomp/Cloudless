@@ -179,7 +179,7 @@ def create_links(filename_or_series,source_dir,dest_dir):
         print "unknown type for filename_or_series!"
         return
     #
-    if len(os.path.listdir(dest_dir)) != 0:
+    if len(os.listdir(dest_dir)) != 0:
         print dest_dir + " not empty, empty and rerun"
         return
     #
