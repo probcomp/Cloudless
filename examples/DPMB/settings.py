@@ -21,7 +21,7 @@ os.system(
     base_dir,
     ]))
 
-# gdocs settings
+# gdocs
 auth_file = os.path.expanduser("~/mh_gdocs_auth")
 gdocs_folder_default = "MH"
 
@@ -31,3 +31,8 @@ cifar_100_problem_file = "cifar_100_problem.pkl.gz"
 cifar_10_image_dir = "CIFAR10"
 cifar_100_image_dir = "CIFAR100"
 clustering_dir = "Current_clusterings"
+
+# s3
+home_dir = os.path.userexpand("~/")
+bucket_str = "DPMB.mitprobabilisticcomputingproj"
+bucket_dir = ""
