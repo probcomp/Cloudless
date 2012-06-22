@@ -33,6 +33,7 @@ pkl_data = rf.unpickle(problem_file)
 init_x = pkl_data["subset_xs"]
 true_zs,ids = hf.canonicalize_list(pkl_data["subset_zs"])
 test_xs = pkl_data['test_xs']
+image_indices = pkl_data['chosen_indices']
 #
 beta_d = 2.0
 dataset_spec = {}
@@ -174,12 +175,12 @@ def plot_full_state(which_betas=None):
 def write_state(filename,data=None):
     if data is None:
         data = summaries[-1]['last_valid_zs']
-    pandas.DataFrame(data).to_csv(filename)
+    pandas.Series(data,image_indices).to_csv(filename)
 
 def create_links(filename_or_series,source_dir,dest_dir):
     series = None
     if isinstance(filename_or_series,str):
-        series = pandas.DataFrame.from_csv(filename)["0"]
+        series = pandas.Series.from_csv(filename)
     elif isinstance(filename_or_series,pandas.Series):
         series = filename_or_series
     else:
@@ -209,7 +210,7 @@ def do_stats():
     print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
     
 def link_helper():
-    series = pandas.Series(summaries[-1]["last_valid_zs"])
+    series = pandas.Series(summaries[-1]["last_valid_zs"],image_indices)
     create_links(series,image_dir,clustering_dir)
 
 def write_helper():
