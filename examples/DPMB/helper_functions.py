@@ -260,6 +260,17 @@ def cifar_data_to_image(raw_data,filename=None):
         pylab.close()
     return fh
 
+def canonicalize_list(in_list):
+    z_indices = []
+    next_id = 0
+    cluster_ids = {}
+    for el in in_list:
+        if el not in cluster_ids:
+            cluster_ids[el] = next_id
+            next_id += 1
+        z_indices.append(cluster_ids[el])
+    return z_indices,cluster_ids
+    
 ####################
 # SEED FUNCTIONS
 def generate_random_state(seed):

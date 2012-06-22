@@ -240,28 +240,14 @@ class DPMB_State():
 
     def getZIndices(self):
         ##CANONICAL zs
-        z_indices = []
-        next_id = 0
-        cluster_ids = {}
-        for v in self.get_all_vectors():
-            if v.cluster not in cluster_ids:
-                cluster_ids[v.cluster] = next_id
-                next_id += 1
-
-            z_indices.append(cluster_ids[v.cluster])
+        cluster_list = [v.cluster for cluster in self.get_all_vectors()]
+        z_indices, cluster_ids = hf.canonicalize_list(cluster_list)
         return z_indices
 
     def get_decanonicalizing_indices(self):
         ##CANONICAL zs
-        z_indices = []
-        next_id = 0
-        cluster_ids = {}
-        for v in self.get_all_vectors():
-            if v.cluster not in cluster_ids:
-                cluster_ids[v.cluster] = next_id
-                next_id += 1
-
-            z_indices.append(cluster_ids[v.cluster])
+        cluster_list = [v.cluster for cluster in self.get_all_vectors()]
+        z_indices, cluster_ids = hf.canonicalize_list(cluster_list)
 
         decanon_indices = []
         for cluster in self.cluster_list:
