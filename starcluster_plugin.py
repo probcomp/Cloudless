@@ -26,4 +26,5 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('mv Cloudless /usr/local/lib/python2.7/dist-packages')
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
+               node.ssh.execute('chown -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
 
