@@ -11,6 +11,11 @@ else:
     root_dir = os.path.join(os.path.sep,"usr","local")
     is_window = False
 base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
+
+if not os.path.isdir(base_dir): # assume AWS
+    root_dir = os.path.join(os.path.sep,"usr","local","lib","python2.7","dist-packages")
+    base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
+
 data_dir = os.path.join(base_dir,"Data")
 
 # compile pyx_functions.pyx
