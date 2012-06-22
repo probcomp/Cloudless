@@ -3,7 +3,7 @@ import os
 #
 import boto
 #
-import Cloudless.exapmles.DPMB.settings as settings
+import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
 
