@@ -23,11 +23,13 @@ reload(pds)
 import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
 
+problem_file = os.path.join(settings.data_dir,settings.cifar_10_problem_file)
+image_dir = os.path.join(settings.data_dir,settings.cifar_10_image_dir)
+clustering_dir = os.path.join(settings.data_dir,settings.clustering_dir)
+#
 beta_d = 2.0
-
 dataset_spec = {}
-dataset_spec["pkl_file"] = os.path.join(
-    settings.data_dir,settings.cifar_10_problem_file)
+dataset_spec["pkl_file"] = problem_file
 dataset_spec["gen_seed"] = 0
 dataset_spec["num_cols"] = 256
 dataset_spec["num_rows"] = 50000
@@ -166,6 +168,35 @@ def write_state(filename,data=None):
     if data is None:
         data = summaries[-1]['last_valid_zs']
     pandas.DataFrame(data).to_csv(filename)
+
+def create_links(filename_or_series,source_dir,dest_dir):
+    series = None
+    if isinstance(filename_or_series,str):
+        series = pandas.DataFrame.from_csv(filename)["0"]
+    elif isinstance(filename_or_series,pandas.Series):
+        series = filename_or_series
+    else:
+        print "unknown type for filename_or_series!"
+        return
+    #
+    if len(os.path.listdir(dest_dir)) != 0:
+        print dest_dir + " not empty, empty and rerun"
+        return
+    #
+    for vector_idx,cluster_idx in series.iteritems():
+        cluster_dir = os.path.join(dest_dir,str(cluster_idx))
+        if not os.path.isdir(cluster_dir):
+            os.mkdir(cluster_dir)
+        filename = ("%05d" % vector_idx) + ".png"
+        from_file = os.path.join(source_dir,filename)
+        to_file = os.path.join(cluster_dir,filename)
+        #
+        os.symlink(from_file,to_file)
+
     
 if False:
     plot_full_state()
+
+if False:
+    series = pandas.Series(summaries[-1]["last_valid_zs"])
+    create_links(series,image_dir,clustering_dir) 
