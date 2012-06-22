@@ -41,5 +41,5 @@ clustering_dir = "Current_clusterings"
 
 # s3
 home_dir = os.path.expanduser("~/")
-bucket_str = "DPMB.mitprobabilisticcomputingproj"
+bucket_str = "dpmb.mitprobabilisticcomputingproj"
 bucket_dir = ""

@@ -13,7 +13,7 @@ class S3_helper():
         if bucket_str is None:
             bucket_str = settings.bucket_str
         if bucket_dir is None:
-            bucket_dir = setings.bucket_dir
+            bucket_dir = settings.bucket_dir
         if local_dir is None:
             local_dir = settings.home_dir
         #
@@ -33,7 +33,7 @@ class S3_helper():
         return key is not None
 
     def put_s3(self,filename):
-        print "putS3("+filename+")"
+        print "putS3('"+filename+"')"
         key_str = os.path.join(self.bucket_dir,filename)
         full_filename = os.path.join(self.local_dir,filename)
         #
@@ -41,7 +41,7 @@ class S3_helper():
         key.set_contents_from_filename(full_filename)
         
     def get_s3(self,filename):
-        print "getS3("+filename+")"
+        print "getS3('"+filename+"')"
         key_str = os.path.join(self.bucket_dir,filename)
         full_filename = os.path.join(self.local_dir,filename)
         #
