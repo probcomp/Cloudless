@@ -25,28 +25,31 @@ reload(pds)
 import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
 
-problem_file = os.path.join(settings.data_dir,settings.cifar_10_problem_file)
-image_dir = os.path.join(settings.data_dir,settings.cifar_10_image_dir)
+problem_file = os.path.join(settings.data_dir,settings.cifar_100_problem_file)
+image_dir = os.path.join(settings.data_dir,settings.cifar_100_image_dir)
 clustering_dir = os.path.join(settings.data_dir,settings.clustering_dir)
+#
+pkl_data = rf.unpickle(problem_file)
+init_x = pkl_data["subset_xs"]
+true_zs,ids = hf.canonicalize_list(pkl_data["subset_zs"])
+test_xs = pkl_data['test_xs']
 #
 beta_d = 2.0
 dataset_spec = {}
 dataset_spec["pkl_file"] = problem_file
 dataset_spec["gen_seed"] = 0
 dataset_spec["num_cols"] = 256
-dataset_spec["num_rows"] = 50000
+dataset_spec["num_rows"] = len(true_zs)
 dataset_spec["gen_alpha"] = 1.0
 dataset_spec["gen_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
-pkl_data = rf.unpickle(dataset_spec["pkl_file"])
-dataset_spec["gen_z"],ids = hf.canonicalize_list(pkl_data["zs"])
-init_x = pkl_data["xs"]
+dataset_spec["gen_z"] = true_zs
 init_z = None # gibbs-type init
 # init_z = dataset_spec["gen_z"] # ground truth init
 #
 problem = {}
 problem["zs"] = dataset_spec["gen_z"]
 problem["xs"] = init_x
-problem["test_xs"] = pkl_data["test_xs"]
+problem["test_xs"] = test_xs
 #
 state = ds.DPMB_State(dataset_spec["gen_seed"],
                       dataset_spec["num_cols"],
