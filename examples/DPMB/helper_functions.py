@@ -4,6 +4,7 @@ import pdb
 ##
 import pylab
 import matplotlib
+import pandas
 import numpy as np
 import scipy.special as ss
 from numpy.random import RandomState
@@ -270,6 +271,30 @@ def canonicalize_list(in_list):
             next_id += 1
         z_indices.append(cluster_ids[el])
     return z_indices,cluster_ids
+
+def create_links(filename_or_series,source_dir,dest_dir):
+    series = None
+    if isinstance(filename_or_series,str):
+        series = pandas.Series.from_csv(filename)
+    elif isinstance(filename_or_series,pandas.Series):
+        series = filename_or_series
+    else:
+        print "unknown type for filename_or_series!"
+        return
+    #
+    if len(os.listdir(dest_dir)) != 0:
+        print dest_dir + " not empty, empty and rerun"
+        return
+    #
+    for vector_idx,cluster_idx in series.iteritems():
+        cluster_dir = os.path.join(dest_dir,str(cluster_idx))
+        if not os.path.isdir(cluster_dir):
+            os.mkdir(cluster_dir)
+        filename = ("%05d" % vector_idx) + ".png"
+        from_file = os.path.join(source_dir,filename)
+        to_file = os.path.join(cluster_dir,filename)
+        #
+        os.symlink(from_file,to_file)
     
 ####################
 # SEED FUNCTIONS
@@ -323,3 +348,4 @@ def gen_contingency_data(group_idx_list_1,group_idx_list_2):
     As = Ns.sum(axis=1)
     Bs = Ns.sum(axis=0)
     return Ns,As,Bs
+

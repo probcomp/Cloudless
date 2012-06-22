@@ -1,5 +1,4 @@
 #!python
-import cPickle
 import os
 import datetime
 from collections import Counter
@@ -177,49 +176,43 @@ def write_state(filename,data=None):
         data = summaries[-1]['last_valid_zs']
     pandas.Series(data,image_indices).to_csv(filename)
 
-def create_links(filename_or_series,source_dir,dest_dir):
-    series = None
-    if isinstance(filename_or_series,str):
-        series = pandas.Series.from_csv(filename)
-    elif isinstance(filename_or_series,pandas.Series):
-        series = filename_or_series
-    else:
-        print "unknown type for filename_or_series!"
-        return
-    #
-    if len(os.listdir(dest_dir)) != 0:
-        print dest_dir + " not empty, empty and rerun"
-        return
-    #
-    for vector_idx,cluster_idx in series.iteritems():
-        cluster_dir = os.path.join(dest_dir,str(cluster_idx))
-        if not os.path.isdir(cluster_dir):
-            os.mkdir(cluster_dir)
-        filename = ("%05d" % vector_idx) + ".png"
-        from_file = os.path.join(source_dir,filename)
-        to_file = os.path.join(cluster_dir,filename)
-        #
-        os.symlink(from_file,to_file)
-
-
 def do_stats():
-    print "scan times: " + str(
-        np.diff([summary["timing"]["run_sum"] for summary in summaries]))
-    print "num clusters: " + str(summaries[-1]['num_clusters'])
-    print "cluster counts: " + str(summaries[-1]['cluster_counts'])
+    print "scan times: "
+    print str(np.diff([summary["timing"]["run_sum"] for summary in summaries]))
+    print "cluster number trajectory: "
+    str(np.diff([summary['num_clusters'] for summary in summaries]))
+    print "mean test_ll: "
+    print ["%.3f" % np.mean(summary['test_lls']) for summary in summaries]
+    #
+    num_clusters = summaries[-1]['num_clusters']
+    print "cluster counts: " + str(zip(xrange(num_clusters),summaries[-1]['cluster_counts']))
     print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
     
 def link_helper():
     series = pandas.Series(summaries[-1]["last_valid_zs"],image_indices)
-    create_links(series,image_dir,clustering_dir)
+    hf.create_links(series,image_dir,clustering_dir)
+
+def empty_links():
+    if len(os.listdir(clustering_dir)) != 0:
+        os.system("rm -rf " + os.path.join(clustering_dir,"*"))
 
 def write_helper():
-    filename = "cifar_10_state_iter"+str(transitioner.transition_count)+".csv"
+    filename = "cifar_100_state_iter"+str(transitioner.transition_count)+".csv"
     write_state(filename,summaries[-1]["last_valid_zs"])
 
-if False:
-    do_transitions(1)
+def pkl_summaries_helper():
+    filename = "cifar_100_summaries_iter"+str(transitioner.transition_count)+".pkl.gz"
+    rf.pickle(summaries,filename)
+
+if True:
+    # do_transitions(1)
     do_stats()
     plot_full_state(range(10))
+    empty_links()
     link_helper()
     write_helper()
+    pkl_summaries_helper()
+
+# import Cloudless.examples.DPMB.helper_functions as hf
+# import Cloudless.examples.DPMB.settings as settings
+# hf.create_links("cifar_10_state_iter70.csv",settings.cifar_100_image_dir,settings.clustering_dir)
