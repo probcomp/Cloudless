@@ -205,9 +205,16 @@ def do_stats():
     print "cluster counts: " + str(summaries[-1]['cluster_counts'])
     print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
     
-if False:
-    plot_full_state(range(10))
-
-if False:
+def link_helper():
     series = pandas.Series(summaries[-1]["last_valid_zs"])
     create_links(series,image_dir,clustering_dir)
+
+def write_helper():
+    filename = "cifar_10_state_iter"+str(transitioner.transition_count)+".csv"
+    write_state(filename,summaries[-1]["last_valid_zs"])
+
+if False:
+    do_transitions(1)
+    do_stats()
+    plot_full_state(range(10))
+    link_helper()
