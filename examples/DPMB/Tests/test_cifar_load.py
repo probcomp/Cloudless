@@ -2,11 +2,13 @@
 import cPickle
 import os
 import datetime
+from collections import Counter
 #
 import matplotlib
 matplotlib.use('Agg')
 import numpy as np
 import pandas
+from matplotlib.mlab import find
 #
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
@@ -36,12 +38,14 @@ dataset_spec["num_rows"] = 50000
 dataset_spec["gen_alpha"] = 1.0
 dataset_spec["gen_betas"] = np.repeat(beta_d, dataset_spec["num_cols"])
 pkl_data = rf.unpickle(dataset_spec["pkl_file"])
-dataset_spec["gen_z"] = pkl_data["zs"]
+dataset_spec["gen_z"],ids = hf.canonicalize_list(pkl_data["zs"])
 init_x = pkl_data["xs"]
+init_z = None # gibbs-type init
+# init_z = dataset_spec["gen_z"] # ground truth init
 #
 problem = {}
-problem["xs"] = pkl_data["xs"]
-problem["zs"] = pkl_data["zs"]
+problem["zs"] = dataset_spec["gen_z"]
+problem["xs"] = init_x
 problem["test_xs"] = pkl_data["test_xs"]
 #
 state = ds.DPMB_State(dataset_spec["gen_seed"],
@@ -58,7 +62,7 @@ run_spec["num_iters"] = 0
 run_spec["infer_seed"] = 0
 run_spec["infer_init_alpha"] = 1.0
 run_spec["infer_init_betas"] = dataset_spec["gen_betas"].copy()
-run_spec["infer_init_z"] = dataset_spec["gen_z"].copy()
+run_spec["infer_init_z"] = init_z
 run_spec["infer_do_alpha_inference"] = True
 run_spec["infer_do_betas_inference"] = True
 
@@ -193,10 +197,17 @@ def create_links(filename_or_series,source_dir,dest_dir):
         #
         os.symlink(from_file,to_file)
 
+
+def do_stats():
+    print "scan times: " + str(
+        np.diff([summary["timing"]["run_sum"] for summary in summaries]))
+    print "num clusters: " + str(summaries[-1]['num_clusters'])
+    print "cluster counts: " + str(summaries[-1]['cluster_counts'])
+    print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
     
 if False:
-    plot_full_state()
+    plot_full_state(range(10))
 
 if False:
     series = pandas.Series(summaries[-1]["last_valid_zs"])
-    create_links(series,image_dir,clustering_dir) 
+    create_links(series,image_dir,clustering_dir)
