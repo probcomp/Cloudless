@@ -33,6 +33,6 @@ cifar_100_image_dir = "CIFAR100"
 clustering_dir = "Current_clusterings"
 
 # s3
-home_dir = os.path.userexpand("~/")
+home_dir = os.path.expanduser("~/")
 bucket_str = "DPMB.mitprobabilisticcomputingproj"
 bucket_dir = ""
