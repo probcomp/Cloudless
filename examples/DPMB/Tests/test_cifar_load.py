@@ -161,5 +161,10 @@ def plot_full_state(which_betas=None):
             vector_idx=beta_idx
             )
 
+def write_state(filename,data=None):
+    if data is None:
+        data = summaries[-1]['last_valid_zs']
+    pandas.DataFrame(data).to_csv(filename)
+    
 if False:
     plot_full_state()
