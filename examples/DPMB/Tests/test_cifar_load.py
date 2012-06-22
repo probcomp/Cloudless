@@ -218,3 +218,4 @@ if False:
     do_stats()
     plot_full_state(range(10))
     link_helper()
+    write_helper()
