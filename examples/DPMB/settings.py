@@ -43,3 +43,5 @@ clustering_dir = "Current_clusterings"
 home_dir = os.path.expanduser("~/")
 bucket_str = "dpmb.mitprobabilisticcomputingproj"
 bucket_dir = ""
+auth_key = os.path.expanduser("~/awsKeyPair.pem")
+

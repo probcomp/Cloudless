@@ -1,5 +1,6 @@
 from starcluster.clustersetup import ClusterSetup
 from starcluster.logger import log
+import Cloudless.examples.DPMB.settings as settings
 
 class CloudlessSetup(ClusterSetup):
      def __init__(self):
@@ -27,4 +28,4 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
-
+               node.ssh.put(settings.auth_key,"/home/sgeadmin/")
