@@ -28,4 +28,4 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
-               node.ssh.put(settings.auth_key,"/home/sgeadmin/")
+               node.ssh.put(settings.ec2_credentials_file,"/home/sgeadmin/")
