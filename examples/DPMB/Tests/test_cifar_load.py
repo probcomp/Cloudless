@@ -15,6 +15,8 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
+import Cloudless.examples.DPMB.s3_helper as s3h
+reload(s3h)
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
@@ -27,6 +29,7 @@ reload(pdm)
 problem_file = os.path.join(settings.data_dir,settings.cifar_100_problem_file)
 image_dir = os.path.join(settings.data_dir,settings.cifar_100_image_dir)
 clustering_dir = os.path.join(settings.data_dir,settings.clustering_dir)
+s3h.S3_helper().verify_file(problem_file)
 #
 pkl_data = rf.unpickle(problem_file)
 init_x = pkl_data["subset_xs"]
