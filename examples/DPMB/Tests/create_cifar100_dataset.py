@@ -18,7 +18,8 @@ reload(settings)
 
 # settings
 label_type = "fine_labels"
-subset_count_per_label = 100
+subset_count_per_label = 1000
+subset_label_count = 20
 sort_seed = 0
 
 # read in labels from alex's data
@@ -45,14 +46,16 @@ test_data = hf.convert_rpa_representation(cifar["codes"][-len(test_labels):])
 
 # create a reduced subset of the data
 numpy.random.seed(sort_seed)
+chosen_labels = numpy.random.permutation(xrange(max(train_labels)+1))[:subset_label_count]
 chosen_indices = []
-for cluster_num in xrange(max(train_labels)):
+for cluster_num in chosen_labels:
     cluster_indices = find(cluster_num==numpy.array(train_labels))
     cluster_subset_indices = numpy.random.permutation(cluster_indices)[:subset_count_per_label]
     chosen_indices.extend(cluster_subset_indices)
-subset_zs = train_labels[chosen_indices]
-subset_xs = train_data[chosen_indices]
-
+final_permutation_indices = numpy.random.permutation(xrange(len(chosen_indices)))
+subset_uncanon_zs = train_labels[chosen_indices[final_permutation_indices]]
+subset_xs = train_data[chosen_indices[final_permutation_indices]]
+subset_zs,decanon_hash = hf.canonicalize_list(subset_uncanon_zs)
 
 # write out to a pickle file
 cifar = {
@@ -64,7 +67,9 @@ cifar = {
     "test_xs":test_data,
     "name":"cifar-100",
     "type":label_type,
-    "chosen_indices":chosen_indices
+    "chosen_indices":chosen_indices,
+    "chosen_labels":chosen_labels,
+    "decanon_hash":decanon_hash
 }
 filename = os.path.join(settings.data_dir,settings.cifar_100_problem_file)
 rf.pickle(cifar,filename)
