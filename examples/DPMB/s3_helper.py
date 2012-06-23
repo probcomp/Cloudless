@@ -39,6 +39,7 @@ class S3_helper():
         #
         key = self.bucket.new_key(key_str)
         key.set_contents_from_filename(full_filename)
+        return True
         
     def get_s3(self,filename):
         print "getS3('"+filename+"')"
