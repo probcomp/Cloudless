@@ -52,6 +52,7 @@ for cluster_num in chosen_labels:
     cluster_indices = find(cluster_num==numpy.array(train_labels))
     cluster_subset_indices = numpy.random.permutation(cluster_indices)[:subset_count_per_label]
     chosen_indices.extend(cluster_subset_indices)
+chosen_indices = numpy.array(chosen_indices)
 final_permutation_indices = numpy.random.permutation(xrange(len(chosen_indices)))
 subset_uncanon_zs = train_labels[chosen_indices[final_permutation_indices]]
 subset_xs = train_data[chosen_indices[final_permutation_indices]]
