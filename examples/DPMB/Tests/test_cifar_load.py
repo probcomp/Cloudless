@@ -159,8 +159,8 @@ def do_transitions(num_transitions):
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
         #
         empty_links()
-        link_helper()
-        write_helper()
+        link_helper(zs=last_valid_zs)
+        write_helper(zs=last_valid_zs)
         print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
         if transitioner.transition_count % 10 == 0:
             pkl_summaries_helper()
@@ -197,24 +197,28 @@ def do_stats():
     print "cluster counts: " + str(zip(xrange(num_clusters),summaries[-1]['cluster_counts']))
     print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
     
-def link_helper():
-    series = pandas.Series(summaries[-1]["last_valid_zs"],image_indices)
+def link_helper(zs=None,image_indices=image_indices):
+    if zs is None:
+        zs = summaries[-1]["last_valid_zs"]
+    series = pandas.Series(zs,image_indices)
     hf.create_links(series,image_dir,clustering_dir)
 
 def empty_links():
     if len(os.listdir(clustering_dir)) != 0:
         os.system("rm -rf " + os.path.join(clustering_dir,"*"))
 
-def write_helper():
+def write_helper(zs=None):
+    if zs is None:
+        zs = summaries[-1]["last_valid_zs"]
     filename = "cifar_100_state_iter"+str(transitioner.transition_count)+".csv"
-    write_state(filename,summaries[-1]["last_valid_zs"])
+    write_state(filename,zs)
 
 def pkl_summaries_helper():
     filename = "cifar_100_summaries_iter"+str(transitioner.transition_count)+".pkl.gz"
     rf.pickle(summaries,filename)
 
 if True:
-    # do_transitions(1)
+    do_transitions(1)
     do_stats()
     plot_full_state(range(10))
     empty_links()
