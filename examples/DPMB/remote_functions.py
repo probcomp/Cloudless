@@ -235,6 +235,10 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
         #
         dataset_spec['num_cols'] = len(init_x[0])
         dataset_spec['num_rows'] = len(init_x)
+        # FIXME : convenience operations, should do elsewhere
+        dataset_spec.setdefault('gen_seed',0)
+        dataset_spec.setdefault('gen_alpha',1.0)
+        dataset_spec.setdefault('gen_betas',np.repeat(2.0,256))
 
     state = ds.DPMB_State(dataset_spec["gen_seed"],
                           dataset_spec["num_cols"],
