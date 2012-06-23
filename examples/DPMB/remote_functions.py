@@ -861,6 +861,26 @@ def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
 
 ####
 
+def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
+    dataset_spec = {}
+    dataset_spec['pkl_file'] = problem_file
+    dataset_spec['gen_seed'] = 0
+    dataset_spec['gen_alpha'] = 1.0
+    dataset_spec['gen_betas'] = np.repeat(2.0,256)
+    run_spec = {}
+    run_spec['infer_seed'] = infer_seed
+    run_spec['dataset_spec'] = dataset_spec ## settings.cifar_100_problem_file}
+    run_spec["num_iters"] = num_iters
+    run_spec["time_seatbelt"] = None
+    run_spec["infer_init_z"] = None
+    run_spec['infer_init_alpha'] = dataset_spec['gen_alpha']
+    run_spec['infer_init_betas'] = dataset_spec['gen_betas']
+    run_spec["num_nodes"] = 1
+    run_spec["infer_do_alpha_inference"] = True
+    run_spec["infer_do_betas_inference"] = True
+    #
+    return run_spec
+
 def gen_default_run_spec(num_clusters, vectors_per_cluster,
                          num_cols=256, beta_d=3.0
                          ):
