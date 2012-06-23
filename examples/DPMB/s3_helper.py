@@ -54,11 +54,13 @@ class S3_helper():
         return success
 
     def verify_file(self,filename,overwrite_s3=False):
-        success = True
+        success = None
         if not self.is_local(filename):
             success = self.get_s3(filename)
         elif not self.on_s3(filename) and overwrite_s3:
             success = self.put_s3(filename)
+        else:
+            success = True # we have it and s3 has it
         return success
 
     def verify_files(self,file_list,overwrite_s3=False):
