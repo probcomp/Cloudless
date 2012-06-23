@@ -26,12 +26,15 @@ except OSError, e:
     pass
 
 # compile pyx_functions.pyx
-os.system(
-    " ".join([
-    'bash',
-    os.path.join(base_dir,"compile_pyx_functions.sh"),
-    base_dir,
-    ]))
+try:
+    import Cloudless.examples.DPMB.pyx_functions
+except ImportError:
+    os.system(
+        " ".join([
+        'bash',
+        os.path.join(base_dir,"compile_pyx_functions.sh"),
+        base_dir,
+        ]))
 
 # gdocs
 auth_file = os.path.expanduser("~/mh_gdocs_auth")
