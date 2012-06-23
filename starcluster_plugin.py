@@ -15,11 +15,6 @@ class CloudlessSetup(ClusterSetup):
           # import os
           # os.system("starcluster put mycluster --user sgeadmin ~/google_docs_auth /home/sgeadmin/")
 
-          master.ssh.execute('sudo swapoff /dev/xvda3')
-          master.ssh.execute('sudo umount /dev/xvdm')
-          master.ssh.execute('sudo mkswap /dev/xvdz')
-          master.ssh.execute('sudo swapon /dev/xvdz')
-
           for node in nodes:
                log.info("Installing Cloudless on %s" % node.alias)
                node.ssh.execute('git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git')
@@ -29,5 +24,11 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
                #
-               node.ssh.execute('easy_install http://pypi.python.org/packages/source/p/pandas/pandas-0.7.0rc1.tar.gz')
                node.ssh.put(settings.ec2_credentials_file,"/home/sgeadmin/")
+               try:
+                    import pandas
+               except ImportError:
+                    node.ssh.execute('easy_install http://pypi.python.org/packages/source/p/pandas/pandas-0.7.0rc1.tar.gz')
+
+          master.ssh.execute('bash /usr/local/lib/python2.7/dist-packages/Cloudless/use_ebs_swap.sh')
+
