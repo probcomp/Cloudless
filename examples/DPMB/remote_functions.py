@@ -23,6 +23,10 @@ import Cloudless.examples.DPMB.PDPMB as pdm
 reload(pdm)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
+import Cloudless.examples.DPMB.s3_helper as s3h
+reload(s3h)
+import Cloudless.examples.DPMB.settings as settings
+reload(settings)
 import Cloudless
 reload(Cloudless)
 import Cloudless.memo
@@ -217,21 +221,28 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     problem = {}
     problem["dataset_spec"] = dataset_spec
 
+    init_x = None
     if "pkl_file" in dataset_spec:
-        pkl_data = unpickle(dataset_spec["pkl_file"])
-        problem["xs"] = pkl_data["xs"]
-        problem["zs"] = pkl_data["zs"]
-        # may need to change cifar dataset creation to include test set
-        # and create a state with 'ground truth' to create test_lls 
-        return problem
-    
+        have_file = s3h.S3_helper().verify_file(dataset_spec['pkl_file'])
+        if not have_file:
+            raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
+        pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
+        pkl_data = unpickle(pkl_file)
+        # FIXME : need a better way to determine whether to use xs or subset_xs
+        init_x = pkl_data["subset_xs"]
+        dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["subset_zs"])
+        test_xs = pkl_data['test_xs']
+        #
+        dataset_spec['num_cols'] = len(init_x[0])
+        dataset_spec['num_rows'] = len(init_x)
+
     state = ds.DPMB_State(dataset_spec["gen_seed"],
                           dataset_spec["num_cols"],
                           dataset_spec["num_rows"],
                           init_alpha=dataset_spec["gen_alpha"],
                           init_betas=dataset_spec["gen_betas"],
                           init_z=dataset_spec["gen_z"],
-                          init_x = None)
+                          init_x = init_x)
     if save_str is not None:
         state.plot(save_str=save_str)
     
@@ -242,23 +253,17 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
         temp_xs = state.getXValues()
         problem["xs"] = [temp_xs[perm_idx] for perm_idx in permutation_sequence]
         temp_zs = [temp_zs[perm_idx] for perm_idx in permutation_sequence]
-
-        # Must canonicalize zs
-        z_indices = []
-        next_id = 0
-        cluster_ids = {}
-        for v in temp_zs:
-            if v not in cluster_ids:
-                cluster_ids[v] = next_id
-                next_id += 1
-            z_indices.append(cluster_ids[v])
-
+        # canonicalize
+        z_indices,cluster_idx = hf.canonicalize_list(temp_zs)
         problem["zs"] = z_indices
-
     else:
         problem["zs"] = state.getZIndices()
         problem["xs"] = state.getXValues()
-    test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
+
+    if "pkl_file" in dataset_spec:
+        test_lls = state.score_test_set(test_xs)
+    else:
+        test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
     return problem
@@ -472,7 +477,7 @@ def infer_separate(run_spec):
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
     master_summaries[-1]["last_valid_zs"] = last_valid_zs
     master_summaries[-1]["decanon_indices"] = decanon_indices
-    return master_summaries
+    return master_summaries    
 
 def extract_dataset_specs_from_memo(asyncmemo):
     ALL_RUN_SPECS = [eval(key)[0] for key in asyncmemo.memo.keys()]
