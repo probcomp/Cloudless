@@ -15,7 +15,7 @@ class S3_helper():
         if bucket_dir is None:
             bucket_dir = settings.bucket_dir
         if local_dir is None:
-            local_dir = settings.home_dir
+            local_dir = settings.data_dir
         #
         self.bucket_str = bucket_str
         self.bucket_dir = bucket_dir
