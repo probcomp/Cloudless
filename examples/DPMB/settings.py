@@ -20,6 +20,10 @@ if not os.path.isdir(base_dir): # assume AWS
     is_aws = True
 #
 data_dir = os.path.join(base_dir,"Data")
+try:
+    os.makedirs(data_dir)
+except OSError, e:
+    pass
 
 # compile pyx_functions.pyx
 os.system(
