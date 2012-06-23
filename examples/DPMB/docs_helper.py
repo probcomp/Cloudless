@@ -5,7 +5,7 @@ import sys
 import gdata
 import gdata.docs.client as gdc
 #
-import settings
+import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
 ##general gdata documentation
