@@ -29,7 +29,7 @@ reload(pdm)
 problem_file = os.path.join(settings.data_dir,settings.cifar_100_problem_file)
 image_dir = os.path.join(settings.data_dir,settings.cifar_100_image_dir)
 clustering_dir = os.path.join(settings.data_dir,settings.clustering_dir)
-s3h.S3_helper().verify_file(problem_file)
+s3h.S3_helper().verify_file(settings.cifar_100_problem_file)
 #
 pkl_data = rf.unpickle(problem_file)
 init_x = pkl_data["subset_xs"]
