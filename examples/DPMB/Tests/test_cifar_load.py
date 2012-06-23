@@ -157,13 +157,19 @@ def do_transitions(num_transitions):
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
+        #
+        empty_links()
+        link_helper()
+        write_helper()
+        print "mean test_ll: " + str(np.mean(summaries[-1]['test_lls']))
+        if transitioner.transition_count % 10 == 0:
+            pkl_summaries_helper()
     summaries[-1]["last_valid_zs"] = last_valid_zs
     summaries[-1]["decanon_indices"] = decanon_indices
 
 def plot_full_state(which_betas=None):
     if which_betas is None:
         which_betas = xrange(len(inference_state.betas))
-    transitioner.transition_beta()
     for beta_idx in which_betas:
         save_str = "cifar_init_state_beta" + str(beta_idx) + "_vector" + str(beta_idx)
         inference_state.plot(
