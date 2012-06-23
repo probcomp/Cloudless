@@ -25,10 +25,9 @@ class MRSeedInferer(MRJob):
             infer_seed = int(infer_seed_str)
             run_spec = rf.gen_default_cifar_run_spec(
                 problem_file,infer_seed,num_iters)
-            # summaries = rf.infer(run_spec)
+            summaries = rf.infer(run_spec)
         except Exception, e:
             print e
-        summaries = run_spec
         yield infer_seed_str,summaries
 
     def my_reduce(self, infer_seed,summaries):
