@@ -120,7 +120,8 @@ class DPMB():
                                  for cluster in self.state.cluster_list])
         ##
         self.state.timing["zs"] = hf.delta_since(start_dt)
-        self.state.timing["micro_z_timing"] = micro_z_timing
+        # FIXME : determine if micro_z_timing should still be kept
+        self.state.timing["micro_z_timing"] = None # micro_z_timing # 
         self.state.timing["run_sum"] += self.state.timing["zs"]
         
     def transition_x(self):
@@ -223,5 +224,6 @@ class DPMB():
             state_dict["xs"] = self.state.getXValues()
 
         if test_xs is not None:
-            state_dict["test_lls"] = self.state.score_test_set(test_xs)
+            # FIXME : determine if passing mean breaks anything
+            state_dict["test_lls"] = [np.mean(self.state.score_test_set(test_xs))]
         return state_dict
