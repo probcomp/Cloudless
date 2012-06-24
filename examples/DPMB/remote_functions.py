@@ -64,10 +64,10 @@ def copy_jobspec(jobspec): #my own deepcopy
 
 def modify_jobspec_to_results(jobspec,job_value):
     last_summary = job_value[-1]
-    jobspec["infer_seed"] = arr_copy(last_summary["inf_seed"])
+    jobspec["infer_seed"] = arr_copy(last_summary["last_valid_seed"])
     jobspec["infer_init_alpha"] = last_summary["alpha"]
     jobspec["infer_init_betas"] = arr_copy(last_summary["betas"])
-    jobspec["infer_init_z"] = arr_copy(last_summary["zs"])
+    jobspec["infer_init_z"] = arr_copy(last_summary["last_valid_zs"])
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
                                         
 class Chunked_Job(Thread):
@@ -223,6 +223,7 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
 
     init_x = None
     if "pkl_file" in dataset_spec:
+        permute = False # presume data is permuted, permuting now makes tracking ground truth hard
         have_file = s3h.S3_helper().verify_file(dataset_spec['pkl_file'])
         if not have_file:
             raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
@@ -232,6 +233,8 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
         init_x = pkl_data["subset_xs"]
         dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["subset_zs"])
         test_xs = pkl_data['test_xs']
+        if 'N_test' in dataset_spec:
+            test_xs = test_xs[:dataset_spec['N_test']]
         #
         dataset_spec['num_cols'] = len(init_x[0])
         dataset_spec['num_rows'] = len(init_x)
@@ -249,8 +252,13 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
                           init_x = init_x)
     if save_str is not None:
         state.plot(save_str=save_str)
-    
-    if permute:
+
+    if 'last_valid_zs' in dataset_spec:
+        # problem["zs"] = state.getZIndices()
+        # problem["xs"] = state.getXValues()
+        problem['zs'] = dataset_spec['gen_z']
+        problem['xs'] = init_x
+    elif permute:
         permutation_sequence = state.random_state.permutation(
             range(dataset_spec["num_rows"]))
         temp_zs = state.getZIndices()
@@ -367,7 +375,7 @@ def infer(run_spec):
         hf.printTS("finished saving iteration " + str(i))
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
-            last_valid_seed = trasitioner.random_state.get_state()
+            last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs
     summaries[-1]["last_valid_seed"] = last_valid_seed
@@ -870,6 +878,7 @@ def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
     dataset_spec['gen_seed'] = 0
     dataset_spec['gen_alpha'] = 1.0
     dataset_spec['gen_betas'] = np.repeat(2.0,256)
+    dataset_spec['N_test'] = 300
     run_spec = {}
     run_spec['infer_seed'] = infer_seed
     run_spec['dataset_spec'] = dataset_spec ## settings.cifar_100_problem_file}
