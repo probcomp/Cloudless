@@ -7,9 +7,15 @@ class MRWordCounter(MRJob):
 
     def sum_words(self, word, occurrences):
         yield word, sum(occurrences)
+        
+    def get_letters(self,word,occurrences):
+        yield word[0], occurrences
 
     def steps(self):
-        return [self.mr(self.get_words, self.sum_words),]
+        return [
+            self.mr(self.get_words, self.sum_words),
+            self.mr(self.get_letters, self.sum_words),
+            ]
 
 if __name__ == '__main__':
     MRWordCounter.run()
