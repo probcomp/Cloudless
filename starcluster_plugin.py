@@ -1,5 +1,7 @@
 from starcluster.clustersetup import ClusterSetup
 from starcluster.logger import log
+import Cloudless.examples.DPMB.settings as settings
+
 
 class CloudlessSetup(ClusterSetup):
      def __init__(self):
