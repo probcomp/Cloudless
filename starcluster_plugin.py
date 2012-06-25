@@ -23,8 +23,8 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('mv Cloudless /usr/local/lib/python2.7/dist-packages')
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
-               node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
                node.ssh.execute('python -c \'import Cloudless.examples.DPMB.settings\'')
+               node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
                #
                node.ssh.put(settings.ec2_credentials_file,"/home/sgeadmin/")
 
