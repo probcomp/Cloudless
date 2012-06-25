@@ -1,15 +1,14 @@
 import argparse
 import os
 #
-import Cloudless.examples.DPMB.settings as settings
+import pandas
 
 parser = argparse.ArgumentParser(
     description='Create simlinks given a csv file specifying image index,cluster mappings')
 parser.add_argument('filename',type=str)
+parser.add_argument('image_dir',type=str)
+parser.add_argument('clustering_dir',type=str)
 args,unkown_args = parser.parse_known_args()
-
-image_dir = os.path.join(settings.data_dir,settings.cifar_100_image_dir)
-clustering_dir = os.path.join(settings.data_dir,settings.clustering_dir)
 
 def create_links(filename_or_series,source_dir,dest_dir):
     series = None
@@ -35,4 +34,4 @@ def create_links(filename_or_series,source_dir,dest_dir):
         #
         os.symlink(from_file,to_file)
 
-hf.create_links(args.filename,image_dir,clustering_dir)
+create_links(args.filename,args.image_dir,args.clustering_dir)
