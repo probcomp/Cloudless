@@ -38,7 +38,7 @@ class MRSeedInferer(MRJob):
             summaries = rf.infer(run_spec)
         except Exception, e:
             print e
-            summaries = [infer_seed_str]
+            summaries = [str(e)]
         yield infer_seed_str,summaries
 
     def resume_infer(self,infer_seed_str,prior_summaries):
