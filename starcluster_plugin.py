@@ -1,6 +1,5 @@
 from starcluster.clustersetup import ClusterSetup
 from starcluster.logger import log
-import Cloudless.examples.DPMB.settings as settings
 
 class CloudlessSetup(ClusterSetup):
      def __init__(self):
@@ -23,12 +22,9 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
+               node.ssh.execute('python -c \'import Cloudless.examples.DPMB.settings\'')
                #
                node.ssh.put(settings.ec2_credentials_file,"/home/sgeadmin/")
-               try:
-                    import pandas
-               except ImportError:
-                    node.ssh.execute('easy_install http://pypi.python.org/packages/source/p/pandas/pandas-0.7.0rc1.tar.gz')
 
           master.ssh.execute('bash /usr/local/lib/python2.7/dist-packages/Cloudless/use_ebs_swap.sh')
 

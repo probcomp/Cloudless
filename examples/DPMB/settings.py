@@ -35,6 +35,16 @@ except ImportError:
         os.path.join(base_dir,"compile_pyx_functions.sh"),
         base_dir,
         ]))
+#
+try:
+    import pandas
+except ImportError:
+    os.system('easy_install http://pypi.python.org/packages/source/p/pandas/pandas-0.7.0rc1.tar.gz')
+#
+try:
+    import mrjob
+except ImportError:
+    os.system('easy_install mrjob')
 
 # gdocs
 auth_file = os.path.expanduser("~/mh_gdocs_auth")
