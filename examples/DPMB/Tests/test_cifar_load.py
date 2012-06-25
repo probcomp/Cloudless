@@ -228,4 +228,4 @@ if True:
 
 # import Cloudless.examples.DPMB.helper_functions as hf
 # import Cloudless.examples.DPMB.settings as settings
-# hf.create_links("cifar_10_state_iter70.csv",settings.cifar_100_image_dir,settings.clustering_dir)
+# hf.create_links("cifar_10_state_iter70.csv",os.path.join(settings.data_dir,settings.cifar_100_image_dir),os.path.join(settings.data_dir,settings.clustering_dir))
