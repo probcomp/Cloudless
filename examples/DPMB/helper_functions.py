@@ -276,7 +276,7 @@ def canonicalize_list(in_list):
 def create_links(filename_or_series,source_dir,dest_dir):
     series = None
     if isinstance(filename_or_series,str):
-        series = pandas.Series.from_csv(filename)
+        series = pandas.Series.from_csv(filename_or_series)
     elif isinstance(filename_or_series,pandas.Series):
         series = filename_or_series
     else:
