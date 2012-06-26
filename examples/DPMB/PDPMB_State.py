@@ -177,9 +177,9 @@ class PDPMB_State():
             temp_zs = state.getZIndices()
             if len(temp_zs) == 0:
                 continue
-            max_zs = temp_zs[-1]
             zs.extend(np.array(temp_zs) + cluster_idx)
-            cluster_idx += max_zs
+            max_zs = temp_zs[-1]
+            cluster_idx += max_zs + 1
         single_state = ds.DPMB_State(
             gen_seed=0,num_cols=self.num_cols,num_rows=self.num_rows
             ,init_alpha=self.alpha,init_betas=self.betas
@@ -281,20 +281,4 @@ class PDPMB_State():
             pylab.savefig(save_str)
 
         return fh1,fh2,fh3,fh4
-
-    def N_score_component(self):
-        counts = np.array([len(model.state.vector_list) 
-                           for model in self.model_list])
-        first_part = ss.gammaln(sum(counts)+1) - sum(ss.gammaln(counts+1))
-        second_part = sum(counts*np.log(self.gammas))
-        N_score = first_part + second_part
-        return N_score,first_part,second_part
-
-    def gamma_score_component(self):
-        alpha = self.alpha # /self.num_nodes
-        first_part = (ss.gammaln(float(alpha)*self.num_nodes)
-                      - self.num_nodes*ss.gammaln(float(alpha)))
-        second_part = (alpha-1) * sum(np.log(self.gammas))
-        gamma_score = first_part + second_part
-        return gamma_score,first_part,second_part
 
