@@ -973,6 +973,7 @@ class Bunch:
 def distribute_data(
     gen_seed,inf_seed,
     num_nodes,init_x,
+    init_z=None,
     send_state=False,
     init_alpha=None,init_betas=None,
     alpha_min=.01,alpha_max=1E4,
@@ -990,6 +991,7 @@ def distribute_data(
         init_alpha = init_alpha,
         init_betas = init_betas,
         init_x = init_x,
+        init_z = init_z,
         alpha_min=alpha_min,
         alpha_max=alpha_max,
         beta_min=beta_min,
