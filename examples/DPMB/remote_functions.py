@@ -27,6 +27,8 @@ import Cloudless.examples.DPMB.s3_helper as s3h
 reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
+import pyx_functions as pf
+reload(pf)
 import Cloudless
 reload(Cloudless)
 import Cloudless.memo
@@ -963,3 +965,50 @@ def gen_default_arg_parser(description=None):
     parser.add_argument('--pkl_file_str',default=default_pkl_file_str,type=str)
 
     return parser
+
+class Bunch:
+    def __init__(self, **kwds):
+        self.__dict__.update(kwds)
+
+def gen_gibbs_init_state_cluster_vector_list(
+    gen_seed,inf_seed,
+    num_nodes,init_x,
+    init_alpha=None,init_betas=None,
+    alpha_min=.01,alpha_max=1E4,
+    beta_min=.01,beta_max=1E4,
+    grid_N=100):
+
+    random_state = hf.generate_random_state(inf_seed)
+    mus = np.repeat(1.0/num_nodes,num_nodes)
+
+    # generate the data from a DPMB_State
+    master_state = ds.DPMB_State(
+        gen_seed=gen_seed,
+        num_cols=len(init_x[0]),
+        num_rows=len(init_x),
+        init_alpha = init_alpha,
+        init_betas = init_betas,
+        init_x = init_x,
+        alpha_min=alpha_min,
+        alpha_max=alpha_max,
+        beta_min=beta_min,
+        beta_max=beta_max,
+        grid_N=grid_N
+        )
+
+    # deal out data to states
+    # return a list of lists of lists
+    #          ^state  ^cluster ^vector_idx
+    master_vector_list = list(master_state.vector_list)
+    node_cluster_indices = [[] for node_idx in range(num_nodes)]
+    for cluster_idx in range(len(master_state.cluster_list)):
+        draw = pf.renormalize_and_sample(
+            np.log(mus),random_state.uniform())
+        cluster = master_state.cluster_list[cluster_idx]
+        vector_index_list = [master_vector_list.index(vector) 
+                             for vector in cluster.vector_list]
+        node_cluster_indices[draw].append(vector_index_list)
+
+    gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+    inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+    return node_cluster_indices,gen_seed_list,inf_seed_list
