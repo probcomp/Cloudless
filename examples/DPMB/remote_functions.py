@@ -292,9 +292,10 @@ def plot_helper(name, state):
     state.plot(show=False,save_str = name + "-" + "%3d" % count + ".png")
     counts[state] += 1
 
-def infer(run_spec):
+def infer(run_spec,problem=None):
     dataset_spec = run_spec["dataset_spec"]
-    problem = gen_problem(dataset_spec)
+    if problem is None:
+        problem = gen_problem(dataset_spec) 
     verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
     num_nodes = run_spec.get("num_nodes",1)
