@@ -997,18 +997,32 @@ def gen_gibbs_init_state_cluster_vector_list(
         )
 
     # deal out data to states
-    # return a list of lists of lists
-    #          ^state  ^cluster ^vector_idx
     master_vector_list = list(master_state.vector_list)
-    node_cluster_indices = [[] for node_idx in range(num_nodes)]
+    node_data_indices = [[] for node_idx in range(num_nodes)]
+    node_zs = [[] for node_idx in range(num_nodes)]
     for cluster_idx in range(len(master_state.cluster_list)):
         draw = pf.renormalize_and_sample(
             np.log(mus),random_state.uniform())
         cluster = master_state.cluster_list[cluster_idx]
         vector_index_list = [master_vector_list.index(vector) 
                              for vector in cluster.vector_list]
-        node_cluster_indices[draw].append(vector_index_list)
+        node_data_indices[draw].extend(vector_index_list)
+        new_zs_value = node_zs[draw][-1] + 1 \
+            if len(node_zs[draw]) > 0 else 0
+        node_zs[draw].extend(np.repeat(new_zs_value,len(vector_index_list)))
 
     gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
     inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-    return node_cluster_indices,gen_seed_list,inf_seed_list
+    return node_data_indices,node_zs,gen_seed_list,inf_seed_list
+
+def consolidate_zs(zs_list):
+    single_state = None
+    cluster_idx = 0
+    zs = []
+    for temp_zs in zs_list:
+        if len(temp_zs) == 0:
+            continue
+        zs.extend(np.array(temp_zs) + cluster_idx)
+        max_zs = max(temp_zs)
+        cluster_idx += max_zs + 1
+    return zs
