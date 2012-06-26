@@ -61,17 +61,17 @@ class Docs_helper():
             content_type=content_type
             , file_path=file_path
             , file_name=file_name)
-        myResource = gdata.docs.data.Resource(title=docs_name)
-        self.client.create_resource(myResource,media=mediaResource,
-                                    collection=collection)
+        # myResource = gdata.docs.data.Resource(title=docs_name)
+        # self.client.create_resource(myResource,media=mediaResource,
+        #                             collection=collection)
         # http://code.google.com/p/gdata-python-client/source/browse/samples/docs/docs_v3_example.py#180
-        # myResource = gdata.docs.data.Resource(title=docs_name,type='file')
-        # create_uri = gdata.docs.client.RESOURCE_UPLOAD_URI + '?convert=false'
-        # self.client.CreateResource(myResource,
-        #                            media=mediaResource,
-        #                             collection=collection,
-        #                             create_uri=create_uri
-        #                             )
+        myResource = gdata.docs.data.Resource(title=docs_name,type=content_type)
+        create_uri = gdata.docs.client.RESOURCE_UPLOAD_URI + '?convert=false'
+        self.client.CreateResource(myResource,
+                                   media=mediaResource,
+                                    collection=collection,
+                                    create_uri=create_uri
+                                    )
 
     def get_file(self,title_str,dest_path):
         q = gdata.docs.client.DocsQuery(
