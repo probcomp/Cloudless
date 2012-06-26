@@ -14,6 +14,7 @@ problem_file = settings.cifar_100_problem_file
 pkl_data = rf.unpickle(problem_file)
 init_x = pkl_data["subset_xs"]
 true_zs,ids = hf.canonicalize_list(pkl_data["subset_zs"])
+test_xs = pkl_data['test_xs']
 
 class MRSeedInferer(MRJob):
 
@@ -43,50 +44,96 @@ class MRSeedInferer(MRJob):
         self.num_iters_per_step = self.num_iters/self.num_steps
 
     def init(self, key, infer_seed_str):
-        summaries = None
         infer_seed = int(infer_seed_str)
         run_spec = rf.gen_default_cifar_run_spec(
-            problem_file,infer_seed,0)
+            problem_file=problem_file,
+            infer_seed=infer_seed,
+            num_iters=0
+            )
+        # this will be gibbs-init
         summaries = rf.infer(run_spec)
-        self.summaries.sefdefault(infer_seed,[]).extend(summaries)
+        self.summaries[infer_seed] = summaries
         yield infer_seed_str,summaries[-1]
 
     def distribute_data(self,infer_seed_str,last_summary):
-        gen_seed = ?
         init_alpha = last_summary['alpha']
         init_betas = last_summary['betas']
         inf_seed = last_summary['infer_seed']
         init_z = last_summary['last_valid_zs']
-        node_data,node_zs,gen_seed_list,inf_seed_list,random_state = distribute_data(
-            gen_seed,inf_seed,self.num_nodes,init_x,init_z,init_alpha,init_betas)
+        node_data,node_zs,gen_seed_list,inf_seed_list,random_state = rf.distribute_data(
+            gen_seed=0, # this shouldn't matter/shouldn't be used
+            inf_seed=inf_seed,
+            self.num_nodes=num_nodes,
+            init_x=init_x,
+            init_z=init_z,
+            init_alpha=init_alpha,
+            init_betas=init_betas)
         self.random_states[infer_seed_str] = random_state
         #
         for xs,zs,gen_seed,inf_seed in zip(node_data,node_zs,gen_seed_list,inf_seed_list):
             yield infer_seed_str,(xs,zs,gen_seed,inf_seed)
 
     def infer(self,infer_seed_str,(xs,zs,gen_seed,inf_seed)):
-        # generate a run_spec
-        # no alpha,beta inference should be going on in child states
-        run_spec = None
-        new_summaries = rf.infer(run_spec)
+        dataset_spec = {}
+        dataset_spec["gen_seed"] = 0
+        dataset_spec["num_cols"] = len(zs[0])
+        dataset_spec["num_rows"] = len(zs)
+        dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
+        dataset_spec["gen_betas"] = np.repeat(3.0, dataset_spec["num_cols"])
+        dataset_spec["gen_z"] = true_zs
+        #
+        run_spec = {}
+        run_spec["dataset_spec"] = dataset_spec
+        run_spec["num_iters"] = self.num_iters_per_step
+        run_spec["num_nodes"] = 1
+        run_spec["infer_seed"] = inf_seed
+        # sub_alpha = alpha/num_nodes
+        run_spec["infer_init_alpha"] = self.summaries[infer_seed_str][-1]['alpha']/self.num_nodes
+        run_spec["infer_init_betas"] = self.summaries[infer_seed_str][-1]['betas']
+        # no hypers in child state inference
+        run_spec["infer_do_alpha_inference"] = False
+        run_spec["infer_do_betas_inference"] = False
+        run_spec["infer_init_z"] = zs
+        run_spec["time_seatbelt"] = None
+        run_spec["ari_seatbelt"] = None
+        run_spec["verbose_state"] = False
+        problem = {'xs':init_x,'zs':true_zs,'test_xs':test_xs}
+        new_summaries = rf.infer(run_spec,problem)
         yield infer_seed_str, new_summaries
 
     def consolidate_data(self,infer_seed_str,summaries_list):
         zs_list = [summaries[-1]['last_valid_zs'] for summaries in summaries_list]
         zs = rf.consolidate_zs(zs_list)
-        new_state = state(zs)
-        new_summaries = new_state.extract_state_summary()
-        self.summaries[int(infer_seed)].extend(new_summaries[1:]) # don't include init summary
-        yield infer_seed_str, new_summaries[-1]
+        alpha = self.summaries[-1]['alpha']
+        betas = self.summaries[-1]['betas']
+        inf_seed = self.summaries[-1]['inf_seed']
+        consolidated_state = ds.DPMB_State(
+            gen_seed=0,
+            num_cols=len(zs[0]),
+            num_rows=len(zs),
+            init_alpha=alphas
+            init_betas=betas
+            init_z=zs,
+            init_x=init_x
+            )
+        transitioner = dm.DPMB(inf_seed,consolidated_state,alpha,betas)
+        # FIXME : randomize order?
+        consolidated_state.transition_alpha()
+        consolidated_state.transition_beta()
+        consolidated_summary = consolidated_state.extract_state_summary()
+        # FIXME : not tracking timing
+        self.summaries[infer_seed_str].append(consolidated_summary)
+        yield infer_seed_str, consolidated_summary[-1]
+
+    def final_results(self,infer_seed_str,last_summary):
+        yield infer_seed_str,self.summaries[infer_seed_str]
 
     def steps(self):
-        # one inference step is 
-        # [ self.mr(mapper=pre-mapper), self.mr(mapper=DPMB_mapper,reducer=coalesce) ] * PDPMB_iters
-        #                                              ^^^^^^^^^^^ runs N steps from hypers every N
         num_resume_steps = self.num_steps-1
         ret_list = [self.mr(self.init)]
-        infer_steps = [self.mr(self.resume_infer, self.my_reduce)] * num_resume_steps
-        ret_list.extend(infer_steps)
+        infer_step = [self.mr(self.distribute_data),self.mr(self.infer,self.consolidate_data)]
+        ret_list.extend(infer_steps * num_resume_steps)
+        ret_list.append(self.mr(final_results))
         return ret_list
 
 if __name__ == '__main__':
