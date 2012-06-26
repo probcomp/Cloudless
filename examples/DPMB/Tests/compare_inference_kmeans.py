@@ -36,31 +36,39 @@ test_xs = pkl_data['test_xs']
 image_indices = pkl_data['chosen_indices']
 
 # learn via KMeans
-delta_ts_list = []
-kmeans_testlls_list = []
-kmeans_summaries_list = []
-numpy.random.seed(0)
-for idx in range(10):
-    start_ts = datetime.datetime.now()
-    whitened_obs = whiten(init_x)
-    centroids,labels = kmeans2(whitened_obs,k=50,iter=100)
-    end_ts = datetime.datetime.now()
-    delta_ts = end_ts-start_ts
-    print "time to run k-means: " + str(end_ts-start_ts)
-    Counter(labels)
-
-    # determine predictive
-    run_spec = rf.gen_default_cifar_run_spec(problem_file,0,0)
-    run_spec['dataset_spec']['gen_seed'] = 0
-    run_spec['dataset_spec']['num_cols'] = 256
-    run_spec['dataset_spec']['num_rows'] = len(labels)
-    run_spec['infer_init_z'] = labels
-    kmeans_summaries = rf.infer(run_spec)
-
-    # now stash
-    delta_ts_list.append(delta_ts.total_seconds())
-    kmeans_summaries_list.append(kmeans_summaries)
-    kmeans_testlls_list.append(numpy.mean(kmeans_summaries[-1]['test_lls']))
+kmeans_file = os.path.join(settings.output_dir,'kmeans_results.pkl.gz')
+if os.path.isfile(kmeans_file):
+    kmeans_results = rf.unpickle(kmeans_file)
+else:
+    numpy.random.seed(0)
+    kmeans_results = {}
+    for num_clusters in [2,5,10,20,50,100]:
+        delta_ts_list = []
+        kmeans_test_lls_list = []
+        for idx in range(4):
+            start_ts = datetime.datetime.now()
+            whitened_obs = whiten(init_x)
+            centroids,labels = kmeans2(whitened_obs,k=50,iter=100)
+            end_ts = datetime.datetime.now()
+            delta_ts = end_ts-start_ts
+            print "time to run k-means: " + str(end_ts-start_ts)
+            Counter(labels)
+            # determine predictive
+            run_spec = rf.gen_default_cifar_run_spec(problem_file,0,0)
+            run_spec['dataset_spec']['gen_seed'] = 0
+            run_spec['dataset_spec']['num_cols'] = 256
+            run_spec['dataset_spec']['num_rows'] = len(labels)
+            run_spec['infer_init_z'] = labels
+            kmeans_summaries = rf.infer(run_spec)
+            # now stash
+            delta_ts_list.append(delta_ts.total_seconds())
+            kmeans_summaries_list.append(kmeans_summaries)
+            kmeans_test_lls_list.append(numpy.mean(kmeans_summaries[-1]['test_lls']))
+        kmeans_results[num_clusters] = {
+            'test_lls':kmeans_test_lls_list,
+            'delta_ts':delta_ts_list
+            }
+    rf.pickle(kmeans_results,kmeans_file)
 
 # # show clusterings
 # filename = os.path.join(settings.output_dir,'kmeans_results.csv')
@@ -80,18 +88,30 @@ pylab.plot(
     [numpy.mean(summary['test_lls']) for summary in actual_inference_summaries]
     )
 #
-pylab.plot(delta_ts_list,kmeans_testlls_list,'rx')
-x_lim = pylab.gca().get_xlim()
-y_lim = pylab.gca().get_ylim()
-pylab.hlines(min(kmeans_testlls_list),*x_lim,color='r')
-pylab.hlines(max(kmeans_testlls_list),*x_lim,color='r')
-pylab.vlines(min(delta_ts_list),*y_lim,color='r')
-pylab.vlines(max(delta_ts_list),*y_lim,color='r')
+colors_list = ['b','g','r','c','m','y','k']
+for num_clusters,color in zip(sorted(kmeans_results.keys()),colors_list):
+    delta_ts_list = kmeans_results[num_clusters]['delta_ts']
+    kmeans_test_lls_list = kmeans_results[num_clusters]['test_lls']
+    pylab.plot(delta_ts_list,kmeans_test_lls_list,'x',color=color)
+
 pylab.ion()
 pylab.show()
 #
 pylab.xlabel('time (seconds)')
 pylab.ylabel('predictive log likelohood')
 pylab.ylabel('held out log likelihood')
-pylab.legend(['inference','k-means'])
+legend_list = ['inference']
+legend_list.extend(['k-means: '+str(num_clusters)+" clusters" 
+                    for num_clusters in sorted(kmeans_results.keys())
+                    ])
+pylab.legend(legend_list)
 pylab.title('comparison of predictive between inference and kmeans')
+
+temp_test_lls = []
+for num_clusters in kmeans_results:
+    temp_test_lls.extend(kmeans_results[num_clusters]['test_lls'])
+min_ll = min(temp_test_lls)
+max_ll = max(temp_test_lls)
+x_lim = pylab.gca().get_xlim()
+pylab.hlines(min_ll,*x_lim,color='r')
+pylab.hlines(max_ll,*x_lim,color='r')
