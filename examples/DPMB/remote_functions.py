@@ -970,9 +970,10 @@ class Bunch:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
-def gen_gibbs_init_state_cluster_vector_list(
+def distribute_data(
     gen_seed,inf_seed,
     num_nodes,init_x,
+    send_state=False,
     init_alpha=None,init_betas=None,
     alpha_min=.01,alpha_max=1E4,
     beta_min=.01,beta_max=1E4,
@@ -1013,7 +1014,11 @@ def gen_gibbs_init_state_cluster_vector_list(
 
     gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
     inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-    return node_data_indices,node_zs,gen_seed_list,inf_seed_list
+
+    if send_state:
+        return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state,master_state
+    else:
+        return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state
 
 def consolidate_zs(zs_list):
     single_state = None
