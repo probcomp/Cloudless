@@ -20,6 +20,8 @@ if not os.path.isdir(base_dir): # assume AWS
     is_aws = True
 #
 data_dir = os.path.join(base_dir,"Data")
+output_dir = os.path.join(base_dir,"Output")
+
 try:
     os.makedirs(data_dir)
 except OSError, e:
