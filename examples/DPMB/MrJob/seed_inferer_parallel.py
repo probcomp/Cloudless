@@ -17,7 +17,8 @@ import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
 
-problem_file = 'small_problem.pkl.gz'
+# problem_file = 'small_problem.pkl.gz'
+problem_file = settings.cifar_100_problem_file
 
 class MRSeedInferer(MRJob):
 
