@@ -221,11 +221,11 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     # initialized according to the generation parameters from dataset spec
     # containing all the training data only
     problem = {}
-    problem["dataset_spec"] = dataset_spec
 
     init_x = None
     if "pkl_file" in dataset_spec:
-        permute = False # presume data is permuted, permuting now makes tracking ground truth hard
+        permute = False # presume data is already permuted
+                        # repermuting now makes tracking ground truth hard
         have_file = s3h.S3_helper().verify_file(dataset_spec['pkl_file'])
         if not have_file:
             raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
@@ -295,7 +295,7 @@ def plot_helper(name, state):
 def infer(run_spec,problem=None):
     dataset_spec = run_spec["dataset_spec"]
     if problem is None:
-        problem = gen_problem(dataset_spec) 
+        problem = gen_problem(dataset_spec)
     verbose_state = run_spec.get("verbose_state",False)
     decanon_indices = run_spec.get("decanon_indices",None)
     num_nodes = run_spec.get("num_nodes",1)
