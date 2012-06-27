@@ -1,4 +1,7 @@
-e#!python
+#!python
+import os
+#
+import numpy
 from mrjob.job import MRJob
 from mrjob.protocol import PickleProtocol, RawValueProtocol
 #
@@ -11,20 +14,12 @@ reload(settings)
 
 
 problem_file = settings.cifar_100_problem_file
-pkl_data = rf.unpickle(problem_file)
-init_x = pkl_data["subset_xs"]
-true_zs,ids = hf.canonicalize_list(pkl_data["subset_zs"])
-test_xs = pkl_data['test_xs']
 
 class MRSeedInferer(MRJob):
 
     INPUT_PROTOCOL = RawValueProtocol
     INTERNAL_PROTOCOL = PickleProtocol
     OUTPUT_PROTOCOL = PickleProtocol # RawValueProtocol # 
-
-    self.summaries = {}
-    self.master_states = {}
-    self.random_states = {}
 
     def configure_options(self):
         super(MRSeedInferer, self).configure_options()
@@ -52,34 +47,37 @@ class MRSeedInferer(MRJob):
             )
         # this will be gibbs-init
         summaries = rf.infer(run_spec)
-        self.summaries[infer_seed] = summaries
-        yield infer_seed_str,summaries[-1]
+        yield infer_seed_str,summaries
 
-    def distribute_data(self,infer_seed_str,last_summary):
-        init_alpha = last_summary['alpha']
-        init_betas = last_summary['betas']
-        inf_seed = last_summary['infer_seed']
-        init_z = last_summary['last_valid_zs']
-        node_data,node_zs,gen_seed_list,inf_seed_list,random_state = rf.distribute_data(
+    def distribute_data(self,infer_seed_str,summaries):
+        init_alpha = summaries[-1]['alpha']
+        init_betas = summaries[-1]['betas']
+        inf_seed = summaries[-1]['inf_seed']
+        init_z = summaries[-1]['last_valid_zs']
+        node_data,node_zs,gen_seed_list,inf_seed_list,random_state = \
+            rf.distribute_data(
             gen_seed=0, # this shouldn't matter/shouldn't be used
             inf_seed=inf_seed,
-            self.num_nodes=num_nodes,
+            num_nodes=self.num_nodes,
             init_x=init_x,
             init_z=init_z,
             init_alpha=init_alpha,
             init_betas=init_betas)
-        self.random_states[infer_seed_str] = random_state
         #
-        for xs,zs,gen_seed,inf_seed in zip(node_data,node_zs,gen_seed_list,inf_seed_list):
-            yield infer_seed_str,(xs,zs,gen_seed,inf_seed)
+        for xs,zs,gen_seed,inf_seed in zip(
+            node_data,node_zs,gen_seed_list,inf_seed_list):
+            if len(zs) == 0:
+                continue
+            yield infer_seed_str,(xs,zs,gen_seed,inf_seed,summaries)
 
-    def infer(self,infer_seed_str,(xs,zs,gen_seed,inf_seed)):
+    def infer(self,infer_seed_str,model_specs):
+        (xs,zs,gen_seed,inf_seed,summaries) = model_specs
         dataset_spec = {}
         dataset_spec["gen_seed"] = 0
-        dataset_spec["num_cols"] = len(zs[0])
+        dataset_spec["num_cols"] = 256
         dataset_spec["num_rows"] = len(zs)
         dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
-        dataset_spec["gen_betas"] = np.repeat(3.0, dataset_spec["num_cols"])
+        dataset_spec["gen_betas"] = [3.0 for x in range(dataset_spec['num_cols'])]
         dataset_spec["gen_z"] = true_zs
         #
         run_spec = {}
@@ -88,8 +86,8 @@ class MRSeedInferer(MRJob):
         run_spec["num_nodes"] = 1
         run_spec["infer_seed"] = inf_seed
         # sub_alpha = alpha/num_nodes
-        run_spec["infer_init_alpha"] = self.summaries[infer_seed_str][-1]['alpha']/self.num_nodes
-        run_spec["infer_init_betas"] = self.summaries[infer_seed_str][-1]['betas']
+        run_spec["infer_init_alpha"] = summaries[-1]['alpha']/self.num_nodes
+        run_spec["infer_init_betas"] = summaries[-1]['betas']
         # no hypers in child state inference
         run_spec["infer_do_alpha_inference"] = False
         run_spec["infer_do_betas_inference"] = False
@@ -98,21 +96,25 @@ class MRSeedInferer(MRJob):
         run_spec["ari_seatbelt"] = None
         run_spec["verbose_state"] = False
         problem = {'xs':init_x,'zs':true_zs,'test_xs':test_xs}
-        new_summaries = rf.infer(run_spec,problem)
-        yield infer_seed_str, new_summaries
+        child_summaries = rf.infer(run_spec,problem)
+        # FIXME : use modify_jobspec_to_results(jobspec,job_value) ? 
+        yield infer_seed_str, (summaries,child_summaries)
 
-    def consolidate_data(self,infer_seed_str,summaries_list):
-        zs_list = [summaries[-1]['last_valid_zs'] for summaries in summaries_list]
+    def consolidate_data(self,infer_seed_str,summaries_pair_list):
+        zs_list = [summaries_pair[1][-1]['last_valid_zs'] 
+                   for summaries_pair in summaries_pair_list]
         zs = rf.consolidate_zs(zs_list)
-        alpha = self.summaries[-1]['alpha']
-        betas = self.summaries[-1]['betas']
-        inf_seed = self.summaries[-1]['inf_seed']
+        parent_summaries = summaries_pair_list[0][0]
+        prior_summary = parent_summaries[-1]
+        alpha = prior_summary['alpha']
+        betas = prior_summary['betas']
+        inf_seed = prior_summary['inf_seed']
         consolidated_state = ds.DPMB_State(
             gen_seed=0,
-            num_cols=len(zs[0]),
+            num_cols=len(betas)
             num_rows=len(zs),
-            init_alpha=alphas
-            init_betas=betas
+            init_alpha=alphas,
+            init_betas=betas,
             init_z=zs,
             init_x=init_x
             )
@@ -122,18 +124,14 @@ class MRSeedInferer(MRJob):
         consolidated_state.transition_beta()
         consolidated_summary = consolidated_state.extract_state_summary()
         # FIXME : not tracking timing
-        self.summaries[infer_seed_str].append(consolidated_summary)
-        yield infer_seed_str, consolidated_summary[-1]
-
-    def final_results(self,infer_seed_str,last_summary):
-        yield infer_seed_str,self.summaries[infer_seed_str]
+        parent_summaries.append(consolidated_summary)
+        yield infer_seed_str, parent_summaries
 
     def steps(self):
         num_resume_steps = self.num_steps-1
         ret_list = [self.mr(self.init)]
         infer_step = [self.mr(self.distribute_data),self.mr(self.infer,self.consolidate_data)]
-        ret_list.extend(infer_steps * num_resume_steps)
-        ret_list.append(self.mr(final_results))
+        ret_list.extend(infer_step * num_resume_steps)
         return ret_list
 
 if __name__ == '__main__':
