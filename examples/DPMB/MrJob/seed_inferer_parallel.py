@@ -45,7 +45,7 @@ class MRSeedInferer(MRJob):
             infer_seed=infer_seed,
             num_iters=0
            )
-        problem = gen_problem(run_spec['dataset_spec'])
+        problem = rf.gen_problem(run_spec['dataset_spec'])
         # this will be gibbs-init
         summaries = rf.infer(run_spec,problem)
         # problem contains the true zs,xs and test_xs
@@ -57,6 +57,7 @@ class MRSeedInferer(MRJob):
         init_betas = summaries[-1]['betas']
         inf_seed = summaries[-1]['inf_seed']
         init_z = summaries[-1]['last_valid_zs']
+        init_x = summaries[0]['problem']['xs']
         node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state = \
             rf.distribute_data(
             gen_seed=0, # this shouldn't matter/shouldn't be used
@@ -98,29 +99,33 @@ class MRSeedInferer(MRJob):
         run_spec["time_seatbelt"] = None
         run_spec["ari_seatbelt"] = None
         run_spec["verbose_state"] = False
-        init_x = summaries[0]['probelm']['xs'][x_indices]
+        init_x = [summaries[0]['problem']['xs'][x_index] for x_index in x_indices]
         problem = {'xs':init_x,'zs':None,'test_xs':None}
         child_summaries = rf.infer(run_spec,problem)
         # FIXME : use modify_jobspec_to_results(jobspec,job_value) ? 
+        rf.pickle(child_summaries,'/usr/local/Cloudless/examples/DPMB/MrJob/child_summaries_'+str(numpy.random.randint(1000))+'.pkl.gz')
         yield infer_seed_str, (summaries,child_summaries,x_indices)
 
-    def consolidate_data(self,infer_seed_str,summaries_triplet_list):
+    def consolidate_data(self,infer_seed_str,summaries_triplet_generator):
         zs_list = [summaries_triplet[1][-1]['last_valid_zs'] 
-                   for summaries_triplet in summaries_triplet_list]
+                   for summaries_triplet in summaries_triplet_generator]
         zs = rf.consolidate_zs(zs_list)
         x_indices_list = [summaries_triplet[2]
-                   for summaries_triplet in summaries_triplet_list]
+                   for summaries_triplet in summaries_triplet_generator]
         x_indices = [y for x in x_indices_list for y in x]
         # reorder zs according to original data
         z_reorder_indices = numpy.argsort(x_indices)
-        parent_summaries = summaries_triplet_list[0][0]
+        parent_summaries = summaries_triplet_generator.__iter__().next()[0]
+        rf.pickle(parent_summaries,'/usr/local/Cloudless/examples/DPMB/MrJob/parent_summaries_'+str(numpy.random.randint(1000))+'.pkl.gz')
+        print "parent_summaries here"
+        print str(parent_summaries)
         prior_summary = parent_summaries[-1]
         alpha = prior_summary['alpha']
         betas = prior_summary['betas']
         inf_seed = prior_summary['inf_seed']
         consolidated_state = ds.DPMB_State(
             gen_seed=0,
-            num_cols=len(betas)
+            num_cols=len(betas),
             num_rows=len(zs),
             init_alpha=alphas,
             init_betas=betas,
@@ -139,10 +144,9 @@ class MRSeedInferer(MRJob):
         yield infer_seed_str, parent_summaries
 
     def steps(self):
-        num_resume_steps = self.num_steps-1
         ret_list = [self.mr(self.init)]
         infer_step = [self.mr(self.distribute_data),self.mr(self.infer,self.consolidate_data)]
-        ret_list.extend(infer_step * num_resume_steps)
+        ret_list.extend(infer_step * self.num_steps)
         return ret_list
 
 if __name__ == '__main__':
