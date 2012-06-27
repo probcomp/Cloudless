@@ -44,9 +44,12 @@ class MRSeedInferer(MRJob):
             problem_file=problem_file,
             infer_seed=infer_seed,
             num_iters=0
-            )
+           )
+        problem = gen_problem(run_spec['dataset_spec'])
         # this will be gibbs-init
-        summaries = rf.infer(run_spec)
+        summaries = rf.infer(run_spec,problem)
+        # problem contains the true zs,xs and test_xs
+        summaries[0]['problem'] = problem
         yield infer_seed_str,summaries
 
     def distribute_data(self,infer_seed_str,summaries):
@@ -54,7 +57,7 @@ class MRSeedInferer(MRJob):
         init_betas = summaries[-1]['betas']
         inf_seed = summaries[-1]['inf_seed']
         init_z = summaries[-1]['last_valid_zs']
-        node_data,node_zs,gen_seed_list,inf_seed_list,random_state = \
+        node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state = \
             rf.distribute_data(
             gen_seed=0, # this shouldn't matter/shouldn't be used
             inf_seed=inf_seed,
@@ -64,21 +67,21 @@ class MRSeedInferer(MRJob):
             init_alpha=init_alpha,
             init_betas=init_betas)
         #
-        for xs,zs,gen_seed,inf_seed in zip(
-            node_data,node_zs,gen_seed_list,inf_seed_list):
+        for x_indices,zs,gen_seed,inf_seed in zip(
+            node_data_indices,node_zs,gen_seed_list,inf_seed_list):
             if len(zs) == 0:
                 continue
-            yield infer_seed_str,(xs,zs,gen_seed,inf_seed,summaries)
+            yield infer_seed_str,(x_indices,zs,gen_seed,inf_seed,summaries)
 
     def infer(self,infer_seed_str,model_specs):
-        (xs,zs,gen_seed,inf_seed,summaries) = model_specs
+        (x_indices,zs,gen_seed,inf_seed,summaries) = model_specs
         dataset_spec = {}
         dataset_spec["gen_seed"] = 0
         dataset_spec["num_cols"] = 256
         dataset_spec["num_rows"] = len(zs)
-        dataset_spec["gen_alpha"] = 3.0 #FIXME: could make it MLE alpha later
+        dataset_spec["gen_alpha"] = 3.0 # FIXME: are these actually needed
         dataset_spec["gen_betas"] = [3.0 for x in range(dataset_spec['num_cols'])]
-        dataset_spec["gen_z"] = true_zs
+        dataset_spec["gen_z"] = None # FIXME: are these actually needed?
         #
         run_spec = {}
         run_spec["dataset_spec"] = dataset_spec
@@ -95,16 +98,22 @@ class MRSeedInferer(MRJob):
         run_spec["time_seatbelt"] = None
         run_spec["ari_seatbelt"] = None
         run_spec["verbose_state"] = False
-        problem = {'xs':init_x,'zs':true_zs,'test_xs':test_xs}
+        init_x = summaries[0]['probelm']['xs'][x_indices]
+        problem = {'xs':init_x,'zs':None,'test_xs':None}
         child_summaries = rf.infer(run_spec,problem)
         # FIXME : use modify_jobspec_to_results(jobspec,job_value) ? 
-        yield infer_seed_str, (summaries,child_summaries)
+        yield infer_seed_str, (summaries,child_summaries,x_indices)
 
-    def consolidate_data(self,infer_seed_str,summaries_pair_list):
-        zs_list = [summaries_pair[1][-1]['last_valid_zs'] 
-                   for summaries_pair in summaries_pair_list]
+    def consolidate_data(self,infer_seed_str,summaries_triplet_list):
+        zs_list = [summaries_triplet[1][-1]['last_valid_zs'] 
+                   for summaries_triplet in summaries_triplet_list]
         zs = rf.consolidate_zs(zs_list)
-        parent_summaries = summaries_pair_list[0][0]
+        x_indices_list = [summaries_triplet[2]
+                   for summaries_triplet in summaries_triplet_list]
+        x_indices = [y for x in x_indices_list for y in x]
+        # reorder zs according to original data
+        z_reorder_indices = numpy.argsort(x_indices)
+        parent_summaries = summaries_triplet_list[0][0]
         prior_summary = parent_summaries[-1]
         alpha = prior_summary['alpha']
         betas = prior_summary['betas']
@@ -115,14 +124,16 @@ class MRSeedInferer(MRJob):
             num_rows=len(zs),
             init_alpha=alphas,
             init_betas=betas,
-            init_z=zs,
-            init_x=init_x
+            init_z=zs[z_reorder_indices],
+            init_x=parent_summaries[0]['problem']['xs']
             )
         transitioner = dm.DPMB(inf_seed,consolidated_state,alpha,betas)
         # FIXME : randomize order?
         consolidated_state.transition_alpha()
         consolidated_state.transition_beta()
-        consolidated_summary = consolidated_state.extract_state_summary()
+        consolidated_summary = consolidated_state.extract_state_summary(
+            true_zs=parent_summaries[0]['problem']['zs'],
+            test_xs=parent_summaries[0]['problem']['test_xs'])
         # FIXME : not tracking timing
         parent_summaries.append(consolidated_summary)
         yield infer_seed_str, parent_summaries
