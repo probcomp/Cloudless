@@ -107,6 +107,7 @@ class MRSeedInferer(MRJob):
         yield infer_seed_str, (summaries,child_summaries,x_indices)
 
     def consolidate_data(self,infer_seed_str,summaries_triplet_generator):
+        rf.pickle(infer_seed_str,'/usr/local/Cloudless/examples/DPMB/MrJob/infer_seed_str_'+infer_seeed_str+'_'+str(numpy.random.randint(1000))+'.pkl.gz')
         zs_list = [summaries_triplet[1][-1]['last_valid_zs'] 
                    for summaries_triplet in summaries_triplet_generator]
         zs = rf.consolidate_zs(zs_list)
