@@ -31,7 +31,7 @@ class CloudlessSetup(ClusterSetup):
                #
                remote_home_dir = '/home/sgeadmin/'
                node.ssh.put(settings.ec2_credentials_file,remote_home_dir)
-               node.ssh.execute('chmod -R ugo+rwx ' + os.path.join(remote_home_dir,settings.ec2_credentials_file))
+               node.ssh.execute('chmod -R ugo+rwx ' + os.path.join(remote_home_dir,'.boto'))
 
           master.ssh.execute('bash /usr/local/lib/python2.7/dist-packages/Cloudless/use_ebs_swap.sh')
 
