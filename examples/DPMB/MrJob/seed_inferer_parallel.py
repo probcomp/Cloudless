@@ -7,13 +7,17 @@ from mrjob.protocol import PickleProtocol, RawValueProtocol
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
 
-problem_file = settings.cifar_100_problem_file
+problem_file = 'small_problem.pkl.gz'
 
 class MRSeedInferer(MRJob):
 
@@ -103,23 +107,22 @@ class MRSeedInferer(MRJob):
         problem = {'xs':init_x,'zs':None,'test_xs':None}
         child_summaries = rf.infer(run_spec,problem)
         # FIXME : use modify_jobspec_to_results(jobspec,job_value) ? 
-        rf.pickle(child_summaries,'/usr/local/Cloudless/examples/DPMB/MrJob/child_summaries_'+str(numpy.random.randint(1000))+'.pkl.gz')
-        yield infer_seed_str, (summaries,child_summaries,x_indices)
+        val = (summaries,child_summaries,x_indices) # must assemble before yield, else reducer gets nothing
+        yield infer_seed_str, val
 
     def consolidate_data(self,infer_seed_str,summaries_triplet_generator):
-        rf.pickle(infer_seed_str,'/usr/local/Cloudless/examples/DPMB/MrJob/infer_seed_str_'+infer_seeed_str+'_'+str(numpy.random.randint(1000))+'.pkl.gz')
-        zs_list = [summaries_triplet[1][-1]['last_valid_zs'] 
-                   for summaries_triplet in summaries_triplet_generator]
+        parent_summaries_list = []
+        zs_list = []
+        x_indices_list = []
+        for summaries_triplet in summaries_triplet_generator:
+            parent_summaries_list.append(summaries_triplet[0])
+            zs_list.append(summaries_triplet[1][-1]['last_valid_zs'])
+            x_indices_list.append(summaries_triplet[2])
         zs = rf.consolidate_zs(zs_list)
-        x_indices_list = [summaries_triplet[2]
-                   for summaries_triplet in summaries_triplet_generator]
         x_indices = [y for x in x_indices_list for y in x]
         # reorder zs according to original data
         z_reorder_indices = numpy.argsort(x_indices)
-        parent_summaries = summaries_triplet_generator.__iter__().next()[0]
-        rf.pickle(parent_summaries,'/usr/local/Cloudless/examples/DPMB/MrJob/parent_summaries_'+str(numpy.random.randint(1000))+'.pkl.gz')
-        print "parent_summaries here"
-        print str(parent_summaries)
+        parent_summaries = parent_summaries_list[0]
         prior_summary = parent_summaries[-1]
         alpha = prior_summary['alpha']
         betas = prior_summary['betas']
@@ -128,18 +131,20 @@ class MRSeedInferer(MRJob):
             gen_seed=0,
             num_cols=len(betas),
             num_rows=len(zs),
-            init_alpha=alphas,
+            init_alpha=alpha,
             init_betas=betas,
-            init_z=zs[z_reorder_indices],
+            init_z=[zs[reorder_index] for reorder_index in z_reorder_indices],
             init_x=parent_summaries[0]['problem']['xs']
             )
-        transitioner = dm.DPMB(inf_seed,consolidated_state,alpha,betas)
+        transitioner = dm.DPMB(inf_seed,consolidated_state,
+                               infer_alpha=True,infer_beta=True)
         # FIXME : randomize order?
-        consolidated_state.transition_alpha()
-        consolidated_state.transition_beta()
-        consolidated_summary = consolidated_state.extract_state_summary(
+        transitioner.transition_alpha()
+        transitioner.transition_beta()
+        consolidated_summary = transitioner.extract_state_summary(
             true_zs=parent_summaries[0]['problem']['zs'],
             test_xs=parent_summaries[0]['problem']['test_xs'])
+        consolidated_summary['last_valid_zs'] = transitioner.state.getZIndices()
         # FIXME : not tracking timing
         parent_summaries.append(consolidated_summary)
         yield infer_seed_str, parent_summaries
