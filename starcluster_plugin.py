@@ -1,3 +1,6 @@
+#!python
+import os
+#
 from starcluster.clustersetup import ClusterSetup
 from starcluster.logger import log
 import Cloudless.examples.DPMB.settings as settings
@@ -26,7 +29,9 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('python -c \'import Cloudless.examples.DPMB.settings\'')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
                #
-               node.ssh.put(settings.ec2_credentials_file,"/home/sgeadmin/")
+               remote_home_dir = '/home/sgeadmin/'
+               node.ssh.put(settings.ec2_credentials_file,remote_home_dir)
+               node.ssh.execute('chmod -R ugo+rwx ' + os.path.join(remote_home_dir,settings.ec2_credentials_file))
 
           master.ssh.execute('bash /usr/local/lib/python2.7/dist-packages/Cloudless/use_ebs_swap.sh')
 
