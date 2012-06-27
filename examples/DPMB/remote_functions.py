@@ -355,9 +355,9 @@ def infer(run_spec,problem=None):
     #
     print "saved initialization"
     #
-    last_valid_zs = None
-    last_valid_seed = None
-    decanon_indices = None
+    last_valid_zs = transitioner.state.getZIndices()
+    last_valid_seed = transitioner.random_state.get_state()
+    decanon_indices = transitioner.state.get_decanonicalizing_indices()
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(
             time_seatbelt=time_seatbelt
