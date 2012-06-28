@@ -971,45 +971,30 @@ class Bunch:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
-def distribute_data(
-    gen_seed,inf_seed,
-    num_nodes,init_x,
-    init_z=None,
-    send_state=False,
-    init_alpha=None,init_betas=None,
-    alpha_min=.01,alpha_max=1E4,
-    beta_min=.01,beta_max=1E4,
-    grid_N=100):
+def distribute_data(inf_seed,num_nodes,init_z):
 
     random_state = hf.generate_random_state(inf_seed)
     mus = np.repeat(1.0/num_nodes,num_nodes)
 
-    # generate the data from a DPMB_State
-    master_state = ds.DPMB_State(
-        gen_seed=gen_seed,
-        num_cols=len(init_x[0]),
-        num_rows=len(init_x),
-        init_alpha = init_alpha,
-        init_betas = init_betas,
-        init_x = init_x,
-        init_z = init_z,
-        alpha_min=alpha_min,
-        alpha_max=alpha_max,
-        beta_min=beta_min,
-        beta_max=beta_max,
-        grid_N=grid_N
-        )
+    # group x_indices
+    # zs must be canonicalized!!!
+    cluster_data_indices = {}
+    for x_index,z in zip(xrange(len(init_z)),init_z):
+        cluster_data_indices.setdefault(z,[]).append(x_index)
 
     # deal out data to states
-    master_vector_list = list(master_state.vector_list)
-    node_data_indices = [[] for node_idx in range(num_nodes)]
-    node_zs = [[] for node_idx in range(num_nodes)]
-    for cluster_idx in range(len(master_state.cluster_list)):
-        draw = pf.renormalize_and_sample(
-            np.log(mus),random_state.uniform())
-        cluster = master_state.cluster_list[cluster_idx]
-        vector_index_list = [master_vector_list.index(vector) 
-                             for vector in cluster.vector_list]
+    node_data_indices = [[] for node_idx in xrange(num_nodes)]
+    node_zs = [[] for node_idx in xrange(num_nodes)]
+    num_clusters = len(cluster_data_indices)
+    # determine node choices in bulk
+    bulk_counts = np.random.multinomial(num_clusters,mus)
+    node_choices = []
+    for cluster_idx,cluster_count in enumerate(bulk_counts):
+        node_choices.extend(np.repeat(cluster_idx,cluster_count))
+    node_choices = np.random.permutation(node_choices)
+    #
+    for cluster_idx,draw in zip(xrange(num_clusters),node_choices):
+        vector_index_list = cluster_data_indices[cluster_idx]
         node_data_indices[draw].extend(vector_index_list)
         new_zs_value = node_zs[draw][-1] + 1 \
             if len(node_zs[draw]) > 0 else 0
@@ -1018,10 +1003,7 @@ def distribute_data(
     gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
     inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
 
-    if send_state:
-        return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state,master_state
-    else:
-        return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state
+    return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state
 
 def consolidate_zs(zs_list):
     single_state = None
