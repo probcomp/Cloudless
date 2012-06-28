@@ -68,7 +68,7 @@ parser.add_argument('--pkl_file',default='factorial_problem.pkl.gz',type=str)
 parser.add_argument('--image_save_str',default=None,type=str)
 args,unkown_args = parser.parse_known_args()
 
-data,inverse_permutation_indices = factorial(
+data,inverse_permutation_indices_list = factorial(
     gen_seed=args.gen_seed,
     num_cols=args.num_cols,
     num_rows=args.num_rows,
@@ -76,7 +76,15 @@ data,inverse_permutation_indices = factorial(
     num_splits=args.num_splits,
     image_save_str=args.image_save_str)
 
+pkl_vals = {
+    'data':data,
+    'inverse_permutation_indices_list':inverse_permutation_indices_list,
+    'num_clusters':args.num_clusters,
+    'zs_to_permute':numpy.repeat(xrange(args.num_clusters),
+                                 args.num_rows/args.num_clusters)
+    }
+
 rf.pickle(
-    {'data':data,'inverse_permutation_indices':inverse_permutation_indices},
+    pkl_vals,
     args.pkl_file
     )
