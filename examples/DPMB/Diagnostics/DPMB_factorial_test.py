@@ -4,6 +4,7 @@ import os
 import matplotlib
 matplotlib.use('Agg')
 import pylab
+import numpy
 ##
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
@@ -59,6 +60,7 @@ for iter_num in range(10000):
     summaries.append(next_summary)
     #
     if iter_num % 100 == 0:
+        hf.printTS('Done iter ' + str(iter_num))
         ari_mat = numpy.array([summary['ari_list'] for summary in summaries])
         pylab.plot(ari_mat)
         pylab.savefig('ari_plot_inf_seed_'+str(inf_seed))
