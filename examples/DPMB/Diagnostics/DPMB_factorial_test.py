@@ -1,5 +1,10 @@
 #!python
 import os
+##
+import matplotlib
+matplotlib.use('Agg')
+import pylab
+##
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
@@ -43,7 +48,7 @@ for inverse_permutation_indices in inverse_permutation_indices_list:
 next_summary['ari_list'] = ari_list
 summaries.append(next_summary)
 
-for i in range(100):
+for iter_num in range(10000):
     transitioner.transition()
     next_summary = transitioner.extract_state_summary()
     ari_list = []
@@ -52,7 +57,8 @@ for i in range(100):
             state.getZIndices(),zs_to_permute[inverse_permutation_indices]))
     next_summary['ari_list'] = ari_list
     summaries.append(next_summary)
-
-ari_mat = numpy.array([summary['ari_list'] for summary in summaries])
-import pylab
-pylab.plot(ari_mat)
+    #
+    if iter_num % 100 == 0:
+        ari_mat = numpy.array([summary['ari_list'] for summary in summaries])
+        pylab.plot(ari_mat)
+        pylab.savefig('ari_plot_inf_seed_'+str(inf_seed))
