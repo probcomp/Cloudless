@@ -64,14 +64,8 @@ class MRSeedInferer(MRJob):
         init_z = summaries[-1]['last_valid_zs']
         init_x = summaries[0]['problem']['xs']
         node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state = \
-            rf.distribute_data(
-            gen_seed=0, # this shouldn't matter/shouldn't be used
-            inf_seed=inf_seed,
-            num_nodes=self.num_nodes,
-            init_x=init_x,
-            init_z=init_z,
-            init_alpha=init_alpha,
-            init_betas=init_betas)
+            rf.distribute_data(inf_seed=inf_seed,num_nodes=self.num_nodes,
+            init_z=init_z)
         #
         for x_indices,zs,gen_seed,inf_seed in zip(
             node_data_indices,node_zs,gen_seed_list,inf_seed_list):
