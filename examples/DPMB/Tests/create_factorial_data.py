@@ -10,6 +10,8 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
+import Cloudless.examples.DPMB.settings as settings
+reload(settings)
 
 
 def gen_data(gen_seed,num_clusters,num_cols,num_rows):
@@ -86,5 +88,4 @@ pkl_vals = {
 
 rf.pickle(
     pkl_vals,
-    args.pkl_file
-    )
+    os.path.join(settings.data_dir,args.pkl_file))
