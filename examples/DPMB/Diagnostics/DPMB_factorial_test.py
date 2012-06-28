@@ -72,3 +72,4 @@ for iter_num in range(10000):
         ari_mat = numpy.array([summary['ari_list'] for summary in summaries])
         pylab.plot(ari_mat)
         pylab.savefig('ari_plot_inf_seed_'+str(inf_seed))
+        pylab.close()
