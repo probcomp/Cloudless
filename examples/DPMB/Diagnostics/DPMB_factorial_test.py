@@ -33,6 +33,14 @@ state = ds.DPMB_State(
     num_rows=num_rows,
     init_x=data)
 
+# proof that these permutation indices work
+for idx,inverse_permutation_indices \
+        in enumerate(inverse_permutation_indices_list):
+    hf.plot_data(
+        data=numpy.array(state.getXValues())[inverse_permutation_indices])
+    pylab.savefig(str(idx))
+    pylab.close()
+
 transitioner = dm.DPMB(
     inf_seed=inf_seed,
     state=state,
@@ -55,7 +63,7 @@ for iter_num in range(10000):
     ari_list = []
     for inverse_permutation_indices in inverse_permutation_indices_list:
         ari_list.append(hf.calc_ari(
-            state.getZIndices(),zs_to_permute[inverse_permutation_indices]))
+            state.getZIndices(),zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
     next_summary['ari_list'] = ari_list
     summaries.append(next_summary)
     #
