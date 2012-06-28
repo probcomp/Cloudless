@@ -66,7 +66,9 @@ for iter_num in range(10000):
             state.getZIndices(),zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
     next_summary['ari_list'] = ari_list
     summaries.append(next_summary)
-    #
+    if 250 < iter_num and iter_num < 270:
+        if iter_num % 1 == 0:
+            state.plot(save_str='state_'+str(iter_num))
     if iter_num % 100 == 0:
         hf.printTS('Done iter ' + str(iter_num))
         ari_mat = numpy.array([summary['ari_list'] for summary in summaries])
