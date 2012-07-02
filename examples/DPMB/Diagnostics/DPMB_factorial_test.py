@@ -1,4 +1,5 @@
 #!python
+import argparse
 import os
 ##
 import matplotlib
@@ -24,8 +25,15 @@ zs_to_permute = data_dict['zs_to_permute']
 num_rows = data.shape[0]
 num_cols = data.shape[1]
 
-gen_seed = 0
-inf_seed = 0
+parser = argparse.ArgumentParser('Run inference on a factorial problem')
+parser.add_argument('inf_seed',type=int)
+parser.add_argument('--gen_seed',default=0,type=int)
+parser.add_argument('--num_iters',default=2000,type=int)
+args,unkown_args = parser.parse_known_args()
+
+inf_seed = args.inf_seed
+gen_seed = args.gen_seed
+num_iters = args.num_iters
 
 state = ds.DPMB_State(
     gen_seed=0,
@@ -59,7 +67,7 @@ for inverse_permutation_indices in inverse_permutation_indices_list:
 next_summary['ari_list'] = ari_list
 summaries.append(next_summary)
 
-for iter_num in range(2000):
+for iter_num in range(num_iters):
     transitioner.transition()
     next_summary = transitioner.extract_state_summary()
     ari_list = []
