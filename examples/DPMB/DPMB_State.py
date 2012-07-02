@@ -228,8 +228,8 @@ class DPMB_State():
         return grid
     
     def get_beta_grid(self):
-        ##endpoint should be set by MLE of all data in its own cluster?
-        grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N) 
+        grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N)
+        # grid = np.linspace(self.beta_min,self.beta_max,self.grid_N)
         return grid
 
     def get_all_vectors(self):
