@@ -31,6 +31,8 @@ state = ds.DPMB_State(
     gen_seed=0,
     num_cols=num_cols,
     num_rows=num_rows,
+    beta_min=1.E-2,
+    beta_max=1.E2,
     init_x=data)
 
 # proof that these permutation indices work
@@ -57,7 +59,7 @@ for inverse_permutation_indices in inverse_permutation_indices_list:
 next_summary['ari_list'] = ari_list
 summaries.append(next_summary)
 
-for iter_num in range(10000):
+for iter_num in range(2000):
     transitioner.transition()
     next_summary = transitioner.extract_state_summary()
     ari_list = []
@@ -69,18 +71,27 @@ for iter_num in range(10000):
     if False and 250 < iter_num and iter_num < 270:
         if iter_num % 1 == 0:
             state.plot(save_str='state_'+str(iter_num))
-    if iter_num % 100 == 0:
+    if iter_num % 100 == 0 and iter_num != 0:
         hf.printTS('Done iter ' + str(iter_num))
         ari_mat = numpy.array([summary['ari_list'] for summary in summaries[2:]])
         #
         pylab.figure()
-        ax1 = pylab.subplot(211)
+        ax1 = pylab.subplot(411)
         pylab.plot(ari_mat)
         pylab.xlabel('iter')
         pylab.ylabel('ari for each independent clustering')
-        pylab.subplot(212,sharex=ax1)
+        pylab.subplot(412,sharex=ax1)
         pylab.plot([summary["score"] for summary in summaries[2:]])
         pylab.xlabel('iter')
         pylab.ylabel('overall model score')
-        pylab.savefig('ari_score_inf_seed_'+str(inf_seed))
+        pylab.subplot(413,sharex=ax1)
+        pylab.plot(temp_betas[:,:4],color='b')
+        pylab.xlabel('iter')
+        pylab.ylabel('log10 betas')
+        pylab.subplot(414,sharex=ax1)
+        pylab.plot(temp_betas[:,4:],color='g')
+        pylab.xlabel('iter')
+        pylab.ylabel('log10 betas')
+        #
+        pylab.savefig('ari_score_betas_inf_seed_'+str(inf_seed))
         pylab.close()
