@@ -79,19 +79,25 @@ for iter_num in range(2000):
         ax1 = pylab.subplot(411)
         pylab.plot(ari_mat)
         pylab.xlabel('iter')
-        pylab.ylabel('ari for each independent clustering')
+        pylab.ylabel('independent aris')
         pylab.subplot(412,sharex=ax1)
-        pylab.plot([summary["score"] for summary in summaries[2:]])
+        pylab.plot([summary["score"] for summary in summaries[2:]],color='k')
         pylab.xlabel('iter')
-        pylab.ylabel('overall model score')
+        pylab.ylabel('model score')
+        #
+        temp_betas = numpy.log10([summary['betas'] for summary in summaries[2:]])
         pylab.subplot(413,sharex=ax1)
-        pylab.plot(temp_betas[:,:4],color='b')
+        pylab.plot(temp_betas[:,:4],color='b',linewidth=.5)
         pylab.xlabel('iter')
         pylab.ylabel('log10 betas')
         pylab.subplot(414,sharex=ax1)
-        pylab.plot(temp_betas[:,4:],color='g')
+        pylab.plot(temp_betas[:,4:],color='g',linewidth=.5)
         pylab.xlabel('iter')
         pylab.ylabel('log10 betas')
         #
         pylab.savefig('ari_score_betas_inf_seed_'+str(inf_seed))
         pylab.close()
+
+rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
+
+
