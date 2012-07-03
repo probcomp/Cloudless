@@ -18,7 +18,7 @@ import pdb
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=1E4
+                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=10.
                  ,grid_N=100):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
@@ -228,8 +228,8 @@ class DPMB_State():
         return grid
     
     def get_beta_grid(self):
-        grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N)
-        # grid = np.linspace(self.beta_min,self.beta_max,self.grid_N)
+        # grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N)
+        grid = np.linspace(self.beta_min,self.beta_max,self.grid_N)
         return grid
 
     def get_all_vectors(self):
