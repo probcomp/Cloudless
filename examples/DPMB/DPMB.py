@@ -183,7 +183,7 @@ class DPMB():
 
             self.transition_count += 1
 
-        return None
+        return transition_func_list
 
     def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):
         if time_seatbelt is None:
