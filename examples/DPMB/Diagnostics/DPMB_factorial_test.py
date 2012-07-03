@@ -1,6 +1,7 @@
 #!python
 import argparse
 import os
+from collections import Counter
 ##
 import matplotlib
 matplotlib.use('Agg')
@@ -115,8 +116,10 @@ for inverse_permutation_indices in inverse_permutation_indices_list:
 next_summary['ari_list'] = ari_list
 summaries.append(next_summary)
 
+transition_orders = []
 for iter_num in range(num_iters):
-    transitioner.transition()
+    transition_order = transitioner.transition()
+    transition_orders.append(transition_order)
     next_summary = transitioner.extract_state_summary()
     ari_list = []
     z_indices = state.getZIndices()
@@ -190,10 +193,25 @@ for zs_str in top_zs[-10:]:
             beta_logps[beta_idx] += -beta_value
         beta_log_probs.append(reduce(numpy.logaddexp,beta_logps))
 
+    print '%.2g' % numpy.exp(alpha_log_prob), \
+        '%.2g' % numpy.exp(sum(beta_log_probs)), \
+        '%.2g' % numpy.exp(alpha_log_prob + sum(beta_log_probs))
     state_logps.append(alpha_log_prob + sum(beta_log_probs))
 
+transition_orders = numpy.array(transition_orders)
 state_probs = numpy.exp(state_logps)
+state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-10:]])
+print
 print "theoretical ratios relative to most likely state"
 print state_probs/state_probs[-1]
 print "sampler state visit ratios"
-print [z_indices_count[zs] for zs in top_zs[-10:]]
+print state_counts/float(state_counts[-1])
+
+print
+print "order of transitions occurring"
+print "transition 0"
+print Counter(transition_orders[:,0])
+print "transition 1"
+print Counter(transition_orders[:,1])
+print "transition 2"
+print Counter(transition_orders[:,2])
