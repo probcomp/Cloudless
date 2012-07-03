@@ -205,11 +205,16 @@ for zs_str in top_zs[-10:]:
 transition_orders = numpy.array(transition_orders)
 state_probs = numpy.exp(state_logps)
 state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-10:]])
-print
-print "theoretical ratios relative to most likely state"
-print state_probs/state_probs[-1]
-print "sampler state visit ratios"
-print state_counts/float(state_counts[-1])
+
+fh = pylab.figure()
+pylab.subplot(211)
+pylab.title('theortical frequencies')
+hf.bar_helper(xrange(len(state_logps)),numpy.exp(state_logps - state_logps[-1]),fh=fh)
+pylab.subplot(212)
+pylab.title('empirical frequencies')
+hf.bar_helper(xrange(len(state_logps)), state_counts/float(state_counts[-1]),fh=fh)
+pylab.savefig('histogram_inf_seed_'+str(inf_seed))
+
 
 print
 print "order of transitions occurring"
