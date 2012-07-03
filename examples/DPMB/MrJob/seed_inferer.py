@@ -1,4 +1,5 @@
 #!python
+import datetime
 import os
 #
 import numpy
@@ -29,11 +30,11 @@ class MRSeedInferer(MRJob):
     def configure_options(self):
         super(MRSeedInferer, self).configure_options()
         self.add_passthrough_option(
-            '--num-steps',type='int',default=1)
+            '--num-steps',type='int',default=2)
         self.add_passthrough_option(
-            '--num-iters',type='int',default=4)
+            '--num-iters',type='int',default=8)
         self.add_passthrough_option(
-            '--num-nodes',type='int',default=2)
+            '--num-nodes',type='int',default=4)
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
@@ -55,6 +56,9 @@ class MRSeedInferer(MRJob):
         summaries = rf.infer(run_spec,problem)
         # problem contains the true zs,xs and test_xs
         summaries[0]['problem'] = problem
+        summaries[0]['timing'] = {
+            'start_time':datetime.datetime.now(),
+            'run_sum':0}
         yield infer_seed_str,summaries
 
     def distribute_data(self,infer_seed_str,summaries):
@@ -142,6 +146,9 @@ class MRSeedInferer(MRJob):
         consolidated_summary['last_valid_zs'] = transitioner.state.getZIndices()
         # FIXME : not tracking timing
         parent_summaries.append(consolidated_summary)
+        parent_summaries[-1]['timing'] = {
+            'timestamp':datetime.datetime.now(),
+            'run_sum':hf.delta_since(parent_summaries[0]['timing']['start_time'])}
         yield infer_seed_str, parent_summaries
 
     def steps(self):
