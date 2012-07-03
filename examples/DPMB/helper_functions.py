@@ -161,10 +161,9 @@ def calc_beta_conditional(state,col_idx):
 
     # FIXME : Hardcoding prior on beta here
     #       : determine proper way to do this
-    # unormalized gamma func, k= 2, theta = 1
-    prior_func = lambda x: numpy.log(x) - x
+    prior_func = lambda x: -x # unormalized gamma func, k= 1, theta = 1
     logp_arr = pf.calc_beta_conditional_helper(
-        state,grid,col_idx)
+        state,grid,col_idx,prior_func)
     logp_list = logp_arr.tolist()[0]
     ##
     state.setBetaD(lnPdf,col_idx,original_beta)
