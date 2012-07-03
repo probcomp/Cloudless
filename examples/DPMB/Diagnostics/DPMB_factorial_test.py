@@ -175,22 +175,26 @@ for zs_str in top_zs[-10:]:
         init_x=data,
         init_z=zs)
     #
-    alpha_grid = state.get_alpha_grid()
-    alpha_pdf = hf.create_alpha_lnPdf(state)
-    alpha_logps = alpha_grid.copy()
-    for alpha_idx,alpha_value in enumerate(alpha_grid):
-        alpha_logps[alpha_idx] = alpha_pdf(alpha_value)
+    # alpha_grid = state.get_alpha_grid()
+    # alpha_pdf = hf.create_alpha_lnPdf(state)
+    # alpha_logps = alpha_grid.copy()
+    # for alpha_idx,alpha_value in enumerate(alpha_grid):
+    #     alpha_logps[alpha_idx] = alpha_pdf(alpha_value)
 
+    alpha_logps,temp1,temp2 = numpy.array(hf.calc_alpha_conditional(state))
     alpha_log_prob = reduce(numpy.logaddexp,alpha_logps)
     #
     beta_log_probs = []
     for col_idx in range(num_cols):
-        beta_grid = state.get_beta_grid()
-        beta_pdf = hf.create_beta_lnPdf(state,col_idx)
-        beta_logps = beta_grid.copy()
-        for beta_idx,beta_value in enumerate(beta_grid):
-            beta_logps[beta_idx] = beta_pdf(beta_value)
-            beta_logps[beta_idx] += -beta_value
+        # beta_grid = state.get_beta_grid()
+        # beta_pdf = hf.create_beta_lnPdf(state,col_idx)
+        # beta_logps = beta_grid.copy()
+        # for beta_idx,beta_value in enumerate(beta_grid):
+        #     beta_logps[beta_idx] = beta_pdf(beta_value)
+        #     # beta_logps[beta_idx] += -beta_value
+
+        beta_logps,temp1,temp2 = numpy.array(hf.calc_beta_conditional(state,col_idx))
+
         beta_log_probs.append(reduce(numpy.logaddexp,beta_logps))
 
     print '%.2g' % numpy.exp(alpha_log_prob), \
