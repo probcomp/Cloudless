@@ -6,11 +6,14 @@ import os
 import matplotlib
 matplotlib.use('Agg')
 import numpy
+import pylab
 #
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
@@ -58,6 +61,11 @@ def gen_factorial_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,beta_d
             if image_save_str is not None:
                 save_str = image_save_str + '_' + str(state_idx)
             state.plot(save_str=save_str)
+
+            hf.plot_data(data=data[inverse_permutation_indices_list[state_idx]])
+            pylab.savefig('just_state_'+str(state_idx))
+            pylab.close()
+            
         
     return data,inverse_permutation_indices_list
 
