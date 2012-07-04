@@ -151,6 +151,11 @@ def calc_alpha_conditional(state):
         logp_list.append(state.score)
         state.removeAlpha(lnPdf)
     ##
+    # FIXME : testing uniform prior, rather than implicit log prior
+    #       : resulting from log gridding
+    #       : remove when done
+    logp_list += np.log(grid)
+    
     state.setAlpha(lnPdf,original_alpha)
     return np.array(logp_list)-base_score,lnPdf,grid
 
