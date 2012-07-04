@@ -139,28 +139,27 @@ def slice_sample_beta(state,col_idx,init=None):
     return a
 
 def calc_alpha_conditional(state):
-    ##save original value, should be invariant
     original_alpha = state.alpha
     ##
     grid = state.get_alpha_grid()
     lnPdf = create_alpha_lnPdf(state)
     logp_list = []
+    state.removeAlpha(lnPdf)
+    base_score = state.score
     for test_alpha in grid:
-        state.removeAlpha(lnPdf)
         state.setAlpha(lnPdf,test_alpha)
         logp_list.append(state.score)
+        state.removeAlpha(lnPdf)
     ##
-    state.removeAlpha(lnPdf)
     state.setAlpha(lnPdf,original_alpha)
-    ##
-    return logp_list,lnPdf,grid
+    return np.array(logp_list)-base_score,lnPdf,grid
 
 def calc_beta_conditional(state,col_idx):
-    lnPdf = create_beta_lnPdf(state,col_idx)
-    grid = state.get_beta_grid()
-    logp_list = []
     original_beta = state.betas[col_idx]
     ##
+    grid = state.get_beta_grid()
+    lnPdf = create_beta_lnPdf(state,col_idx)
+    logp_list = []
     state.removeBetaD(lnPdf,col_idx)
     base_score = state.score
     # FIXME : Hardcoding prior on beta here
@@ -171,7 +170,7 @@ def calc_beta_conditional(state,col_idx):
     logp_list = logp_arr.tolist()[0]
     ##
     state.setBetaD(lnPdf,col_idx,original_beta)
-    return logp_list,lnPdf,grid
+    return np.array(logp_list)-base_score,lnPdf,grid
 
 # deprecated, use pyx_functions version
 # def calculate_cluster_conditional(state,vector):
