@@ -139,7 +139,7 @@ for iter_num in range(num_iters):
             do_plot()
 
 ari_mat = do_plot()
-top_zs = sorted(z_indices_count.keys(),lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y])))[-10:]
+top_zs = sorted(z_indices_count.keys(),lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y])))[-9:]
 summaries[-1]['top_zs'] = top_zs
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 
@@ -152,10 +152,7 @@ for plot_idx in range(9):
     ari_list = []
     for inverse_permutation_indices in inverse_permutation_indices_list:
         ari_list.append(hf.calc_ari(
-                # FIXME : Determine which of these is correct
-                #       : was using numpy.argsort(inverse_permutationd_indices)
-                # zs,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
-                zs,zs_to_permute[inverse_permutation_indices]))
+                zs,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
     #
     pylab.subplot(330+plot_idx)
     ari_str = ','.join(['%.2f' % ari for ari in ari_list])
@@ -168,7 +165,7 @@ pylab.close()
 
 
 state_logps = []
-for zs_str in top_zs[-10:]:
+for zs_str in top_zs[-9:]:
     zs = eval(zs_str)
     state = ds.DPMB_State(
         gen_seed=0,
@@ -179,24 +176,32 @@ for zs_str in top_zs[-10:]:
         init_x=data,
         init_z=zs)
 
-    alpha_logps,temp1,temp2 = numpy.array(hf.calc_alpha_conditional(state))
-    alpha_log_prob = reduce(numpy.logaddexp,alpha_logps)
+    alpha_logps,lnPdf,grid = hf.calc_alpha_conditional(state)
+    curr_alpha_logp = lnPdf(state.alpha)
+    alpha_log_prob = reduce(
+        numpy.logaddexp,
+        numpy.array(alpha_logps)-curr_alpha_logp
+        )
     #
     beta_log_probs = []
     for col_idx in range(num_cols):
 
-        beta_logps,temp1,temp2 = numpy.array(hf.calc_beta_conditional(state,col_idx))
+        beta_logps,lnPdf,grid = hf.calc_beta_conditional(state,col_idx)
+        curr_beta_logp = lnPdf(state.betas[col_idx])
+        beta_log_prob = reduce(
+            numpy.logaddexp,
+            numpy.array(beta_logps)-curr_beta_logp
+            )
+        beta_log_probs.append(beta_log_prob)
 
-        beta_log_probs.append(reduce(numpy.logaddexp,beta_logps))
-
-    print '%.2g' % numpy.exp(alpha_log_prob), \
-        '%.2g' % numpy.exp(sum(beta_log_probs)), \
-        '%.2g' % numpy.exp(alpha_log_prob + sum(beta_log_probs))
+    print '%3.2g' % numpy.exp(alpha_log_prob), \
+        '%3.2g' % numpy.exp(sum(beta_log_probs)), \
+        '%3.2g' % numpy.exp(alpha_log_prob + sum(beta_log_probs))
     state_logps.append(alpha_log_prob + sum(beta_log_probs))
 
 transition_orders = numpy.array(transition_orders)
 state_probs = numpy.exp(state_logps)
-state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-10:]])
+state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-9:]])
 
 fh = pylab.figure()
 pylab.subplot(211)
