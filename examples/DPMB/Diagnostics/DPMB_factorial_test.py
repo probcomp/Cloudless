@@ -177,20 +177,18 @@ for zs_str in top_zs[-9:]:
         init_z=zs)
 
     alpha_logps,lnPdf,grid = hf.calc_alpha_conditional(state)
-    curr_alpha_logp = lnPdf(state.alpha)
     alpha_log_prob = reduce(
         numpy.logaddexp,
-        numpy.array(alpha_logps)-curr_alpha_logp
+        numpy.array(alpha_logps)
         )
     #
     beta_log_probs = []
     for col_idx in range(num_cols):
 
         beta_logps,lnPdf,grid = hf.calc_beta_conditional(state,col_idx)
-        curr_beta_logp = lnPdf(state.betas[col_idx])
         beta_log_prob = reduce(
             numpy.logaddexp,
-            numpy.array(beta_logps)-curr_beta_logp
+            numpy.array(beta_logps)
             )
         beta_log_probs.append(beta_log_prob)
 
