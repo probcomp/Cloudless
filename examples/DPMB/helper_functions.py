@@ -80,18 +80,22 @@ def cluster_vector_joint(vector,cluster,state):
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    # lnProdGammas = sum([ss.gammaln(len(cluster.vector_list)) 
-    #                     for cluster in state.cluster_list])
+    # FIXME : verify that this fixes the sampling issue
+    lnProdGammas = sum([ss.gammaln(len(cluster.vector_list)) 
+                        for cluster in state.cluster_list])
+
     lnPdf = lambda alpha: ss.gammaln(alpha) \
         + len(state.cluster_list)*np.log(alpha) \
-        - ss.gammaln(alpha+len(state.vector_list))
+        - ss.gammaln(alpha+len(state.vector_list)) \
+        + lnProdGammas
+
     return lnPdf
 
 def create_beta_lnPdf(state,col_idx):
     S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
     R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
                   for cluster in state.cluster_list]
-    beta_d = state.betas[col_idx]
+    # beta_d = state.betas[col_idx]
     lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
                                 - ss.gammaln(S+R+2*beta_d) 
@@ -158,7 +162,7 @@ def calc_beta_conditional(state,col_idx):
     original_beta = state.betas[col_idx]
     ##
     state.removeBetaD(lnPdf,col_idx)
-
+    base_score = state.score
     # FIXME : Hardcoding prior on beta here
     #       : determine proper way to do this
     prior_func = lambda x: -x # unormalized gamma func, k= 1, theta = 1
