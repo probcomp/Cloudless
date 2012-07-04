@@ -145,6 +145,8 @@ def calc_beta_conditional_helper(
     ,int col_idx
     ,prior_func=None):
 
+    if prior_func is None:
+        prior_func = lambda x: 0 # essentially a nop
     cdef np.float64_t score = state.score
     cdef int num_clusters = len(state.cluster_list)
     cdef int grid_len = grid.shape[0]
@@ -165,9 +167,7 @@ def calc_beta_conditional_helper(
                 + lgamma(S+test_beta) \
                 + lgamma(N-S+test_beta) \
                 - lgamma(N+2*test_beta)
-        ret_arr[0,grid_idx] = curr_score
-        if prior_func is not None:
-            ret_arr[0,grid_idx] += prior_func(test_beta)
+        ret_arr[0,grid_idx] = curr_score + prior_func(test_beta)
     return ret_arr
 
             
