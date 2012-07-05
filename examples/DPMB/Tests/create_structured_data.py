@@ -114,7 +114,7 @@ def gen_factorial_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,beta_d
         
     return data,inverse_permutation_indices_list
 
-def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,
+def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,num_splits=None,
                        plot=False,image_save_str=None):
 
     num_splits = 2 # only two splits for now
@@ -171,11 +171,13 @@ def main():
     parser.add_argument('num_clusters',type=int)
     parser.add_argument('num_splits',type=int)
     parser.add_argument('--beta_d',default=1.0,type=float)
-    parser.add_argument('--pkl_file',default='factorial_problem.pkl.gz',type=str)
+    parser.add_argument('--pkl_file',default='structured_problem.pkl.gz',type=str)
     parser.add_argument('--image_save_str',default=None,type=str)
     args,unkown_args = parser.parse_known_args()
 
-    data,inverse_permutation_indices_list = gen_factorial_data(
+    # data,inverse_permutation_indices_list = gen_factorial_data(
+    # data,inverse_permutation_indices_list = make_balanced_data(
+    data,inverse_permutation_indices_list = gen_hierarchical_data(
         gen_seed=args.gen_seed,
         num_cols=args.num_cols,
         num_rows=args.num_rows,
@@ -183,13 +185,6 @@ def main():
         num_splits=args.num_splits,
         beta_d=args.beta_d,
         image_save_str=args.image_save_str)
-    # data,inverse_permutation_indices_list = make_balanced_data(
-    #     gen_seed=args.gen_seed,
-    #     num_cols=args.num_cols,
-    #     num_rows=args.num_rows,
-    #     num_clusters=args.num_clusters,
-    #     beta_d=args.beta_d,
-    #     image_save_str=args.image_save_str)
 
     pkl_vals = {
         'data':data,
@@ -197,7 +192,8 @@ def main():
         'num_clusters':args.num_clusters,
         'zs_to_permute':numpy.repeat(xrange(args.num_clusters),
                                      args.num_rows/args.num_clusters),
-        'beta_d':args.beta_d
+        'beta_d':args.beta_d,
+        'num_splits':args.num_splits
         }
 
     rf.pickle(
