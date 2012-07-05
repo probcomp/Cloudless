@@ -28,6 +28,51 @@ def gen_data(gen_seed,num_clusters,num_cols,num_rows,beta_d):
     )
     return state.getXValues()
 
+def gen_hierarchical_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,
+                          beta_d,
+                          plot=False,image_save_str=None):
+    numpy.random.seed(gen_seed)
+    cols_per_split = num_cols/num_splits
+    inverse_permutation_indices_list = []
+    data_list = []
+    for data_idx in xrange(num_splits):
+        sub_num_clusters = 2**(1+data_idx)
+        data_i = gen_data(
+            gen_seed=numpy.random.randint(sys.maxint),
+            num_clusters=sub_num_clusters,
+            num_cols=cols_per_split,
+            num_rows=num_rows,
+            beta_d=beta_d
+            )
+        data_list.append(data_i)
+
+    permutation_indices = numpy.random.permutation(xrange(num_rows))
+    inverse_permutation_indices = numpy.argsort(permutation_indices)
+    inverse_permutation_indices_list.append(inverse_permutation_indices)
+
+    data = numpy.hstack(data_list)[permutation_indices]
+
+    # this is just to visualize, data is already generated
+    state_idx = 0
+    if image_save_str is not None or plot:
+        state = ds.DPMB_State(
+            gen_seed=numpy.random.randint(sys.maxint),
+            num_cols=num_cols,
+            num_rows=num_rows,
+            init_z=('balanced',2),
+            init_x=data[inverse_permutation_indices_list[state_idx]]
+            )
+        save_str = None
+        if image_save_str is not None:
+            save_str = image_save_str + '_' + str(state_idx)
+        state.plot(save_str=save_str)
+
+        hf.plot_data(data=data[inverse_permutation_indices_list[state_idx]])
+        pylab.savefig('just_state_'+str(state_idx))
+        pylab.close()
+            
+    return data,inverse_permutation_indices_list
+
 def gen_factorial_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,beta_d,
                        plot=False,image_save_str=None):
     numpy.random.seed(gen_seed)
@@ -161,4 +206,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
