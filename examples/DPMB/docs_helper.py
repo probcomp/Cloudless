@@ -107,6 +107,9 @@ def main():
         auth_file=args.auth_file,
         )
     collection = client.get_collection(args.folder)
+    if collection is None:
+        collection = client.create_collection(args.folder)
+
     for file_str in args.file_strs:
         if not os.path.isfile(file_str):
             print "Files doesn't exists: file_str: " + file_str
