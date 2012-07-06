@@ -57,21 +57,17 @@ class Docs_helper():
             except Exception,e:
                 pass ##most likely, there was no file
 
+        # http://code.google.com/p/gdata-python-client/source/browse/samples/docs/docs_v3_example.py#180
+        # http://shadowbadger.wordpress.com/2012/04/11/uploading-deleting-bypassing-the-bin-and-searching-for-documents-on-google-docs-with-python-gdata/
+        myResource = gdata.docs.data.Resource(title=docs_name,type=content_type)
         mediaResource = gdata.data.MediaSource(
             content_type=content_type
             , file_path=file_path
             , file_name=file_name)
-        # myResource = gdata.docs.data.Resource(title=docs_name)
-        # self.client.create_resource(myResource,media=mediaResource,
-        #                             collection=collection)
-        # http://code.google.com/p/gdata-python-client/source/browse/samples/docs/docs_v3_example.py#180
-        myResource = gdata.docs.data.Resource(title=docs_name,type=content_type)
         create_uri = gdata.docs.client.RESOURCE_UPLOAD_URI + '?convert=false'
-        self.client.CreateResource(myResource,
-                                   media=mediaResource,
-                                    collection=collection,
-                                    create_uri=create_uri
-                                    )
+        upload_doc = self.client.CreateResource(myResource,media=mediaResource,create_uri=create_uri)
+        if collection is not None:
+            self.client.MoveResource(upload_doc,collection)
 
     def get_file(self,title_str,dest_path):
         q = gdata.docs.client.DocsQuery(
@@ -101,7 +97,8 @@ def main():
         type=str,
         )
     parser.add_argument('--replace',action='store_true')
-    parser.add_argument('--mime_type',default="text/plain",type=str)
+    # parser.add_argument('--mime_type',default="text/plain",type=str)
+    parser.add_argument('--mime_type',default="application/octet-stream",type=str)
     args = parser.parse_args()
     #
     client = Docs_helper(
