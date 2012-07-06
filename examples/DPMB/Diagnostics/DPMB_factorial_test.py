@@ -19,12 +19,13 @@ reload(ds)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
-data_dict = rf.unpickle(os.path.join(settings.data_dir,'factorial_problem.pkl.gz'))
+data_dict = rf.unpickle(os.path.join(settings.data_dir,'structured_problem.pkl.gz'))
 data = data_dict['data']
 inverse_permutation_indices_list = data_dict['inverse_permutation_indices_list']
 zs_to_permute = data_dict['zs_to_permute']
 num_rows = data.shape[0]
 num_cols = data.shape[1]
+num_splits = data_dict['num_splits']
 
 parser = argparse.ArgumentParser('Run inference on a factorial problem')
 parser.add_argument('inf_seed',type=int)
@@ -38,28 +39,29 @@ gen_seed = args.gen_seed
 num_iters = args.num_iters
 
 def do_plot():
-    ari_mat = numpy.array([summary['ari_list'] for summary in summaries[2:]])
+    reduced_summaries = summaries[2:]
+    ari_mat = numpy.array([summary['ari_list'] for summary in reduced_summaries])
     #
     pylab.figure()
-    ax1 = pylab.subplot(411)
+    ax1 = pylab.subplot(211 + 100*num_splits)
     pylab.plot(ari_mat)
     pylab.xlabel('iter')
     pylab.ylabel('independent aris')
-    pylab.subplot(412,sharex=ax1)
-    pylab.plot([summary["score"] for summary in summaries[2:]],color='k')
+    pylab.subplot(212 + 100*num_splits,sharex=ax1)
+    pylab.plot([summary["score"] for summary in reduced_summaries],color='k')
     pylab.xlabel('iter')
     pylab.ylabel('model score')
     #
-    temp_betas = numpy.array([summary['betas'] for summary in summaries[2:]])
-    pylab.subplot(413,sharex=ax1)
-    pylab.plot(temp_betas[:,:4],color='b',linewidth=.5)
-    pylab.xlabel('iter')
-    pylab.ylabel('betas')
-    pylab.subplot(414,sharex=ax1)
-    pylab.plot(temp_betas[:,4:],color='g',linewidth=.5)
-    pylab.xlabel('iter')
-    pylab.ylabel('betas')
-    #
+    cols_per_split = num_cols/num_splits
+    reduced_betas = numpy.array([summary['betas'] for summary in reduced_summaries])
+    for betas_idx in range(num_splits):
+        start_idx = betas_idx*cols_per_split
+        end_idx = (betas_idx+1)*cols_per_split
+        pylab.subplot(213 + 100*num_splits + betas_idx,sharex=ax1)
+        pylab.plot(reduced_betas[:,start_idx:end_idx],linewidth=.5)
+        pylab.xlabel('iter')
+        pylab.ylabel('betas: ' + str(start_idx) + ':' + str(end_idx))
+
     pylab.savefig('ari_score_betas_inf_seed_'+str(inf_seed))
     pylab.close()
     #
@@ -88,8 +90,6 @@ state = ds.DPMB_State(
     gen_seed=0,
     num_cols=num_cols,
     num_rows=num_rows,
-    beta_min=1.E-1,
-    beta_max=1.E1,
     init_x=data)
 
 # proof that these permutation indices work
@@ -171,10 +171,8 @@ for zs_str in top_zs[-9:]:
         gen_seed=0,
         num_cols=num_cols,
         num_rows=num_rows,
-        beta_min=1.E-1,
-        beta_max=1.E1,
         init_x=data,
-        init_z=zs)
+        init_z=hf.canonicalize_list(zs)[0])
 
     alpha_logps,lnPdf,grid = hf.calc_alpha_conditional(state)
     alpha_log_prob = reduce(
