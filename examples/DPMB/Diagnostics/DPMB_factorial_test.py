@@ -203,7 +203,7 @@ state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-9:]])
 
 fh = pylab.figure()
 pylab.subplot(211)
-pylab.title('theortical frequencies')
+pylab.title('theoretical frequencies')
 hf.bar_helper(xrange(len(state_logps)),numpy.exp(state_logps - state_logps[-1]),fh=fh)
 pylab.subplot(212)
 pylab.title('empirical frequencies')
