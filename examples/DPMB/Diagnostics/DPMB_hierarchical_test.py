@@ -27,7 +27,7 @@ num_rows = data.shape[0]
 num_cols = data.shape[1]
 num_splits = data_dict['num_splits']
 
-parser = argparse.ArgumentParser('Run inference on a factorial problem')
+parser = argparse.ArgumentParser('Run inference on a hierarchical problem')
 parser.add_argument('inf_seed',type=int)
 parser.add_argument('--gen_seed',default=0,type=int)
 parser.add_argument('--num_iters',default=2000,type=int)
@@ -90,8 +90,6 @@ state = ds.DPMB_State(
     gen_seed=0,
     num_cols=num_cols,
     num_rows=num_rows,
-    beta_min=1.E-1,
-    beta_max=1.E1,
     init_x=data)
 
 # proof that these permutation indices work
@@ -173,8 +171,6 @@ for zs_str in top_zs[-9:]:
         gen_seed=0,
         num_cols=num_cols,
         num_rows=num_rows,
-        beta_min=1.E-1,
-        beta_max=1.E1,
         init_x=data,
         init_z=hf.canonicalize_list(zs)[0])
 
