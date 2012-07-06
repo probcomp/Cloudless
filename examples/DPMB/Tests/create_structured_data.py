@@ -193,6 +193,7 @@ def main():
         'zs_to_permute':numpy.repeat(xrange(args.num_clusters),
                                      args.num_rows/args.num_clusters),
         'beta_d':args.beta_d,
+        'gen_seed':gen_seed,
         'num_splits':args.num_splits
         }
 
