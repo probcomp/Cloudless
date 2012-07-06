@@ -173,11 +173,20 @@ def main():
     parser.add_argument('--beta_d',default=1.0,type=float)
     parser.add_argument('--pkl_file',default='structured_problem.pkl.gz',type=str)
     parser.add_argument('--image_save_str',default=None,type=str)
+    parser.add_argument('--problem_type',default='factorial',type=str)
     args,unkown_args = parser.parse_known_args()
 
-    # data,inverse_permutation_indices_list = gen_factorial_data(
-    # data,inverse_permutation_indices_list = make_balanced_data(
-    data,inverse_permutation_indices_list = gen_hierarchical_data(
+    generator = None
+    if args.problem_type == 'factorial':
+        generator = gen_factorial_data
+    elif args.problem_type == 'balanced':
+        generator = make_balanced_data
+    elif args.problem_type == 'hierarchical':
+        generator = gen_hierarchical_data
+    else:
+        raise Exception('unknown problem type: ' + args.problem_type)
+
+    data,inverse_permutation_indices_list = generator(
         gen_seed=args.gen_seed,
         num_cols=args.num_cols,
         num_rows=args.num_rows,
