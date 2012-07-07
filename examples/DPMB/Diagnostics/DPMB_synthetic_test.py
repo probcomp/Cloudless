@@ -86,6 +86,23 @@ def plot_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
         pylab.savefig(save_str)
         pylab.close()
 
+def plot_histograms(zs_strs):
+    state_logps = []
+    for zs_str in zs_strs
+        state_logps.append(calc_state_logp(eval(zs_str)))
+    state_probs = numpy.exp(state_logps)
+    state_counts = numpy.array([z_indices_count[zs] for zs in zs_strs))
+    #
+    fh = pylab.figure()
+    pylab.subplot(211)
+    pylab.title('theoretical frequencies')
+    hf.bar_helper(xrange(len(state_logps)),numpy.exp(state_logps - state_logps[-1]),fh=fh)
+    pylab.subplot(212)
+    pylab.title('empirical frequencies')
+    hf.bar_helper(xrange(len(state_logps)), state_counts/float(state_counts[-1]),fh=fh)
+    pylab.savefig('histogram_inf_seed_'+str(inf_seed))
+    return state_logps
+
 def calc_state_logp(zs):
     state = ds.DPMB_State(
         gen_seed=0,
@@ -170,8 +187,7 @@ rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 # plot top states
 fh = pylab.figure()
 pylab.title('Count of particular samples: total samples=' + str(args.num_iters))
-for plot_idx in range(9):
-    zs_str = top_zs[-plot_idx]
+for plot_idx,zs_str in enumerate(top_zs):
     count = z_indices_count[zs_str]
     zs = eval(zs_str)
     ari_list = []
@@ -189,17 +205,5 @@ pylab.savefig('top_states_'+str(inf_seed))
 pylab.close()
 
 # create histograms of actual vs theoretical state frequencies
-state_logps = []
-for zs_str in top_zs[-9:]:
-    state_logps.append(calc_state_logp(eval(zs_str)))
-state_probs = numpy.exp(state_logps)
-state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-9:]])
-#
-fh = pylab.figure()
-pylab.subplot(211)
-pylab.title('theoretical frequencies')
-hf.bar_helper(xrange(len(state_logps)),numpy.exp(state_logps - state_logps[-1]),fh=fh)
-pylab.subplot(212)
-pylab.title('empirical frequencies')
-hf.bar_helper(xrange(len(state_logps)), state_counts/float(state_counts[-1]),fh=fh)
-pylab.savefig('histogram_inf_seed_'+str(inf_seed))
+state_logps = plot_histograms(top_zs)
+
