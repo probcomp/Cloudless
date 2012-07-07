@@ -102,19 +102,20 @@ def plot_histograms(zs_strs):
     for zs_str in zs_strs:
         state_logps.append(calc_state_logp(eval(zs_str)))
     state_probs = numpy.exp(state_logps)
-    state_counts = numpy.array([z_indices_count[zs] for zs in zs_strs))
-    xvals = xrange(len(state_logps),0,-1)
+    state_counts = numpy.array([z_indices_count[zs] for zs in zs_strs])
+    xvals = xrange(len(state_logps)) # xrange(len(state_logps),0,-1)
     #
     fh = pylab.figure()
     pylab.subplot(211)
     pylab.title('theoretical frequencies')
-    hf.bar_helper(xvals,numpy.exp(state_logps - state_logps[-1]),fh=fh)
+    hf.bar_helper(xvals,numpy.exp(state_logps - state_logps[0]),fh=fh)
     pylab.xlabel('state rank')
     pylab.subplot(212)
     pylab.title('empirical frequencies')
-    hf.bar_helper(xvals, state_counts/float(state_counts[-1]),fh=fh)
+    hf.bar_helper(xvals, state_counts/float(state_counts[0]),fh=fh)
     pylab.xlabel('state rank')
     #
+    pylab.subplots_adjust(hspace=.5)
     pylab.savefig('histogram_inf_seed_'+str(inf_seed))
     return state_logps
 
@@ -140,7 +141,8 @@ def calc_state_logp(zs):
 def get_aris(z_indices):
     ari_list = []
     for inverse_permutation_indices in inverse_permutation_indices_list:
-        ground_truth_zs = zs_to_permute[inverse_permutation_indices]
+        # ground_truth_zs = zs_to_permute[inverse_permutation_indices]
+        ground_truth_zs = zs_to_permute[numpy.argsort(inverse_permutation_indices)]
         new_aris = hf.calc_ari(z_indices,ground_truth_zs)
         ari_list.append(new_aris)
     return ari_list
@@ -196,7 +198,7 @@ for iter_num in range(num_iters):
 # final anlaysis  
 ari_mat = plot_timeseries()
 sort_counts_func = lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y]))
-top_zs = sorted(z_indices_count.keys(),sort_counts_func)[-9:]
+top_zs = sorted(z_indices_count.keys(),sort_counts_func)[-9:][::-1]
 summaries[-1]['top_zs'] = top_zs
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 
@@ -211,7 +213,7 @@ for plot_idx,zs_str in enumerate(top_zs):
         ari_list.append(hf.calc_ari(
                 zs,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
     #
-    pylab.subplot(330+plot_idx)
+    pylab.subplot(330+plot_idx+1)
     ari_str = ','.join(['%.2f' % ari for ari in ari_list])
     pylab.title(str(count) + ' ; ' + ari_str)
     plot_state(state,zs,fh=fh)
