@@ -27,7 +27,7 @@ num_rows = data.shape[0]
 num_cols = data.shape[1]
 num_splits = data_dict['num_splits']
 
-parser = argparse.ArgumentParser('Run inference on a factorial problem')
+parser = argparse.ArgumentParser('Run inference on a synthetic problem')
 parser.add_argument('inf_seed',type=int)
 parser.add_argument('--gen_seed',default=0,type=int)
 parser.add_argument('--num_iters',default=2000,type=int)

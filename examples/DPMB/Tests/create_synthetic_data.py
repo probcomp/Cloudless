@@ -164,7 +164,7 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,num_splits
     return data,inverse_distribute_indices
 
 def main():
-    parser = argparse.ArgumentParser('Create a factorial problem')
+    parser = argparse.ArgumentParser('Create a synthetic problem')
     parser.add_argument('gen_seed',type=int)
     parser.add_argument('num_cols',type=int)
     parser.add_argument('num_rows',type=int)
