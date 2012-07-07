@@ -38,7 +38,7 @@ inf_seed = args.inf_seed
 gen_seed = args.gen_seed
 num_iters = args.num_iters
 
-def do_plot():
+def plot_timeseries():
     reduced_summaries = summaries[2:]
     ari_mat = numpy.array([summary['ari_list'] for summary in reduced_summaries])
     #
@@ -67,7 +67,7 @@ def do_plot():
     #
     return ari_mat
 
-def save_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
+def plot_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
     if permutation_indices is None:
         permutation_indices = numpy.argsort(new_zs)
     x_values = state.getXValues()
@@ -86,23 +86,43 @@ def save_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
         pylab.savefig(save_str)
         pylab.close()
 
+def calc_state_logp(zs):
+    state = ds.DPMB_State(
+        gen_seed=0,
+        num_cols=num_cols,
+        num_rows=num_rows,
+        init_x=data,
+        init_z=hf.canonicalize_list(zs)[0])
+    #
+    alpha_logps,lnPdf,grid = hf.calc_alpha_conditional(state)
+    alpha_log_prob = reduce(numpy.logaddexp,numpy.array(alpha_logps))
+    #
+    beta_log_probs = []
+    for col_idx in range(num_cols):
+        beta_logps,lnPdf,grid = hf.calc_beta_conditional(state,col_idx)
+        beta_log_prob = reduce(numpy.logaddexp,numpy.array(beta_logps))
+        beta_log_probs.append(beta_log_prob)
+    #
+    return alpha_log_prob + sum(beta_log_probs)
+
+# set up inference machinery
 state = ds.DPMB_State(
     gen_seed=0,
     num_cols=num_cols,
     num_rows=num_rows,
     init_x=data)
-
-# proof that these permutation indices work
-for idx,inverse_permutation_indices \
-        in enumerate(inverse_permutation_indices_list):
-    new_zs = zs_to_permute
-    save_state(state,new_zs,permutation_indices=inverse_permutation_indices,save_str=str(idx))
-
+#
 transitioner = dm.DPMB(
     inf_seed=inf_seed,
     state=state,
     infer_alpha=True,
     infer_beta=True)
+
+# proof that these permutation indices work
+for idx,inverse_permutation_indices \
+        in enumerate(inverse_permutation_indices_list):
+    new_zs = zs_to_permute
+    plot_state(state,new_zs,permutation_indices=inverse_permutation_indices,save_str=str(idx))
 
 z_indices_count = dict()
 summaries = []
@@ -110,7 +130,7 @@ next_summary = transitioner.extract_state_summary()
 #
 ari_list = []
 z_indices = state.getZIndices()
-z_indices_count[str(z_indices)] = 1
+z_indices_count[str(z_indices)] = z_indices_count.get(str(z_indices),0) + 1
 for inverse_permutation_indices in inverse_permutation_indices_list:
     ari_list.append(hf.calc_ari(
             z_indices,zs_to_permute[inverse_permutation_indices]))
@@ -130,15 +150,12 @@ for iter_num in range(num_iters):
                 z_indices,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
     next_summary['ari_list'] = ari_list
     summaries.append(next_summary)
-    if False and 250 < iter_num and iter_num < 270:
-        if iter_num % 1 == 0:
-            state.plot(save_str='state_'+str(iter_num))
     if iter_num % 100 == 0 and iter_num != 0:
         hf.printTS('Done iter ' + str(iter_num))
         if not args.no_intermediate_plots:
-            do_plot()
-
-ari_mat = do_plot()
+            plot_timeseries()
+#
+ari_mat = plot_timeseries()
 top_zs = sorted(z_indices_count.keys(),lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y])))[-9:]
 summaries[-1]['top_zs'] = top_zs
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
@@ -157,7 +174,7 @@ for plot_idx in range(9):
     pylab.subplot(330+plot_idx)
     ari_str = ','.join(['%.2f' % ari for ari in ari_list])
     pylab.title(str(count) + ' ; ' + ari_str)
-    save_state(state,zs,fh=fh)
+    plot_state(state,zs,fh=fh)
 
 pylab.subplots_adjust(hspace=.5)
 pylab.savefig('top_states_'+str(inf_seed))
@@ -166,39 +183,10 @@ pylab.close()
 
 state_logps = []
 for zs_str in top_zs[-9:]:
-    zs = eval(zs_str)
-    state = ds.DPMB_State(
-        gen_seed=0,
-        num_cols=num_cols,
-        num_rows=num_rows,
-        init_x=data,
-        init_z=hf.canonicalize_list(zs)[0])
-
-    alpha_logps,lnPdf,grid = hf.calc_alpha_conditional(state)
-    alpha_log_prob = reduce(
-        numpy.logaddexp,
-        numpy.array(alpha_logps)
-        )
-    #
-    beta_log_probs = []
-    for col_idx in range(num_cols):
-
-        beta_logps,lnPdf,grid = hf.calc_beta_conditional(state,col_idx)
-        beta_log_prob = reduce(
-            numpy.logaddexp,
-            numpy.array(beta_logps)
-            )
-        beta_log_probs.append(beta_log_prob)
-
-    print '%3.2g' % numpy.exp(alpha_log_prob), \
-        '%3.2g' % numpy.exp(sum(beta_log_probs)), \
-        '%3.2g' % numpy.exp(alpha_log_prob + sum(beta_log_probs))
-    state_logps.append(alpha_log_prob + sum(beta_log_probs))
-
-transition_orders = numpy.array(transition_orders)
+    state_logps.append(calc_state_logp(eval(zs_str)))
 state_probs = numpy.exp(state_logps)
 state_counts = numpy.array([z_indices_count[zs] for zs in top_zs[-9:]])
-
+#
 fh = pylab.figure()
 pylab.subplot(211)
 pylab.title('theoretical frequencies')
@@ -210,6 +198,7 @@ pylab.savefig('histogram_inf_seed_'+str(inf_seed))
 
 
 print
+transition_orders = numpy.array(transition_orders)
 print "order of transitions occurring"
 print "transition 0"
 print Counter(transition_orders[:,0])
