@@ -32,7 +32,7 @@ parser = argparse.ArgumentParser('Run inference on a synthetic problem')
 parser.add_argument('inf_seed',type=int)
 parser.add_argument('--gen_seed',default=0,type=int)
 parser.add_argument('--num_iters',default=2000,type=int)
-parser.add_argument('-no_intermediate_plots',action='store_true')
+parser.add_argument('-intermediate_plots',action='store_true')
 args,unkown_args = parser.parse_known_args()
 
 inf_seed = args.inf_seed
@@ -99,7 +99,7 @@ def plot_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
 
 def plot_histograms(zs_strs):
     state_logps = []
-    for zs_str in zs_strs
+    for zs_str in zs_strs:
         state_logps.append(calc_state_logp(eval(zs_str)))
     state_probs = numpy.exp(state_logps)
     state_counts = numpy.array([z_indices_count[zs] for zs in zs_strs))
@@ -190,7 +190,7 @@ for iter_num in range(num_iters):
     #
     if iter_num % 100 == 0 and iter_num != 0:
         hf.printTS('Done iter ' + str(iter_num))
-        if not args.no_intermediate_plots:
+        if args.intermediate_plots:
             plot_timeseries()
 
 # final anlaysis  
