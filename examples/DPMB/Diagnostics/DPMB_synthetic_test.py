@@ -105,6 +105,15 @@ def calc_state_logp(zs):
     #
     return alpha_log_prob + sum(beta_log_probs)
 
+def get_aris(z_indices):
+    ari_list = []
+    for inverse_permutation_indices in inverse_permutation_indices_list:
+        ground_truth_zs = zs_to_permute[inverse_permutation_indices]
+        new_aris = hf.calc_ari(z_indices,ground_truth_zs)
+        ari_list.append(new_aris)
+    return ari_list
+
+
 # set up inference machinery
 state = ds.DPMB_State(
     gen_seed=0,
@@ -121,45 +130,44 @@ transitioner = dm.DPMB(
 # proof that these permutation indices work
 for idx,inverse_permutation_indices \
         in enumerate(inverse_permutation_indices_list):
-    new_zs = zs_to_permute
-    plot_state(state,new_zs,permutation_indices=inverse_permutation_indices,save_str=str(idx))
+    plot_state(state,zs_to_permute,
+               permutation_indices=inverse_permutation_indices,
+               save_str=str(idx)
+               )
 
+# save initial state
 z_indices_count = dict()
 summaries = []
-next_summary = transitioner.extract_state_summary()
 #
-ari_list = []
 z_indices = state.getZIndices()
 z_indices_count[str(z_indices)] = z_indices_count.get(str(z_indices),0) + 1
-for inverse_permutation_indices in inverse_permutation_indices_list:
-    ari_list.append(hf.calc_ari(
-            z_indices,zs_to_permute[inverse_permutation_indices]))
-next_summary['ari_list'] = ari_list
+next_summary = transitioner.extract_state_summary()
+next_summary['ari_list'] = get_aris(z_indices)
 summaries.append(next_summary)
 
+# run inference
 transition_orders = []
 for iter_num in range(num_iters):
     transition_order = transitioner.transition()
     transition_orders.append(transition_order)
-    next_summary = transitioner.extract_state_summary()
-    ari_list = []
     z_indices = state.getZIndices()
     z_indices_count[str(z_indices)] = z_indices_count.get(str(z_indices),0) + 1
-    for inverse_permutation_indices in inverse_permutation_indices_list:
-        ari_list.append(hf.calc_ari(
-                z_indices,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
-    next_summary['ari_list'] = ari_list
+    next_summary = transitioner.extract_state_summary()
+    next_summary['ari_list'] = get_aris(z_indices)
     summaries.append(next_summary)
+    #
     if iter_num % 100 == 0 and iter_num != 0:
         hf.printTS('Done iter ' + str(iter_num))
         if not args.no_intermediate_plots:
             plot_timeseries()
-#
+
+# final anlaysis  
 ari_mat = plot_timeseries()
 top_zs = sorted(z_indices_count.keys(),lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y])))[-9:]
 summaries[-1]['top_zs'] = top_zs
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 
+# plot top states
 fh = pylab.figure()
 pylab.title('Count of particular samples: total samples=' + str(args.num_iters))
 for plot_idx in range(9):
@@ -175,12 +183,12 @@ for plot_idx in range(9):
     ari_str = ','.join(['%.2f' % ari for ari in ari_list])
     pylab.title(str(count) + ' ; ' + ari_str)
     plot_state(state,zs,fh=fh)
-
+#
 pylab.subplots_adjust(hspace=.5)
 pylab.savefig('top_states_'+str(inf_seed))
 pylab.close()
 
-
+# create histograms of actual vs theoretical state frequencies
 state_logps = []
 for zs_str in top_zs[-9:]:
     state_logps.append(calc_state_logp(eval(zs_str)))
@@ -195,14 +203,3 @@ pylab.subplot(212)
 pylab.title('empirical frequencies')
 hf.bar_helper(xrange(len(state_logps)), state_counts/float(state_counts[-1]),fh=fh)
 pylab.savefig('histogram_inf_seed_'+str(inf_seed))
-
-
-print
-transition_orders = numpy.array(transition_orders)
-print "order of transitions occurring"
-print "transition 0"
-print Counter(transition_orders[:,0])
-print "transition 1"
-print Counter(transition_orders[:,1])
-print "transition 2"
-print Counter(transition_orders[:,2])
