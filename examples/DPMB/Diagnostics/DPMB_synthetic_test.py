@@ -19,7 +19,8 @@ reload(ds)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
-data_dict = rf.unpickle(os.path.join(settings.data_dir,'structured_problem.pkl.gz'))
+problem_file_str = os.path.join(settings.data_dir,'structured_problem.pkl.gz')
+data_dict = rf.unpickle(problem_file_str)
 data = data_dict['data']
 inverse_permutation_indices_list = data_dict['inverse_permutation_indices_list']
 zs_to_permute = data_dict['zs_to_permute']
@@ -39,8 +40,20 @@ gen_seed = args.gen_seed
 num_iters = args.num_iters
 
 def plot_timeseries():
-    reduced_summaries = summaries[2:]
-    ari_mat = numpy.array([summary['ari_list'] for summary in reduced_summaries])
+    cols_per_split = num_cols/num_splits
+    reduced_summaries = summaries[2:] # omit first few to reduce range
+    reduced_betas = numpy.array([
+            summary['betas']
+            for summary in reduced_summaries
+            ])
+    ari_mat = numpy.array([
+            summary['ari_list'] 
+            for summary in reduced_summaries
+            ])
+    score = [
+        summary["score"] 
+        for summary in reduced_summaries
+        ]
     #
     pylab.figure()
     ax1 = pylab.subplot(211 + 100*num_splits)
@@ -48,12 +61,10 @@ def plot_timeseries():
     pylab.xlabel('iter')
     pylab.ylabel('independent aris')
     pylab.subplot(212 + 100*num_splits,sharex=ax1)
-    pylab.plot([summary["score"] for summary in reduced_summaries],color='k')
+    pylab.plot(score,color='k')
     pylab.xlabel('iter')
     pylab.ylabel('model score')
     #
-    cols_per_split = num_cols/num_splits
-    reduced_betas = numpy.array([summary['betas'] for summary in reduced_summaries])
     for betas_idx in range(num_splits):
         start_idx = betas_idx*cols_per_split
         end_idx = (betas_idx+1)*cols_per_split
@@ -92,14 +103,18 @@ def plot_histograms(zs_strs):
         state_logps.append(calc_state_logp(eval(zs_str)))
     state_probs = numpy.exp(state_logps)
     state_counts = numpy.array([z_indices_count[zs] for zs in zs_strs))
+    xvals = xrange(len(state_logps),0,-1)
     #
     fh = pylab.figure()
     pylab.subplot(211)
     pylab.title('theoretical frequencies')
-    hf.bar_helper(xrange(len(state_logps)),numpy.exp(state_logps - state_logps[-1]),fh=fh)
+    hf.bar_helper(xvals,numpy.exp(state_logps - state_logps[-1]),fh=fh)
+    pylab.xlabel('state rank')
     pylab.subplot(212)
     pylab.title('empirical frequencies')
-    hf.bar_helper(xrange(len(state_logps)), state_counts/float(state_counts[-1]),fh=fh)
+    hf.bar_helper(xvals, state_counts/float(state_counts[-1]),fh=fh)
+    pylab.xlabel('state rank')
+    #
     pylab.savefig('histogram_inf_seed_'+str(inf_seed))
     return state_logps
 
@@ -180,7 +195,8 @@ for iter_num in range(num_iters):
 
 # final anlaysis  
 ari_mat = plot_timeseries()
-top_zs = sorted(z_indices_count.keys(),lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y])))[-9:]
+sort_counts_func = lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y]))
+top_zs = sorted(z_indices_count.keys(),sort_counts_func)[-9:]
 summaries[-1]['top_zs'] = top_zs
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 
@@ -206,4 +222,3 @@ pylab.close()
 
 # create histograms of actual vs theoretical state frequencies
 state_logps = plot_histograms(top_zs)
-
