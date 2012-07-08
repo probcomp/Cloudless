@@ -1,6 +1,7 @@
 #!python
 import os
 import sys
+import time
 #
 import gdata
 import gdata.docs.client as gdc
@@ -86,6 +87,7 @@ def main():
     parser.add_argument('file_strs',nargs="+",type=str)
     parser.add_argument('--email',default=None,type=str)
     parser.add_argument('--password',default=None,type=str)
+    parser.add_argument('--sleep_dur',default=0.11,type=float)
     parser.add_argument(
         '--auth_file',
         default=settings.auth_file,
@@ -120,6 +122,8 @@ def main():
             collection=collection,
             replace=args.replace,
             )
+        time.sleep(args.sleep_dur)
+            
 
 if __name__ == "__main__":
     main()
