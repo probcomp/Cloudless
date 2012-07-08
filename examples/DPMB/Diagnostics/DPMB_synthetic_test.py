@@ -244,5 +244,5 @@ for idx,inverse_permutation_indices \
     permute_indices = numpy.argsort(inverse_permutation_indices)
     top_zs_copy.append(str(zs_to_permute[permute_indices].tolist()))
 #
-plot_top_states(top_zs_copy,'states_with_intuitive_clusterings')
-state_logps = plot_histograms(top_zs_copy,'histograms_with_intuitive_clusterings')
+plot_top_states(top_zs_copy,'states_with_intuitive_clusterings_'+str(inf_seed))
+state_logps = plot_histograms(top_zs_copy,'histograms_with_intuitive_clusterings_'+str(inf_seed))
