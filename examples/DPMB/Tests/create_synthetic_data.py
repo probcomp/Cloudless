@@ -120,9 +120,11 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,num_splits
     num_splits = 2 # only two splits for now
     numpy.random.seed(gen_seed)
     rows_per_cluster = num_rows/num_clusters
-    distribute_indices = numpy.array((numpy.arange(rows_per_cluster)*num_clusters).tolist()*num_clusters) \
-        + numpy.repeat(range(num_clusters),rows_per_cluster)
-    # distribute_indices = (numpy.arange(num_rows) + rows_per_cluster/4) % num_rows
+    if False:
+        distribute_indices = numpy.array((numpy.arange(rows_per_cluster)*num_clusters).tolist()*num_clusters) \
+            + numpy.repeat(range(num_clusters),rows_per_cluster)
+    else:
+        distribute_indices = (numpy.arange(num_rows) + rows_per_cluster/4) % num_rows
     inverse_distribute_indices = [
         range(num_rows),
         numpy.argsort(distribute_indices)
