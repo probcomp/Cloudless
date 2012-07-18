@@ -145,7 +145,8 @@ for idx,inverse_permutation_indices \
 # create the zs to analyze: gibbs_init, all apart, all together, ground truth
 zs_to_plot = gibbs_zs[:]
 zs_to_plot.append([0 for x in xrange(num_rows)]) # all togehter
-zs_to_plot.append(range(num_rows)) # all apart
+if num_rows < 2048: # takes forever if too large
+    zs_to_plot.append(range(num_rows)) # all apart
 for idx,inverse_permutation_indices \
         in enumerate(inverse_permutation_indices_list):
     permute_indices = numpy.argsort(inverse_permutation_indices)
