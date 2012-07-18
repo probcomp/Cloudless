@@ -169,7 +169,7 @@ def calc_beta_conditional(state,col_idx):
     base_score = state.score
     # FIXME : Hardcoding prior on beta here
     #       : determine proper way to do this
-    prior_func = lambda x: -x # unormalized gamma func, k= 1, theta = 1
+    prior_func = lambda x : -np.log(x) # lambda x: -x # unormalized gamma func, k= 1, theta = 1
     logp_arr = pf.calc_beta_conditional_helper(
         state,grid,col_idx,prior_func)
     logp_list = logp_arr.tolist()[0]
