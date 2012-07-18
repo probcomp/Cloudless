@@ -19,6 +19,20 @@ reload(ds)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
+
+# parse some arguments
+parser = argparse.ArgumentParser('Run inference on a synthetic problem')
+parser.add_argument('inf_seed',type=int)
+parser.add_argument('--gen_seed',default=0,type=int)
+parser.add_argument('--num_iters',default=2000,type=int)
+parser.add_argument('-intermediate_plots',action='store_true')
+args,unkown_args = parser.parse_known_args()
+#
+inf_seed = args.inf_seed
+gen_seed = args.gen_seed
+num_iters = args.num_iters
+
+# read the problem
 problem_file_str = os.path.join(settings.data_dir,'structured_problem.pkl.gz')
 data_dict = rf.unpickle(problem_file_str)
 data = data_dict['data']
@@ -28,20 +42,11 @@ num_rows = data.shape[0]
 num_cols = data.shape[1]
 num_splits = data_dict['num_splits']
 
-parser = argparse.ArgumentParser('Run inference on a synthetic problem')
-parser.add_argument('inf_seed',type=int)
-parser.add_argument('--gen_seed',default=0,type=int)
-parser.add_argument('--num_iters',default=2000,type=int)
-parser.add_argument('-intermediate_plots',action='store_true')
-args,unkown_args = parser.parse_known_args()
-
-inf_seed = args.inf_seed
-gen_seed = args.gen_seed
-num_iters = args.num_iters
 
 def plot_timeseries():
     cols_per_split = num_cols/num_splits
-    reduced_summaries = summaries[2:] # omit first few to reduce range
+    # reduced_summaries = summaries[2:] # omit first few to reduce range
+    reduced_summaries = summaries # FIXME : change this back to [2:]
     reduced_betas = numpy.array([
             summary['betas']
             for summary in reduced_summaries
