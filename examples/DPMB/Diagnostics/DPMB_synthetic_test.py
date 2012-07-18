@@ -243,7 +243,10 @@ state_logps = plot_histograms(top_zs)
 # create new top_zs with intuitively chosen states
 top_zs_copy = top_zs[:-(2+len(inverse_permutation_indices_list))]
 top_zs_copy.append(str([0 for x in xrange(num_rows)])) # all togehter
-top_zs_copy.append(str(range(num_rows))) # all apart
+if num_rows < 1025:
+    top_zs_copy.append(str(range(num_rows))) # all apart
+else:
+    top_zs_copy.append(str([0 for x in xrange(num_rows)])) # all togehter
 for idx,inverse_permutation_indices \
         in enumerate(inverse_permutation_indices_list):
     permute_indices = numpy.argsort(inverse_permutation_indices)
