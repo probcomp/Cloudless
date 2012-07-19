@@ -105,7 +105,6 @@ def calc_state_logp(zs):
     #
     return alpha_log_prob + sum(beta_log_probs)
 
-# change this to plot log probabilities instead of relative frequencies
 def plot_histograms(zs_list,save_str=None):
     state_logps = []
     for zs in zs_list:
