@@ -102,22 +102,29 @@ def plot_state(state,new_zs,permutation_indices=None,fh=None,save_str=None):
         pylab.savefig(save_str)
         pylab.close()
 
-def plot_top_states(top_zs,save_str=None):
+def get_aris(z_indices):
+    # ari according to EACH ground truth state for a SINGLE input configuration
+    ari_list = []
+    for inverse_permutation_indices in inverse_permutation_indices_list:
+        ground_truth_zs = zs_to_permute[
+            numpy.argsort(inverse_permutation_indices)]
+        new_aris = hf.calc_ari(z_indices,ground_truth_zs)
+        ari_list.append(new_aris)
+    return ari_list
+
+def plot_states(zs_to_plot,save_str=None):
     fh = pylab.figure()
     title_str = 'Count of particular samples: total samples=' \
         + str(args.num_iters)
     pylab.title(title_str)
-    for plot_idx,zs_str in enumerate(top_zs):
-        count = z_indices_count.get(zs_str,0)
-        zs = eval(zs_str)
-        ari_list = []
-        for inverse_permutation_indices in inverse_permutation_indices_list:
-            ari_list.append(hf.calc_ari(
-                    zs,zs_to_permute[numpy.argsort(inverse_permutation_indices)]))
+    for plot_idx,zs in enumerate(zs_to_plot):
+        ari_list = get_aris(zs)
+        ari_str = ','.join(['%.2f' % ari for ari in ari_list])
+        count = z_indices_count.get(str(zs_str),0)
+        title_str = str(count) + ' ; ' + ari_str
         #
         pylab.subplot(330+plot_idx+1)
-        ari_str = ','.join(['%.2f' % ari for ari in ari_list])
-        pylab.title(str(count) + ' ; ' + ari_str)
+        pylab.title(title_str)
         plot_state(state,zs,fh=fh)
     #
     pylab.subplots_adjust(hspace=.5)
@@ -125,33 +132,6 @@ def plot_top_states(top_zs,save_str=None):
         save_str = 'top_states_'+str(inf_seed)
     pylab.savefig(save_str)
     pylab.close()
-
-def plot_histograms(zs_strs,save_str=None):
-    state_logps = []
-    state_counts = []
-    for zs_str in zs_strs:
-        state_logps.append(calc_state_logp(eval(zs_str)))
-        # fill in zeros with tiny value so histogram is spaced correctly
-        state_counts.append(z_indices_count.get(zs_str,1.E-6))
-    state_logps = numpy.array(state_logps)[numpy.argsort(state_counts)]
-    state_counts = numpy.sort(state_counts)
-    xvals = xrange(len(state_logps),0,-1) # xrange(len(state_logps)) # 
-    #
-    fh = pylab.figure()
-    pylab.subplot(211)
-    pylab.title('theoretical frequencies')
-    hf.bar_helper(xvals,numpy.exp(state_logps - state_logps[-1]),fh=fh)
-    pylab.xlabel('state rank')
-    pylab.subplot(212)
-    pylab.title('empirical frequencies')
-    hf.bar_helper(xvals, state_counts/float(state_counts[-1]),fh=fh)
-    pylab.xlabel('state rank')
-    #
-    pylab.subplots_adjust(hspace=.5)
-    if save_str is None:
-        save_str = 'histogram_inf_seed_'+str(inf_seed)
-    pylab.savefig(save_str)
-    return state_logps
 
 def calc_state_logp(zs):
     state = ds.DPMB_State(
@@ -172,14 +152,32 @@ def calc_state_logp(zs):
     #
     return alpha_log_prob + sum(beta_log_probs)
 
-def get_aris(z_indices):
-    ari_list = []
-    for inverse_permutation_indices in inverse_permutation_indices_list:
-        # ground_truth_zs = zs_to_permute[inverse_permutation_indices]
-        ground_truth_zs = zs_to_permute[numpy.argsort(inverse_permutation_indices)]
-        new_aris = hf.calc_ari(z_indices,ground_truth_zs)
-        ari_list.append(new_aris)
-    return ari_list
+def plot_histograms(zs_list,save_str=None):
+    state_logps = []
+    state_counts = []
+    for zs in zs_list:
+        state_logps.append(calc_state_logp(zs))
+        # fill in zeros with tiny value so histogram is spaced correctly
+        state_counts.append(z_indices_count.get(str(zs),1.E-6))
+    state_logps = numpy.array(state_logps)[numpy.argsort(state_counts)]
+    state_counts = numpy.sort(state_counts)
+    xvals = xrange(len(state_logps),0,-1) # xrange(len(state_logps)) # 
+    #
+    fh = pylab.figure()
+    pylab.subplot(211)
+    pylab.title('theoretical log probabilities')
+    hf.bar_helper(xvals,state_logps,fh=fh)
+    pylab.xlabel('state rank')
+    pylab.subplot(212)
+    pylab.title('empirical log probabilities')
+    hf.bar_helper(xvals, numpy.log(state_counts/float(state_counts[-1])),fh=fh)
+    pylab.xlabel('state rank')
+    #
+    pylab.subplots_adjust(hspace=.5)
+    if save_str is None:
+        save_str = 'histogram_inf_seed_'+str(inf_seed)
+    pylab.savefig(save_str)
+    return state_logps
 
 
 # set up inference machinery
@@ -231,26 +229,31 @@ for iter_num in range(num_iters):
 
 # final anlaysis  
 ari_mat = plot_timeseries()
-sort_counts_func = lambda x,y: int(numpy.sign(z_indices_count[x]-z_indices_count[y]))
-top_zs = sorted(z_indices_count.keys(),sort_counts_func)[-9:][::-1]
-summaries[-1]['top_zs'] = top_zs
+sort_counts_func = lambda x,y: \
+                   int(numpy.sign(z_indices_count[x]-z_indices_count[y]))
+zs_to_plot = [eval(zs_str) for zs_str in # FIXME : ensure the sort order is correct
+              sorted(z_indices_count.keys(),sort_counts_func)[-9:][::-1]]
+summaries[-1]['zs_to_plot'] = zs_to_plot
 rf.pickle((summaries,ari_mat),'summaries.pkl.gz')
 
 # plot top states, histograms of actual vs theoretical state frequencies
-plot_top_states(top_zs)
-state_logps = plot_histograms(top_zs)
+plot_states(zs_to_plot)
+state_logps = plot_histograms(zs_to_plot)
 
-# create new top_zs with intuitively chosen states
-top_zs_copy = top_zs[:-(2+len(inverse_permutation_indices_list))]
-top_zs_copy.append(str([0 for x in xrange(num_rows)])) # all togehter
-if num_rows < 1025:
-    top_zs_copy.append(str(range(num_rows))) # all apart
+# create new zs_to_plot with intuitively chosen states
+num_empirical_states = 9 - len(inverse_permutation_indices_list) - 2
+zs_to_plot_copy = zs_to_plot[:num_empirical_states]
+zs_to_plot_copy.append([0 for x in xrange(num_rows)]) # all togehter
+if num_rows < 2048: # takes forever if too large
+    zs_to_plot_copy.append(range(num_rows)) # all apart
 else:
-    top_zs_copy.append(str([0 for x in xrange(num_rows)])) # all togehter
+    zs_to_plot.append([0 for x in xrange(num_rows)]) # all togehter
 for idx,inverse_permutation_indices \
         in enumerate(inverse_permutation_indices_list):
     permute_indices = numpy.argsort(inverse_permutation_indices)
-    top_zs_copy.append(str(zs_to_permute[permute_indices].tolist()))
+    zs_to_plot_copy.append(zs_to_permute[permute_indices].tolist())
 #
-plot_top_states(top_zs_copy,'states_with_intuitive_clusterings_'+str(inf_seed))
-state_logps = plot_histograms(top_zs_copy,'histograms_with_intuitive_clusterings_'+str(inf_seed))
+plot_states(zs_to_plot_copy,'states_with_intuitive_clusterings_'+str(inf_seed))
+state_logps = plot_histograms(
+    zs_to_plot_copy,
+    'histograms_with_intuitive_clusterings_'+str(inf_seed))
