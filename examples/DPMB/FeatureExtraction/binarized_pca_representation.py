@@ -3,6 +3,7 @@ import os
 import argparse
 #
 import numpy as np
+from matplotlib.mlab import find
 from scikits.learn.decomposition import RandomizedPCA
 #
 import Cloudless.examples.DPMB.settings as settings
@@ -51,6 +52,55 @@ def generate_binarized_pca_data(data,components,medians):
     bit_vectors = weights > medians
     return bit_vectors
 
+def create_cifar_bpr_problem(parameter_file,read_func,outfile,
+                             num_labels=20,train_rows_per_label=400,
+                             test_rows_per_label=100,seed=0):
+    # FIXME : may need to pick a subset of the labels to simplify problem
+    assert train_rows_per_label+test_rows_per_label<=500, \
+        'cifar-100 only has 500 rows per labels'
+    np.random.seed(seed)
+    parameter_hash = rf.unpickle(parameter_file)
+    components = parameter_hash['components']
+    medians = parameter_hash['medians']
+    raw_data, labels = read_func()
+    #
+    chosen_labels = np.random.permutation(
+        xrange(max(labels)+1))[:num_labels]
+    train_indices = []
+    test_indices = []
+    for cluster_num in chosen_labels:
+        cluster_indices = find(cluster_num==labels)
+        cluster_subset_indices = np.random.permutation(
+            cluster_indices)[:train_rows_per_label+test_rows_per_label]
+        train_indices.extend(
+            cluster_subset_indices[:train_rows_per_label])
+        test_indices.extend(
+            cluster_subset_indices[train_rows_per_label:])
+    # one last permutation so gibbs init is in randomized order
+    train_indices = np.random.permutation(train_indices)
+    test_indices = np.random.permutation(test_indices)
+    #
+    train_raw_data = raw_data[train_indices]
+    train_labels = labels[train_indices]
+    train_bit_vectors = generate_binarized_pca_data(
+        train_raw_data,components,medians)    
+    test_raw_data = raw_data[test_indices]
+    test_labels = labels[test_indices]
+    test_bit_vectors = generate_binarized_pca_data(
+        test_raw_data,components,medians)    
+    #
+    cifar = {
+        'zs':train_labels,
+        'xs':train_bit_vectors,
+        'test_zs':test_labels,
+        'test_xs':test_bit_vectors,
+        'name':'cifar-100-bpr',
+        'train_indices':train_indices,
+        'test_indices':test_indices,
+        }
+    rf.pickle(cifar,outfile)
+    return cifar
+
 def main():
     parser = argparse.ArgumentParser(
         'create a binarized pca representation of cifar data')
@@ -74,7 +124,6 @@ def main():
     train_data = data[:n_train]
     components, medians, pca = generate_binarized_pca_model(
         train_data, n_components)
-    # bit_vectors = generate_binarized_pca_data(data,components,medians)
     #
     pickle_var = {
         'components':components,
