@@ -41,10 +41,13 @@ class Docs_helper():
         new_col = self.client.CreateResource(new_col,collection=in_collection)
         return new_col
     
-    def push_file(self,file_path,content_type,collection=None,docs_name=None,replace=False):
+    def push_file(self,file_path,content_type,collection=None,
+                  docs_name=None,replace=False):
         if not os.path.isfile(file_path):
             print file_path + " doesn't exist!"
             return None
+        if isinstance(collection,str):
+            collection = self.get_collection(collection)
 
         file_name = os.path.split(file_path)[-1]
         docs_name = docs_name if docs_name is not None else file_name
@@ -99,7 +102,6 @@ def main():
         type=str,
         )
     parser.add_argument('--replace',action='store_true')
-    # parser.add_argument('--mime_type',default="text/plain",type=str)
     parser.add_argument('--mime_type',default="application/octet-stream",type=str)
     args = parser.parse_args()
     #
@@ -123,7 +125,7 @@ def main():
             replace=args.replace,
             )
         time.sleep(args.sleep_dur)
-            
+
 
 if __name__ == "__main__":
     main()
