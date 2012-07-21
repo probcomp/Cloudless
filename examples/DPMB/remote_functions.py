@@ -263,11 +263,11 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
             raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
         pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
         pkl_data = unpickle(pkl_file)
-        init_x = np.array(pkl_data["xs"],dtype=int)
+        init_x = np.array(pkl_data["xs"],dtype=np.int32)
         dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["zs"])
         test_xs = pkl_data['test_xs']
         if 'N_test' in dataset_spec:
-            test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=int)
+            test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=np.int32)
         #
         dataset_spec['num_cols'] = len(init_x[0])
         dataset_spec['num_rows'] = len(init_x)
