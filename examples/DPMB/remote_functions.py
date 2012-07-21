@@ -263,12 +263,11 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
             raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
         pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
         pkl_data = unpickle(pkl_file)
-        # FIXME : need a better way to determine whether to use xs or subset_xs
-        init_x = pkl_data["subset_xs"]
-        dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["subset_zs"])
+        init_x = np.array(pkl_data["xs"],dtype=int)
+        dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["zs"])
         test_xs = pkl_data['test_xs']
         if 'N_test' in dataset_spec:
-            test_xs = test_xs[:dataset_spec['N_test']]
+            test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=int)
         #
         dataset_spec['num_cols'] = len(init_x[0])
         dataset_spec['num_rows'] = len(init_x)
@@ -402,7 +401,7 @@ def infer(run_spec,problem=None):
             ,test_xs=problem["test_xs"])
         time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
         hf.printTS("time elapsed: " + time_elapsed_str)
-        if transition_return is not None:
+        if type(transition_return) == dict:
             summaries[-1]["break"] = transition_return
             summaries[-1]["failed_info"] = next_summary
             break
