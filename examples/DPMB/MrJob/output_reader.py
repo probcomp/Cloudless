@@ -28,12 +28,16 @@ if os.path.isfile(filename):
             infer_seed,summaries = which_protocol.read(line)
             summaries_single[infer_seed] = summaries
 
+print 'sequential'
 for key in summaries_sequential:
     print [summary['score'] for summary in summaries_sequential[key]]
+print 'single'
 for key in summaries_single:
     print [summary['score'] for summary in summaries_single[key]]
 print
+print 'sequential'
 for key in summaries_sequential:
     print [mean(summary['test_lls']) for summary in summaries_sequential[key]]
+print 'single'
 for key in summaries_single:
     print [mean(summary['test_lls']) for summary in summaries_single[key]]
