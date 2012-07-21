@@ -133,8 +133,8 @@ def main():
     rf.pickle(pickle_var,pkl_name)
     # create the problem file and pickle it
     cifar = create_cifar_bpr_problem(
-        parameter_file=pkl_name
-        read_func=read_func
+        parameter_file=pkl_name,
+        read_func=read_func,
         outfile='out.pkl.gz'
         )
 
