@@ -119,18 +119,24 @@ def main():
         read_func = read_cifar_10
     else:
         read_func = read_cifar_100
-    #
+    # create a binarized representation of the data
     data, labels = read_func()
     train_data = data[:n_train]
     components, medians, pca = generate_binarized_pca_model(
         train_data, n_components)
-    #
+    # save the binarized reprsentation
     pickle_var = {
         'components':components,
         'medians':medians,
         'pca':pca
         }
     rf.pickle(pickle_var,pkl_name)
+    # create the problem file and pickle it
+    cifar = create_cifar_bpr_problem(
+        parameter_file=pkl_name
+        read_func=read_func
+        outfile='out.pkl.gz'
+        )
 
 if __name__ == '__main__':
     main()
