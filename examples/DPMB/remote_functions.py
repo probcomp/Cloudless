@@ -71,6 +71,38 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["infer_init_betas"] = arr_copy(last_summary["betas"])
     jobspec["infer_init_z"] = arr_copy(last_summary["last_valid_zs"])
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
+
+def run_spec_from_model_specs(model_specs,seed_inferer):
+    num_cols = 256 # FIXME : hardcoded
+    gen_alpha_beta = 3.0
+    #
+    (x_indices,zs,gen_seed,inf_seed,summaries) = model_specs
+    # gen dataset_spec
+    dataset_spec = {}
+    dataset_spec["gen_seed"] = 0
+    dataset_spec["num_cols"] = num_cols
+    dataset_spec["num_rows"] = len(zs)
+    # FIXME: are the following dataset_spec entries actually needed?
+    dataset_spec["gen_alpha"] = gen_alpha_beta
+    dataset_spec["gen_betas"] = np.repeat(gen_alpha_beta,num_cols)
+    dataset_spec["gen_z"] = None
+    # gen run_spec
+    run_spec = {}
+    run_spec["dataset_spec"] = dataset_spec
+    run_spec["num_iters"] = seed_inferer.num_iters_per_step
+    run_spec["num_nodes"] = 1
+    run_spec["infer_seed"] = inf_seed
+    # sub_alpha = alpha/num_nodes
+    run_spec["infer_init_alpha"] = summaries[-1]['alpha']/seed_inferer.num_nodes
+    run_spec["infer_init_betas"] = summaries[-1]['betas']
+    # no hypers in child state inference
+    run_spec["infer_do_alpha_inference"] = False
+    run_spec["infer_do_betas_inference"] = False
+    run_spec["infer_init_z"] = zs
+    run_spec["time_seatbelt"] = None
+    run_spec["ari_seatbelt"] = None
+    run_spec["verbose_state"] = False
+    return run_spec
                                         
 class Chunked_Job(Thread):
     def __init__(self,parent_jobspec,asyncmemo=None,chunk_iter=100,sleep_duration=20,lock=None):
