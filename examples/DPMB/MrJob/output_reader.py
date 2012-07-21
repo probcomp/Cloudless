@@ -12,32 +12,26 @@ reload(settings)
 
 which_protocol = PickleProtocol
 
-filename = "output_sequential.txt"
-summaries_sequential = {}
-if os.path.isfile(filename):
-    with open(filename) as fh:
-        for line in fh:
-            infer_seed,summaries = which_protocol.read(line)
-            summaries_sequential[infer_seed] = summaries
+summaries_dict = {}
+filenames = ['num_nodes_1.txt','num_nodes_2.txt','num_nodes_4.txt']
+for filename in filenames:
+    this_summary = {}
+    if os.path.isfile(filename):
+        with open(filename) as fh:
+            for line in fh:
+                infer_seed,summaries = which_protocol.read(line)
+                this_summary[infer_seed] = summaries
+    summaries_dict[filename] = this_summary
 
-filename = "output_single.txt"
-summaries_single = {}
-if os.path.isfile(filename):
-    with open(filename) as fh:
-        for line in fh:
-            infer_seed,summaries = which_protocol.read(line)
-            summaries_single[infer_seed] = summaries
+extract_funcs = [
+    lambda x : x['score'],
+    lambda x : x['test_lls'],
+    lambda x : x['timing']['run_sum']
+    ]
 
-print 'sequential'
-for key in summaries_sequential:
-    print [summary['score'] for summary in summaries_sequential[key]]
-print 'single'
-for key in summaries_single:
-    print [summary['score'] for summary in summaries_single[key]]
-print
-print 'sequential'
-for key in summaries_sequential:
-    print [mean(summary['test_lls']) for summary in summaries_sequential[key]]
-print 'single'
-for key in summaries_single:
-    print [mean(summary['test_lls']) for summary in summaries_single[key]]
+for extract_func in extract_funcs:
+    for filename in sorted(summaries_dict.keys()):
+        summaries = summaries_dict[filename]
+        print filename
+        for key in summaries:
+            print [extract_func(summary) for summary in summaries[key]]
