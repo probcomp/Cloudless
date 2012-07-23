@@ -21,7 +21,7 @@ reload(settings)
 # problem_file = settings.cifar_100_problem_file
 problem_file = settings.cifar_100_bpr_problem_file
 create_pickle_file = lambda iter_num, seed_str : \
-    '_'.join(['summary','iternum' + str(iter_num),'seed' + key])
+    '_'.join(['summary','seed' + seed_str,'iternum' + str(iter_num)])
 
 class MRSeedInferer(MRJob):
 
