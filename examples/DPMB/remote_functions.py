@@ -76,7 +76,8 @@ def run_spec_from_model_specs(model_specs,seed_inferer):
     num_cols = 256 # FIXME : hardcoded
     gen_alpha_beta = 3.0
     #
-    (x_indices,zs,gen_seed,inf_seed,summaries) = model_specs
+    (x_indices, zs, gen_seed, inf_seed, master_alpha, betas,
+     master_inf_seed, iter_num) = model_specs
     # gen dataset_spec
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
@@ -93,8 +94,8 @@ def run_spec_from_model_specs(model_specs,seed_inferer):
     run_spec["num_nodes"] = 1
     run_spec["infer_seed"] = inf_seed
     # sub_alpha = alpha/num_nodes
-    run_spec["infer_init_alpha"] = summaries[-1]['alpha']/seed_inferer.num_nodes
-    run_spec["infer_init_betas"] = summaries[-1]['betas']
+    run_spec["infer_init_alpha"] = master_alpha/seed_inferer.num_nodes
+    run_spec["infer_init_betas"] = betas
     # no hypers in child state inference
     run_spec["infer_do_alpha_inference"] = False
     run_spec["infer_do_betas_inference"] = False
@@ -362,7 +363,7 @@ def infer(run_spec,problem=None):
                                  init_alpha=run_spec["infer_init_alpha"],
                                  init_betas=run_spec["infer_init_betas"],
                                  init_z=run_spec["infer_init_z"],
-                                 init_x = problem["xs"],
+                                 init_x=np.array(problem["xs"],dtype=np.int32),
                                  **state_kwargs
                                  )
     init_delta_seconds = hf.delta_since(init_start_ts)
