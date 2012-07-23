@@ -20,6 +20,8 @@ reload(settings)
 
 # problem_file = settings.cifar_100_problem_file
 problem_file = settings.cifar_100_bpr_problem_file
+create_pickle_file = lambda iter_num, seed_str : \
+    '_'.join(['summary','iternum' + str(iter_num),'seed' + key])
 
 class MRSeedInferer(MRJob):
 
@@ -65,9 +67,8 @@ class MRSeedInferer(MRJob):
         #
         pickle_str = os.path.join(
             settings.data_dir,
-            'summary_' + str(iter_num) + '.pkl.gz'
+            create_pickle_file(iter_num,key)
             )
-        rf.pickle(summary,pickle_str)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
@@ -160,7 +161,7 @@ class MRSeedInferer(MRJob):
         #
         pickle_str = os.path.join(
             settings.data_dir,
-            'summary_' + str(iter_num) + '.pkl.gz'
+            create_pickle_file(iter_num,key)
             )
         rf.pickle(summary, pickle_str)
         #
