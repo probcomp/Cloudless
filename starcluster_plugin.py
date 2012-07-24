@@ -27,6 +27,7 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute('cd /usr/local/lib/python2.7/dist-packages/Cloudless/ && git checkout mrjobify')
                node.ssh.execute('python -c \'import Cloudless.examples.DPMB.settings\'')
+               node.ssh.execute('python -c \'import matplotlib\'')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
                #
                remote_home_dir = '/home/sgeadmin/'
