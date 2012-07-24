@@ -6,4 +6,4 @@ python seed_inferer.py --jobconf mapred.map.tasks=2 --num-steps 4 --num-iters 8 
 python seed_inferer.py --jobconf mapred.map.tasks=1 --num-steps 8 --num-iters 8 --num-nodes 1 < seed_list.txt > num_nodes_1.txt &
 
 wait
-python -i output_reader.py
+python -i consolidate_summaries.py
