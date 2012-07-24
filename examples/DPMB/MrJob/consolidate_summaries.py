@@ -36,13 +36,26 @@ for summary_name, iter_list in summary_names.iteritems():
         summaries_dict.setdefault(summary_name,[]).append(new_summary)
 
 extract_funcs = [
-    lambda x : x['score'],
-    lambda x : x['test_lls'],
-    # lambda x : x['timing']['run_sum']
+    ('score', 
+     lambda summaries : [('%.2f' % summary['score'])
+                         for summary in summaries]
+     ),
+    ('test_lls', 
+     lambda summaries : [('%.2f' % mean(summary['test_lls']))
+                         for summary in summaries]
+     ),
+    ('delta_t',
+     lambda summaries : [
+            ('%.2f' % (summary['timing']['timestamp'] - 
+                       summaries[0]['timing']['start_time']).total_seconds())
+            for summary in summaries[1:]]
+     ),
     ]
 
-for extract_func in extract_funcs:
+for extract_label, extract_func in extract_funcs:
+    print extract_label
     for filename in sorted(summaries_dict.keys()):
         summaries = summaries_dict[filename]
         print filename
-        print [extract_func(summary) for summary in summaries]
+        print extract_func(summaries)
+    print
