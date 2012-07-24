@@ -74,6 +74,7 @@ class MRSeedInferer(MRJob):
             settings.data_dir,
             create_pickle_file(self.num_nodes, run_key, iter_num)
             )
+        rf.pickle(summary, pickle_str)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
