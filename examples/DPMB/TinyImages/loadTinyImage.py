@@ -70,32 +70,45 @@ def main():
     parser.add_argument('--n_images',default=10,type=int)
     args,unkown_args = parser.parse_known_args()
     n_images = args.n_images
-
-
-    cifar_data, cifar_labels = bpr.read_cifar_100()
-
-    tiny_image_indices = None
+    
+    # the tiny image indices corresponding cifar indices 
+    tiny_image_index_lookup = None
+    # http://www.cs.utoronto.ca/~kriz/cifar_indexes
     with open('cifar_indexes') as fh:
         csv_reader = csv.reader(fh)
-        tiny_image_indices = [int(index[0])-1 for index in csv_reader]
+        tiny_image_index_lookup = [int(index[0])-1 for index in csv_reader]
 
+    # random indices to test
     random.seed(0)
     cifar_indices = random.sample(xrange(50000),n_images)
+    # sometimes a tiny_image_index is -1
+    # this means the cifar image isn't from tiny images
+    cifar_indices = filter(lambda x: tiny_image_index_lookup[x]!=-1,cifar_indices)
+    tiny_image_indices = [
+        tiny_image_index_lookup[cifar_index]
+        for cifar_index in cifar_indices
+        ]
+    
+    print 'Verifying cifar_indices: ' + str(cifar_indices)
+    print 'Corresponding tiny_image_indices: ' + str(tiny_image_indices)
+
+    # cifar data
+    cifar_data, cifar_labels = bpr.read_cifar_100()
+
+    # tiny image data
     tiny_image_strs,temp_indices = read_images(
         n_images=None,
-        image_indices=[
-            tiny_image_indices[cifar_index]
-            for cifar_index in cifar_indices
-            ]
-        )
+        image_indices=tiny_image_indices)
     tiny_images = [
         reorder_per_cifar(tiny_image_str)
         for tiny_image_str in tiny_image_strs
         ]
-    print 'Verifying cifar_indices: ' + str(cifar_indices)
     for index in range(len(cifar_indices)):
-        assert all(tiny_images[index]==cifar_data[cifar_indices[index]]), \
-            'failed on cifar index: ' + str(index)
-    
+        try:
+            assert all(tiny_images[index]==cifar_data[cifar_indices[index]])
+        except AssertionError,e:
+            'Failed on cifar index: ' + str(cifar_indices[index])
+            'Corresponding tiny_images index: ' + str(tiny_image_indices[index])
+
 if __name__ == '__main__':
     main()
