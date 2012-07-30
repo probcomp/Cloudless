@@ -36,29 +36,36 @@ def reorder_per_cifar(image_str_data):
         image_data_reordered.extend(current_color_reordered)
     return numpy.array(image_data_reordered)
 
-def read_images(n_images,seed=0,image_indices=None,save_image=False,per_cifar=True):
+def read_images(n_images,seed=0,image_indices=None,
+                save_images=False,per_cifar=True):
     if image_indices is None:
         random.seed(seed)
         image_indices = random.sample(xrange(total_num_images),n_images)
-    image_list = []
+    image_list = [None for x in image_indices]
     with open(filename) as fh:
-        for image_idx in image_indices:
-            image_offset = image_idx * nbytesPerImage 
-            fh.seek(image_offset)
+        arg_indices = numpy.argsort(image_indices)
+        prior_index = -1
+        for list_idx in arg_indices:
+            image_idx = image_indices[list_idx]
+            image_delta = image_idx - prior_index
+            image_relative_offset = (image_delta - 1) * nbytesPerImage 
+            # image_absolute_offset = image_idx * nbytesPerImage 
+            fh.seek(image_relative_offset,1)
+            # fh.seek(image_absolute_offset)
             raw_image_str_data = fh.read(nbytesPerImage)
             raw_image_int_data = [ord(x) for x in raw_image_str_data]
             # if you don't do this, the data is different as determined by min,max
             image_str_data = reorder_image_bytes(raw_image_str_data)
             #
-            if save_image:
+            if save_images:
                 image = Image.fromstring('RGB',(sx,sx),image_str_data).transpose(
                     Image.ROTATE_270)
                 image.save(str(image_idx)+'.png','PNG')
             #
-            if per_cifar:
-                image_list.append(reorder_per_cifar(image_str_data))
-            else:
-                image_list.append(image_str_data)
+            data = reorder_per_cifar(image_str_data) \
+                if per_cifar else image_str_data
+            image_list[list_idx] = data
+            prior_index = image_idx
     return image_list,image_indices
 
 def main():
@@ -66,14 +73,17 @@ def main():
     import argparse
     import random
     #
-    import Cloudless.examples.DPMB.FeatureExtraction.binarized_pca_representation as bpr
+    import Cloudless.examples.DPMB.FeatureExtraction.binarized_pca_representation\
+        as bpr
     reload(bpr)
     from loadTinyImage import read_images, reorder_per_cifar
 
     parser = argparse.ArgumentParser('Verify cifar and tiny_image data match')
     parser.add_argument('--n_images',default=10,type=int)
+    parser.add_argument('--save_images',action='store_true')
     args,unkown_args = parser.parse_known_args()
     n_images = args.n_images
+    save_images = args.save_images
     
     # the tiny image indices corresponding cifar indices 
     tiny_image_index_lookup = None
@@ -102,7 +112,8 @@ def main():
     # tiny image data
     tiny_images,temp_indices = read_images(
         n_images=None,
-        image_indices=tiny_image_indices)
+        image_indices=tiny_image_indices,
+        save_images=save_images)
     for index in range(len(cifar_indices)):
         try:
             assert all(tiny_images[index]==cifar_data[cifar_indices[index]])
@@ -112,3 +123,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# import Cloudless.examples.DPMB.TinyImages.loadTinyImage as lti
+# import Cloudless.examples.DPMB.remote_functions as rf
+# In [7]: %timeit -r1 tiny_images,temp_indices = lti.read_images(n_images=1000)
+# 1 loops, best of 1: 3.19 s per loop
+# In [13]: %timeit -r1 rf.pickle(tiny_images,'temp.pkl')
+# 1 loops, best of 1: 3.54 s per loop
+# In [14]: %timeit -r1 rf.pickle(tiny_images,'temp.pkl.gz')
+# 1 loops, best of 1: 29.9 s per loop
