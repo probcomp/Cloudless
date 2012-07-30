@@ -11,6 +11,7 @@ sx = 32
 num_channels = 3
 nbytesPerChannel = sx*sx
 nbytesPerImage = nbytesPerChannel*num_channels
+total_num_images = 79302017
 
 def reorder_image_bytes(raw_image_data):
     red_channel = raw_image_data[(0*nbytesPerChannel):(1*nbytesPerChannel)]
@@ -35,11 +36,10 @@ def reorder_per_cifar(image_str_data):
         image_data_reordered.extend(current_color_reordered)
     return numpy.array(image_data_reordered)
 
-def read_images(n_images,seed=0,image_indices=None,save_image=False):
+def read_images(n_images,seed=0,image_indices=None,save_image=False,per_cifar=True):
     if image_indices is None:
         random.seed(seed)
-        # FIXME : make xrange argument full length of image file
-        image_indices = random.sample(xrange(10000),n_images)
+        image_indices = random.sample(xrange(total_num_images),n_images)
     image_list = []
     with open(filename) as fh:
         for image_idx in image_indices:
@@ -49,12 +49,16 @@ def read_images(n_images,seed=0,image_indices=None,save_image=False):
             raw_image_int_data = [ord(x) for x in raw_image_str_data]
             # if you don't do this, the data is different as determined by min,max
             image_str_data = reorder_image_bytes(raw_image_str_data)
-            image_list.append(image_str_data)
             #
             if save_image:
                 image = Image.fromstring('RGB',(sx,sx),image_str_data).transpose(
                     Image.ROTATE_270)
                 image.save(str(image_idx)+'.png','PNG')
+            #
+            if per_cifar:
+                image_list.append(reorder_per_cifar(image_str_data))
+            else:
+                image_list.append(image_str_data)
     return image_list,image_indices
 
 def main():
@@ -94,15 +98,11 @@ def main():
 
     # cifar data
     cifar_data, cifar_labels = bpr.read_cifar_100()
-
+    
     # tiny image data
-    tiny_image_strs,temp_indices = read_images(
+    tiny_images,temp_indices = read_images(
         n_images=None,
         image_indices=tiny_image_indices)
-    tiny_images = [
-        reorder_per_cifar(tiny_image_str)
-        for tiny_image_str in tiny_image_strs
-        ]
     for index in range(len(cifar_indices)):
         try:
             assert all(tiny_images[index]==cifar_data[cifar_indices[index]])
