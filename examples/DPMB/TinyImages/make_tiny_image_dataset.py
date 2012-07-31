@@ -3,7 +3,7 @@ import os
 import csv
 import random
 #
-import Cloudless.examples.DPMB.TinyImages.loadTinyImage as lti
+import Cloudless.examples.DPMB.TinyImages.loadTinyImages as lti
 import Cloudless.examples.DPMB.remote_functions as rf
 
 
