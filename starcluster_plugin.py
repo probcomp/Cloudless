@@ -29,6 +29,9 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('python -c \'import Cloudless.examples.DPMB.settings\'')
                node.ssh.execute('python -c \'import matplotlib\'')
                node.ssh.execute('chmod -R ugo+rwx /usr/local/lib/python2.7/dist-packages/Cloudless/')
+               node.ssh.execute('easy_install scikits.learn')
+               node.ssh.execute('mkdir /mnt/TinyImages')
+               node.ssh.execute('chown sgeadmin /mnt/TinyImages')
                #
                remote_home_dir = '/home/sgeadmin/'
                node.ssh.put(settings.ec2_credentials_file,remote_home_dir)
