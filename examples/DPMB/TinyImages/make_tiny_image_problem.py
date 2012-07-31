@@ -17,20 +17,22 @@ reload(bpr)
 
 
 # set some parameters
-base_dir = '/media/VonNeumann/' if settings.is_aws else '/mnt/'
-dest_dir = os.path.join(base_dir,'TinyImages')
-problem_file = os.path.join(dest_dir,'tiny_image_problem.pkl.gz')
+base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
+local_dir = os.path.join(base_dir, bucket_dir)
+problem_file = 'tiny_image_problem.pkl.gz'
+full_problem_file = os.path.join(local_dir, problem_file)
+#
 num_pieces = 100
 n_test = int(.01*num_pieces*10000)
 data_piece_filter = lambda x : x.find('_data')!=-1
 
 # make sure files are in place
-if not os.path.isdir(dest_dir): os.makedirs(dest_dir)
+if not os.path.isdir(local_dir): os.makedirs(local_dir)
 s3 = s3_helper.S3_helper(
-    bucket_str=settings.bucket_str,bucket_dir=bucket_dir,local_dir=dest_dir)
+    bucket_str=settings.bucket_str, bucket_dir=bucket_dir, local_dir=local_dir)
 all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
-data_files = filter(data_piece_filter,all_files)
+data_files = filter(data_piece_filter, all_files)
 data_files = [os.path.split(data_file)[-1] for data_file in data_files]
 #
 for data_file in data_files[:num_pieces]:
@@ -40,7 +42,7 @@ for data_file in data_files[:num_pieces]:
 image_list = []
 image_indices = []
 for data_file in data_files[:num_pieces]:
-    full_filename = os.path.join(dest_dir,data_file)
+    full_filename = os.path.join(local_dir, data_file)
     unpickled = rf.unpickle(full_filename)
     image_list.extend(unpickled['image_list'])
     image_indices.extend(unpickled['image_indices'])
@@ -48,7 +50,8 @@ for data_file in data_files[:num_pieces]:
 # run pca
 image_data = numpy.array(image_list)
 pca_components, medians, pca = bpr.generate_binarized_pca_model(image_data)
-binarized_data = bpr.generate_binarized_pca_data(image_data,pca_components,medians)
+binarized_data = bpr.generate_binarized_pca_data(
+    image_data, pca_components, medians)
 
 # FIXME : is it appropriate for test data to be part of features extraction?
 tiny_images = {
@@ -58,4 +61,5 @@ tiny_images = {
     'train_indices':image_list[:-n_test],
     'test_indices':image_list[-n_test:],
     }
-rf.pickle(tiny_images,problem_file)
+rf.pickle(tiny_images, full_problem_file)
+s3.put_s3(problem_file)
