@@ -17,11 +17,12 @@ reload(bpr)
 
 
 # set some parameters
-dest_dir = '/media/VonNeumann/TinyImagePieces'
-problem_file = '/media/VonNeumann/tiny_image_problem.pkl.gz'
+base_dir = '/media/VonNeumann/' if settings.is_aws else '/mnt/'
+dest_dir = os.path.join(base_dir,'TinyImages')
+problem_file = os.path.join(dest_dir,'tiny_image_problem.pkl.gz')
 bucket_dir = 'TinyImages'
-num_pieces = 1
-n_test = 100
+num_pieces = 100
+n_test = int(.01*num_pieces*10000)
 data_piece_filter = lambda x : x.find('_data')!=-1
 
 # make sure files are in place
@@ -30,6 +31,7 @@ s3 = s3_helper.S3_helper(
     bucket_str=settings.bucket_str,bucket_dir=bucket_dir,local_dir=dest_dir)
 all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
 data_files = filter(data_piece_filter,all_files)
+data_files = [os.path.split(data_file)[-1] for data_file in data_files]
 #
 for data_file in data_files[:num_pieces]:
     s3.verify_file(data_file)

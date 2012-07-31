@@ -7,7 +7,7 @@ import Cloudless.examples.DPMB.TinyImages.loadTinyImages as lti
 import Cloudless.examples.DPMB.remote_functions as rf
 
 
-dest_dir = '/media/VonNeumann/TinyImagePieces'
+dest_dir = '/media/VonNeumann/TinyImages'
 n_images = 1000*1000
 n_pieces = 100
 images_per_piece = n_images/n_pieces
