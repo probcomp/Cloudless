@@ -17,14 +17,14 @@ reload(bpr)
 
 
 # set some parameters
+num_pieces = 20
+n_test = int(.01*num_pieces*10000)
 base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
 local_dir = os.path.join(base_dir, bucket_dir)
-problem_file = 'tiny_image_problem.pkl.gz'
+problem_file = 'tiny_image_problem_' + str(num_pieces) + '.pkl.gz'
 full_problem_file = os.path.join(local_dir, problem_file)
 #
-num_pieces = 100
-n_test = int(.01*num_pieces*10000)
 data_piece_filter = lambda x : x.find('_data')!=-1
 
 # make sure files are in place
