@@ -1,5 +1,7 @@
 #!python
 import os
+import datetime
+import argparse
 #
 import numpy
 #
@@ -16,8 +18,13 @@ import Cloudless.examples.DPMB.FeatureExtraction.binarized_pca_representation \
 reload(bpr)
 
 
+# parse some arguments
+parser = argparse.ArgumentParser('Script to read in N image pieces and create a problem file')
+parser.add_argument('--num_pieces',default=20,type=int)
+args, unknown_args = parser.parse_known_args()
+num_pieces = args.num_pieces
+
 # set some parameters
-num_pieces = 20
 n_test = int(.01*num_pieces*10000)
 base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
@@ -37,6 +44,8 @@ data_files = [os.path.split(data_file)[-1] for data_file in data_files]
 #
 for data_file in data_files[:num_pieces]:
     s3.verify_file(data_file)
+print datetime.datetime.now()
+print 'Done copying down files'
 
 # read in the data
 image_list = []
@@ -46,20 +55,31 @@ for data_file in data_files[:num_pieces]:
     unpickled = rf.unpickle(full_filename)
     image_list.extend(unpickled['image_list'])
     image_indices.extend(unpickled['image_indices'])
+    print datetime.datetime.now()
+    print 'Done reading ' + data_file
+
+print datetime.datetime.now()
+print 'Done reading files'
 
 # run pca
 image_data = numpy.array(image_list)
 pca_components, medians, pca = bpr.generate_binarized_pca_model(image_data)
 binarized_data = bpr.generate_binarized_pca_data(
     image_data, pca_components, medians)
+print datetime.datetime.now()
+print 'Done binarizing data'
 
 # FIXME : is it appropriate for test data to be part of features extraction?
 tiny_images = {
     'xs':binarized_data[:-n_test],
     'test_xs':binarized_data[-n_test:],
     'name':'tiny-images-test-bpr',
-    'train_indices':image_list[:-n_test],
-    'test_indices':image_list[-n_test:],
+    'train_indices':image_indices[:-n_test],
+    'test_indices':image_indices[-n_test:],
     }
 rf.pickle(tiny_images, full_problem_file)
+print datetime.datetime.now()
+print 'Done pickling problem'
 s3.put_s3(problem_file)
+print datetime.datetime.now()
+print 'Done pushing problem up to s3'
