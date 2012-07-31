@@ -25,7 +25,10 @@ args, unknown_args = parser.parse_known_args()
 num_pieces = args.num_pieces
 
 # set some parameters
-n_test = int(.01*num_pieces*10000)
+images_per_piece = 10000
+pixels_per_image = 3072
+n_components = 256
+n_test = int(.01*num_pieces*images_per_piece)
 base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
 local_dir = os.path.join(base_dir, bucket_dir)
@@ -39,6 +42,7 @@ if not os.path.isdir(local_dir): os.makedirs(local_dir)
 s3 = s3_helper.S3_helper(
     bucket_str=settings.bucket_str, bucket_dir=bucket_dir, local_dir=local_dir)
 all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
+# all_files = sorted([key.name for key in s3.bucket.list(prefix=s3.bucket_dir)])
 data_files = filter(data_piece_filter, all_files)
 data_files = [os.path.split(data_file)[-1] for data_file in data_files]
 #
@@ -48,12 +52,17 @@ print datetime.datetime.now()
 print 'Done copying down files'
 
 # read in the data
-image_list = []
+image_data = numpy.ndarray(
+    (num_pieces*images_per_piece,pixels_per_image)
+    ,dtype=numpy.int32
+    )
 image_indices = []
-for data_file in data_files[:num_pieces]:
+for piece_idx, data_file in enumerate(data_files[:num_pieces]):
     full_filename = os.path.join(local_dir, data_file)
     unpickled = rf.unpickle(full_filename)
-    image_list.extend(unpickled['image_list'])
+    start_idx = piece_idx*images_per_piece
+    end_idx = (1+piece_idx)*images_per_piece
+    image_data[start_idx:end_idx] = unpickled['image_list']
     image_indices.extend(unpickled['image_indices'])
     print datetime.datetime.now()
     print 'Done reading ' + data_file
@@ -62,8 +71,8 @@ print datetime.datetime.now()
 print 'Done reading files'
 
 # run pca
-image_data = numpy.array(image_list)
-pca_components, medians, pca = bpr.generate_binarized_pca_model(image_data)
+pca_components, medians, pca = bpr.generate_binarized_pca_model(
+    image_data, n_components=n_components)
 binarized_data = bpr.generate_binarized_pca_data(
     image_data, pca_components, medians)
 print datetime.datetime.now()
