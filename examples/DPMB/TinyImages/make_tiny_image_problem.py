@@ -21,13 +21,17 @@ reload(bpr)
 # parse some arguments
 parser = argparse.ArgumentParser('Script to read in N image pieces and create a problem file')
 parser.add_argument('--num_pieces',default=20,type=int)
+parser.add_argument('--num_pca_train',default=20,type=int)
 args, unknown_args = parser.parse_known_args()
 num_pieces = args.num_pieces
+num_pca_train_pieces = args.num_pca_train
 
 # set some parameters
 images_per_piece = 10000
 pixels_per_image = 3072
 n_components = 256
+#
+n_pca_train = int(num_pca_train_pieces * images_per_peice)
 n_test = int(.01*num_pieces*images_per_piece)
 base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
@@ -72,21 +76,24 @@ print 'Done reading files'
 
 # run pca
 pca_components, medians, pca = bpr.generate_binarized_pca_model(
-    image_data, n_components=n_components)
+    image_data[:n_pca_train], n_components=n_components)
 binarized_data = bpr.generate_binarized_pca_data(
     image_data, pca_components, medians)
 print datetime.datetime.now()
 print 'Done binarizing data'
 
 # FIXME : is it appropriate for test data to be part of features extraction?
-tiny_images = {
+problem = {
     'xs':binarized_data[:-n_test],
     'test_xs':binarized_data[-n_test:],
     'name':'tiny-images-test-bpr',
     'train_indices':image_indices[:-n_test],
     'test_indices':image_indices[-n_test:],
+    'pca_components':pca_components,
+    'medians':medians,
+    'n_pca_train':n_pca_train,
     }
-rf.pickle(tiny_images, full_problem_file)
+rf.pickle(problem, full_problem_file)
 print datetime.datetime.now()
 print 'Done pickling problem'
 s3.put_s3(problem_file)
