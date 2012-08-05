@@ -113,7 +113,22 @@ class MRSeedInferer(MRJob):
             ]
         problem = {'xs':init_x,'zs':None,'test_xs':None}
         # actually infer
-        child_summaries = rf.infer(run_spec, problem)
+        child_summaries = None
+        if self.num_nodes == 1:
+            problem['test_xs'] = numpy.array(cifar['test_xs'],dtype=numpy.int32)
+            run_spec['infer_do_alpha_inference'] = True
+            run_spec['infer_do_betas_inference'] = True
+            child_summaries = rf.infer(run_spec, problem)
+            for child_iter_num,child_summary in enumerate(child_summaries):
+                pickle_str = os.path.join(
+                    settings.data_dir,
+                    create_pickle_file(
+                        self.num_nodes, run_key+'_children', child_iter_num)
+                    )
+                rf.pickle(child_summary, pickle_str)
+        else:
+            child_summaries = rf.infer(run_spec, problem)
+        #
         last_valid_zs = child_summaries[-1]['last_valid_zs']
         new_iter_num = iter_num + 1
         # FIXME : to robustify, should be checking for failure conditions
@@ -124,6 +139,7 @@ class MRSeedInferer(MRJob):
         yield run_key, yielded_tuple
 
     def consolidate_data(self, run_key, yielded_val_generator):
+        start_dt = datetime.datetime.now()
         zs_list = []
         x_indices_list = []
         for (child_zs, child_x_indices, master_alpha, betas,
@@ -152,17 +168,22 @@ class MRSeedInferer(MRJob):
             init_z=zs,
             init_x=init_x
             )
+        consolidate_delta = hf.delta_since(start_dt)
         transitioner = dm.DPMB(master_inf_seed, consolidated_state,
                                infer_alpha=True, infer_beta=True)
         for transition_type in numpy.random.permutation([
                 transitioner.transition_beta, transitioner.transition_alpha]):
             transition_type()
+        start_dt = datetime.datetime.now()
         summary = transitioner.extract_state_summary(
             true_zs=true_zs,
             test_xs=test_xs)
+        score_delta = hf.delta_since(start_dt)
         summary['last_valid_zs'] = transitioner.state.getZIndices()
         summary['timing'] = {
-            'timestamp':datetime.datetime.now()
+            'timestamp':datetime.datetime.now(),
+            'consolidate_delta':consolidate_delta,
+            'score_delta':score_delta
             }
         #
         pickle_str = os.path.join(

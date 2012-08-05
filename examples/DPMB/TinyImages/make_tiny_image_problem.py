@@ -19,24 +19,26 @@ reload(bpr)
 
 
 # parse some arguments
-parser = argparse.ArgumentParser('Script to read in N image pieces and create a problem file')
+parser = argparse.ArgumentParser('Script to read in N image pieces and'
+                                 ' create a problem file')
 parser.add_argument('--num_pieces',default=20,type=int)
-parser.add_argument('--num_pca_train',default=20,type=int)
+parser.add_argument('--num_pca_train_pieces',default=20,type=int)
 args, unknown_args = parser.parse_known_args()
 num_pieces = args.num_pieces
-num_pca_train_pieces = args.num_pca_train
+num_pca_train_pieces = args.num_pca_train_pieces
 
 # set some parameters
 images_per_piece = 10000
 pixels_per_image = 3072
 n_components = 256
 #
-n_pca_train = int(num_pca_train_pieces * images_per_peice)
+n_pca_train = num_pca_train_pieces * images_per_piece
 n_test = int(.01*num_pieces*images_per_piece)
 base_dir = '/mnt/' if settings.is_aws else '/media/VonNeumann/'
 bucket_dir = 'TinyImages'
 local_dir = os.path.join(base_dir, bucket_dir)
-problem_file = 'tiny_image_problem_' + str(num_pieces) + '.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_' + str(num_pieces*images_per_piece) \
+    + '_nPcaTrain_' + str(num_pca_train_pieces*images_per_piece)+ '.pkl.gz'
 full_problem_file = os.path.join(local_dir, problem_file)
 #
 data_piece_filter = lambda x : x.find('_data')!=-1

@@ -35,6 +35,19 @@ for summary_name, iter_list in summary_names.iteritems():
         new_summary = rf.unpickle(filename)
         summaries_dict.setdefault(summary_name,[]).append(new_summary)
 
+def process_timing(summaries):
+    delta_ts = []
+    if 'run_sum' in summaries[0]['timing']:
+        for summary in summaries[1:]:
+            delta_ts.append('%.2f' % summary['timing']['run_sum'])
+    else:
+        start_time = summaries[0]['timing']['start_time']
+        get_total_seconds = lambda summary : \
+            (summary['timing']['timestamp'] - start_time).total_seconds()
+        for summary in summaries[1:]:
+            delta_ts.append('%.2f' % get_total_seconds(summary))
+    return delta_ts
+
 extract_funcs = [
     ('score', 
      lambda summaries : [('%.2f' % summary['score'])
@@ -45,10 +58,11 @@ extract_funcs = [
                          for summary in summaries]
      ),
     ('delta_t',
-     lambda summaries : [
-            ('%.2f' % (summary['timing']['timestamp'] - 
-                       summaries[0]['timing']['start_time']).total_seconds())
-            for summary in summaries[1:]]
+     process_timing
+     # lambda summaries : [
+     #        ('%.2f' % (summary['timing']['timestamp'] - 
+     #                   summaries[0]['timing']['start_time']).total_seconds())
+     #        for summary in summaries[1:]]
      ),
     ]
 
