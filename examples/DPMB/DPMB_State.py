@@ -1,5 +1,6 @@
 #!python
 import sys
+import datetime
 #
 import numpy as np
 import pylab
@@ -67,6 +68,10 @@ class DPMB_State():
             else:
                 cluster = self.cluster_list[draw]
             cluster.assign_vector(vector)
+
+            # FIXME : Remove when done analyzing gibbs-init timing
+            if R % 1000 == 0: # FIXME : Remove when done analyzing gibbs-init timing
+                print datetime.datetime.now(), R, len(self.cluster_list) # FIXME : Remove when done analyzing gibbs-init timing
 
     def non_gibbs_type_init(self, num_rows, init_z, init_x, decanon_indices):
 
