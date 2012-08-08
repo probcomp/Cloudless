@@ -19,7 +19,7 @@ reload(settings)
 
 
 # problem_file = settings.cifar_100_problem_file
-problem_file = settings.cifar_100_bpr_problem_file
+problem_file = settings.tiny_image_problem_file
 create_pickle_file = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
         'summary',
