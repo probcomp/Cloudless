@@ -266,7 +266,10 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
         pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
         pkl_data = unpickle(pkl_file)
         init_x = np.array(pkl_data["xs"],dtype=np.int32)
-        dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["zs"])
+        if 'zs' in pkl_data:
+            dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["zs"])
+        else:
+            dataset_spec['gen_z'] = None
         test_xs = pkl_data['test_xs']
         if 'N_test' in dataset_spec:
             test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=np.int32)
