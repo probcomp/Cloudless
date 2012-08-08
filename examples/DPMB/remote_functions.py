@@ -261,7 +261,8 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
                         # repermuting now makes tracking ground truth hard
         have_file = s3h.S3_helper().verify_file(dataset_spec['pkl_file'])
         if not have_file:
-            raise Exception('gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
+            raise Exception(
+                'gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
         pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
         pkl_data = unpickle(pkl_file)
         init_x = np.array(pkl_data["xs"],dtype=np.int32)
@@ -309,7 +310,8 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     if "pkl_file" in dataset_spec:
         test_lls = state.score_test_set(test_xs)
     else:
-        test_xs, test_lls = state.generate_and_score_test_set(dataset_spec["N_test"])
+        test_xs, test_lls = \
+            state.generate_and_score_test_set(dataset_spec["N_test"])
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
     return problem
