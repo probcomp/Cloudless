@@ -15,7 +15,8 @@ else:
 base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
 #
 if not os.path.isdir(base_dir): # assume AWS
-    root_dir = os.path.join(os.path.sep,"usr","local","lib","python2.7","dist-packages")
+    root_dir = os.path.join(
+        os.path.sep,"usr","local","lib","python2.7","dist-packages")
     base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
     is_aws = True
 #
@@ -41,7 +42,10 @@ except ImportError:
 try:
     import pandas
 except ImportError:
-    os.system('easy_install http://pypi.python.org/packages/source/p/pandas/pandas-0.7.0rc1.tar.gz')
+    os.system(
+        'easy_install http://pypi.python.org/packages/source/p/' \
+            'pandas/pandas-0.7.0rc1.tar.gz'
+        )
 #
 try:
     import mrjob
@@ -59,6 +63,14 @@ cifar_100_bpr_problem_file = "cifar_100_bpr_problem.pkl.gz"
 cifar_10_image_dir = "CIFAR10"
 cifar_100_image_dir = "CIFAR100"
 clustering_dir = "Current_clusterings"
+
+# tiny images
+# tiny_image_dir only necessary for pulling actual image data
+tiny_image_dir = '/mnt/TinyImages' \
+                 if is_aws else '/media/VonNeumann/TinyImages'
+tiny_image_problem_file = 'tiny_image_problem_nImages_' \
+    '1000000_nPcaTrain_400000.pkl.gz'
+
 
 # s3
 home_dir = os.path.expanduser("~/")
