@@ -251,70 +251,67 @@ class Chunked_Job(Thread):
         
 def gen_problem(dataset_spec,permute=True,save_str=None):
     # generate a state
-    # initialized according to the generation parameters from dataset spec
+    # initialize according to the generation parameters from dataset spec
     # containing all the training data only
-    problem = {}
 
-    init_x = None
+    xs, zs, test_xs, test_lls, state = None, None, None, None, None
     if "pkl_file" in dataset_spec:
+        # make sure the file is local
+        pkl_file = dataset_spec['pkl_file']
         permute = False # presume data is already permuted
                         # repermuting now makes tracking ground truth hard
-        have_file = s3h.S3_helper().verify_file(dataset_spec['pkl_file'])
+        have_file = s3h.S3_helper().verify_file(pkl_file)
         if not have_file:
-            raise Exception(
-                'gen_problem couldn\'t get pkl_file: ' + dataset_spec['pkl_file'])
-        pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
-        pkl_data = unpickle(pkl_file)
-        init_x = np.array(pkl_data["xs"],dtype=np.int32)
+            raise Exception('gen_problem couldn\'t get pkl_file: ' + pkl_file)
+        full_pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
+        pkl_data = unpickle(full_pkl_file)
+        # set problem variables
+        xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
-            dataset_spec['gen_z'],ids = hf.canonicalize_list(pkl_data["zs"])
+            zs,ids = hf.canonicalize_list(pkl_data["zs"])
         else:
-            dataset_spec['gen_z'] = None
+            zs = None
         test_xs = pkl_data['test_xs']
         if 'N_test' in dataset_spec:
             test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=np.int32)
-        #
-        dataset_spec['num_cols'] = len(init_x[0])
-        dataset_spec['num_rows'] = len(init_x)
+        # verify dataset spec variables correct
+        dataset_spec['num_cols'] = len(xs[0])
+        dataset_spec['num_rows'] = len(xs)
         # FIXME : convenience operations, should do elsewhere
         dataset_spec.setdefault('gen_seed',0)
         dataset_spec.setdefault('gen_alpha',1.0)
         dataset_spec.setdefault('gen_betas',np.repeat(2.0,256))
-
-    state = ds.DPMB_State(dataset_spec["gen_seed"],
-                          dataset_spec["num_cols"],
-                          dataset_spec["num_rows"],
-                          init_alpha=dataset_spec["gen_alpha"],
-                          init_betas=dataset_spec["gen_betas"],
-                          init_z=dataset_spec["gen_z"],
-                          init_x = init_x)
-    if save_str is not None:
-        state.plot(save_str=save_str)
-
-    if 'last_valid_zs' in dataset_spec:
-        # problem["zs"] = state.getZIndices()
-        # problem["xs"] = state.getXValues()
-        problem['zs'] = dataset_spec['gen_z']
-        problem['xs'] = init_x
-    elif permute:
+    elif 'last_valid_zs' in dataset_spec:
+        zs = dataset_spec['last_valid_zs']
+        xs = dataset_spec['xs']
+    else:
+        zs = dataset_spec.get('gen_z', None)
+        state = ds.DPMB_State(dataset_spec["gen_seed"],
+                              dataset_spec["num_cols"],
+                              dataset_spec["num_rows"],
+                              init_alpha=dataset_spec["gen_alpha"],
+                              init_betas=dataset_spec["gen_betas"],
+                              init_z=zs,
+                              init_x=xs)
+        xs = state.getXValues()
+        if save_str is not None:
+            state.plot(save_str=save_str)
+        
+    if permute:
+        # permute the data before passing out
         permutation_sequence = state.random_state.permutation(
             range(dataset_spec["num_rows"]))
-        temp_zs = state.getZIndices()
-        temp_xs = state.getXValues()
-        problem["xs"] = [temp_xs[perm_idx] for perm_idx in permutation_sequence]
-        temp_zs = [temp_zs[perm_idx] for perm_idx in permutation_sequence]
-        # canonicalize
-        z_indices,cluster_idx = hf.canonicalize_list(temp_zs)
-        problem["zs"] = z_indices
-    else:
-        problem["zs"] = state.getZIndices()
-        problem["xs"] = state.getXValues()
+        xs = [xs[perm_idx] for perm_idx in permutation_sequence]
+        zs = [zs[perm_idx] for perm_idx in permutation_sequence]
+        # canonicalize zs
+        zs, cluster_idx = hf.canonicalize_list(temp_zs)
 
-    if "pkl_file" in dataset_spec:
-        test_lls = state.score_test_set(test_xs)
-    else:
+    if state is not None and 'N_test' in dataset_spec:
         test_xs, test_lls = \
             state.generate_and_score_test_set(dataset_spec["N_test"])
+    problem = {}
+    problem['xs'] = xs
+    problem['zs'] = zs
     problem["test_xs"] = test_xs
     problem["test_lls_under_gen"] = test_lls
     return problem
@@ -367,7 +364,8 @@ def infer(run_spec,problem=None):
                                  dataset_spec["num_rows"],
                                  init_alpha=run_spec["infer_init_alpha"],
                                  init_betas=run_spec["infer_init_betas"],
-                                 init_z=run_spec["infer_init_z"],
+                                 # init_z=run_spec["infer_init_z"],
+                                 init_z=problem['zs'],
                                  init_x=np.array(problem["xs"],dtype=np.int32),
                                  **state_kwargs
                                  )
@@ -385,9 +383,9 @@ def infer(run_spec,problem=None):
     summaries = []
     summaries.append(
         transitioner.extract_state_summary(
-            true_zs=problem["zs"]
-            ,verbose_state=verbose_state
-            ,test_xs=problem["test_xs"]))
+            # true_zs=problem["zs"],
+            verbose_state=verbose_state,
+            test_xs=problem["test_xs"]))
     summaries[-1]["timing"]["init"] = init_delta_seconds
     #
     print "saved initialization"
@@ -397,14 +395,15 @@ def infer(run_spec,problem=None):
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
     for i in range(run_spec["num_iters"]):
         transition_return = transitioner.transition(
-            time_seatbelt=time_seatbelt
-            ,ari_seatbelt=ari_seatbelt
-            ,true_zs=problem["zs"]) # true_zs necessary for seatbelt 
+            time_seatbelt=time_seatbelt,
+            ari_seatbelt=ari_seatbelt,
+            # true_zs=problem["zs"]) # true_zs necessary for seatbelt 
+            )
         hf.printTS("finished doing iteration " + str(i))
         next_summary = transitioner.extract_state_summary(
-            true_zs=problem["zs"]
-            ,verbose_state=verbose_state
-            ,test_xs=problem["test_xs"])
+            # true_zs=problem["zs"],
+            verbose_state=verbose_state,
+            test_xs=problem["test_xs"])
         time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
         hf.printTS("time elapsed: " + time_elapsed_str)
         if type(transition_return) == dict:

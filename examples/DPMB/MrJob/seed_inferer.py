@@ -19,7 +19,9 @@ reload(settings)
 
 
 # problem_file = settings.cifar_100_problem_file
-problem_file = settings.tiny_image_problem_file
+# problem_file = settings.tiny_image_problem_file
+problem_file = 'tiny_image_problem_nImages10000_nPcaTrain_10000.pkl.gz'
+
 create_pickle_file = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
         'summary',
@@ -46,36 +48,35 @@ class MRSeedInferer(MRJob):
         self.num_iters = self.options.num_iters
         self.num_nodes = self.options.num_nodes
         if self.num_steps is None:
-            if self.num_nodes == 1:
+            if self.num_nodes == 1 and self.num_iters !=0:
                 self.num_steps = 1
             else:
                 self.num_steps = self.num_iters/self.num_nodes
         #
-        self.num_iters_per_step = self.num_iters/self.num_steps
+        self.num_iters_per_step = self.num_iters/self.num_steps \
+            if self.num_steps != 0 else 0
 
     def init(self, key, run_key):
         master_infer_seed = int(run_key)
         run_spec = rf.gen_default_cifar_run_spec(
             problem_file=problem_file,
             infer_seed=master_infer_seed,
-            num_iters=0 # just gibbs init 
+            num_iters=0 # no inference, just init
            )
+        gen_problem_start = datetime.datetime.now()
         problem = rf.gen_problem(run_spec['dataset_spec'])
+        gen_problem_delta_t = hf.delta_since(gen_problem_start)
         summaries = rf.infer(run_spec, problem)
-        #
+        # pickle up summary
         summary = summaries[-1]
         summary['problem'] = problem
-        summary['timing'] = {
-            'start_time':datetime.datetime.now(),
-            }
+        summary['timing'] = {'start_time':datetime.datetime.now(),
+                             'gen_problem_delta_t':gen_problem_delta_t}
         iter_num = 0
-        #
-        pickle_str = os.path.join(
-            settings.data_dir,
-            create_pickle_file(self.num_nodes, run_key, iter_num)
-            )
-        rf.pickle(summary, pickle_str)
-        #
+        pickle_file = create_pickle_file(self.num_nodes, run_key, iter_num)
+        pickle_full_file = os.path.join(settings.data_dir,pickle_file)
+        rf.pickle(summary, pickle_full_file)
+        # pull out the values to pass on
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
         betas = summary['betas']
@@ -85,6 +86,7 @@ class MRSeedInferer(MRJob):
         yield run_key, yielded_tuple
 
     def distribute_data(self, run_key, yielded_tuple):
+        print 'distribute data'
         (init_z, master_alpha, betas, master_inf_seed, iter_num) = yielded_tuple
         node_data_indices, node_zs, child_gen_seed_list, \
             child_inf_seed_list, master_inf_seed = \
@@ -101,21 +103,22 @@ class MRSeedInferer(MRJob):
             yield run_key, yielded_tuple
 
     def infer(self, run_key, model_specs):
+        print 'infer'
         x_indices, zs, child_gen_seed, child_inf_seed, \
                    master_alpha, betas, master_inf_seed, iter_num = model_specs
         run_spec = rf.run_spec_from_model_specs(model_specs, self)
         # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
-        cifar = rf.unpickle(os.path.join(settings.data_dir, problem_file))
-        cifar_xs = numpy.array(cifar['xs'],dtype=numpy.int32)
+        problem = rf.unpickle(os.path.join(settings.data_dir, problem_file))
+        problem_xs = numpy.array(problem['xs'],dtype=numpy.int32)
         init_x = [
-            cifar['xs'][x_index]
+            problem['xs'][x_index]
             for x_index in x_indices
             ]
         problem = {'xs':init_x,'zs':None,'test_xs':None}
         # actually infer
         child_summaries = None
         if self.num_nodes == 1:
-            problem['test_xs'] = numpy.array(cifar['test_xs'],dtype=numpy.int32)
+            problem['test_xs'] = numpy.array(problem['test_xs'],dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
             child_summaries = rf.infer(run_spec, problem)
@@ -139,6 +142,7 @@ class MRSeedInferer(MRJob):
         yield run_key, yielded_tuple
 
     def consolidate_data(self, run_key, yielded_val_generator):
+        print 'consolidate data'
         start_dt = datetime.datetime.now()
         zs_list = []
         x_indices_list = []
@@ -155,12 +159,15 @@ class MRSeedInferer(MRJob):
             for reorder_index in numpy.argsort(x_indices)
             ]
         #
-        cifar = rf.unpickle(os.path.join(settings.data_dir, problem_file))
-        init_x = numpy.array(cifar['xs'],dtype=numpy.int32)
-        true_zs,cluster_idx = hf.canonicalize_list(cifar['zs'])
-        test_xs = numpy.array(cifar['test_xs'],dtype=numpy.int32)
+        problem = rf.unpickle(os.path.join(settings.data_dir, problem_file))
+        init_x = numpy.array(problem['xs'],dtype=numpy.int32)
+        # true_zs,cluster_idx = hf.canonicalize_list(cifar['zs'])
+        true_zs, cluster_idx = None, None
+        if problem.get('zs',None) is not None:
+            true_zs, cluster_idx = hf.canonicalize_list(problem['zs'])
+        test_xs = numpy.array(problem['test_xs'],dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
-            gen_seed=0, # FIXME : generate a random variate from master_inf_seed?
+            gen_seed=0, # FIXME : generate random variate from master_inf_seed?
             num_cols=len(betas),
             num_rows=len(zs),
             init_alpha=master_alpha,
