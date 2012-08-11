@@ -19,9 +19,7 @@ reload(settings)
 
 
 # problem_file = settings.cifar_100_problem_file
-# problem_file = settings.tiny_image_problem_file
-# problem_file = 'tiny_image_problem_nImages_1000000_nPcaTrain_400000.pkl.gz'
-problem_file = 'tiny_image_problem_nImages_30000_nPcaTrain_10000.pkl.gz'
+problem_file = settings.tiny_image_problem_file
 
 create_pickle_file = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
