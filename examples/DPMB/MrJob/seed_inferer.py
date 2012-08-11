@@ -73,7 +73,7 @@ class MRSeedInferer(MRJob):
                              'gen_problem_delta_t':gen_problem_delta_t}
         iter_num = 0
         # FIXME : infer will pickle over this
-        pickle_file = create_pickle_file(self.num_nodes, run_key, iter_num)
+        pickle_file = create_pickle_file(self.num_nodes, run_key, str(-1))
         pickle_full_file = os.path.join(settings.data_dir,pickle_file)
         rf.pickle(summary, pickle_full_file)
         # pull out the values to pass on
