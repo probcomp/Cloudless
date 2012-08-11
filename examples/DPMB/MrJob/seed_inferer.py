@@ -20,7 +20,8 @@ reload(settings)
 
 # problem_file = settings.cifar_100_problem_file
 # problem_file = settings.tiny_image_problem_file
-problem_file = 'tiny_image_problem_nImages_1000000_nPcaTrain_400000.pkl.gz'
+# problem_file = 'tiny_image_problem_nImages_1000000_nPcaTrain_400000.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_30000_nPcaTrain_10000.pkl.gz'
 
 create_pickle_file = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -73,6 +74,7 @@ class MRSeedInferer(MRJob):
         summary['timing'] = {'start_time':datetime.datetime.now(),
                              'gen_problem_delta_t':gen_problem_delta_t}
         iter_num = 0
+        # FIXME : infer will pickle over this
         pickle_file = create_pickle_file(self.num_nodes, run_key, iter_num)
         pickle_full_file = os.path.join(settings.data_dir,pickle_file)
         rf.pickle(summary, pickle_full_file)
@@ -108,20 +110,23 @@ class MRSeedInferer(MRJob):
                    master_alpha, betas, master_inf_seed, iter_num = model_specs
         run_spec = rf.run_spec_from_model_specs(model_specs, self)
         # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
-        problem = rf.unpickle(os.path.join(settings.data_dir, problem_file))
-        problem_xs = numpy.array(problem['xs'],dtype=numpy.int32)
+        orig_problem = rf.unpickle(os.path.join(settings.data_dir, problem_file))
+        problem_xs = numpy.array(orig_problem['xs'],dtype=numpy.int32)
         init_x = [
-            problem['xs'][x_index]
+            orig_problem['xs'][x_index]
             for x_index in x_indices
             ]
-        problem = {'xs':init_x,'zs':None,'test_xs':None}
+        sub_problem = {'xs':init_x,'zs':zs,'test_xs':None}
         # actually infer
         child_summaries = None
         if self.num_nodes == 1:
-            problem['test_xs'] = numpy.array(problem['test_xs'],dtype=numpy.int32)
+            # FIXME : can I just modify run_spec and use rf.infer
+            # FIXME: only distinction is how frequently summaries are pickled
+            sub_problem['test_xs'] = \
+                numpy.array(orig_problem['test_xs'],dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
-            child_summaries = rf.infer(run_spec, problem)
+            child_summaries = rf.infer(run_spec, sub_problem)
             for child_iter_num,child_summary in enumerate(child_summaries):
                 pickle_str = os.path.join(
                     settings.data_dir,
@@ -130,7 +135,7 @@ class MRSeedInferer(MRJob):
                     )
                 rf.pickle(child_summary, pickle_str)
         else:
-            child_summaries = rf.infer(run_spec, problem)
+            child_summaries = rf.infer(run_spec, sub_problem)
         #
         last_valid_zs = child_summaries[-1]['last_valid_zs']
         new_iter_num = iter_num + 1
