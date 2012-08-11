@@ -99,6 +99,7 @@ problem = {
 rf.pickle(problem, full_problem_file)
 print datetime.datetime.now()
 print 'Done pickling problem'
+s3.local_dir = pkl_dir
 s3.put_s3(problem_file)
 print datetime.datetime.now()
 print 'Done pushing problem up to s3'
