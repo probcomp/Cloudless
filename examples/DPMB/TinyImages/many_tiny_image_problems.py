@@ -21,6 +21,8 @@ reload(bpr)
 # set some read args
 num_pieces = 4
 num_pca_train_pieces = 1
+num_pieces_list = [8,16,32]
+max_num_pieces = max(num_pieces_list)
 
 # set some parameters
 images_per_piece = 10000
@@ -39,21 +41,6 @@ full_problem_file = os.path.join(pkl_dir, problem_file)
 #
 data_piece_filter = lambda x : x.find('_data')!=-1
 
-# make sure data files are in place
-if not os.path.isdir(local_dir): os.makedirs(local_dir)
-s3 = s3_helper.S3_helper(
-    bucket_str=settings.bucket_str, bucket_dir=bucket_dir, local_dir=local_dir)
-#
-all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
-# all_files = sorted([key.name for key in s3.bucket.list(prefix=s3.bucket_dir)])
-data_files = filter(data_piece_filter, all_files)
-data_files = [os.path.split(data_file)[-1] for data_file in data_files]
-#
-for data_file in data_files[:num_pieces]:
-    s3.verify_file(data_file)
-print datetime.datetime.now()
-print 'Done copying down files'
-
 # pull down base problem file
 s3.local_dir=pkl_dir
 if not s3.is_local(problem_file):
@@ -64,9 +51,22 @@ medians = base_problem['medians']
 print datetime.datetime.now()
 print 'Done unpickling base problem'
 
+# make sure data files are in place
+if not os.path.isdir(local_dir): os.makedirs(local_dir)
+s3 = s3_helper.S3_helper(
+    bucket_str=settings.bucket_str, bucket_dir=bucket_dir, local_dir=local_dir)
+#
+all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
+# all_files = sorted([key.name for key in s3.bucket.list(prefix=s3.bucket_dir)])
+data_files = filter(data_piece_filter, all_files)
+data_files = [os.path.split(data_file)[-1] for data_file in data_files]
+#
+for data_file in data_files[:max_num_pieces]:
+    s3.verify_file(data_file)
+print datetime.datetime.now()
+print 'Done copying down files'
+
 # read in all the data
-num_pieces_list = [8,16,32]
-max_num_pieces = max(num_pieces_list)
 image_data = numpy.ndarray(
     (max_num_pieces*images_per_piece,pixels_per_image)
     ,dtype=numpy.int32
