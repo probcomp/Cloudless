@@ -110,7 +110,7 @@ for num_pieces in num_pieces_list:
 
     rf.pickle(problem, full_problem_file)
     print datetime.datetime.now()
-    print 'Done pickling problem'
+    print 'Done pickling problem: ' + problem_file
     s3.local_dir = pkl_dir
     s3.put_s3(problem_file)
     print datetime.datetime.now()
