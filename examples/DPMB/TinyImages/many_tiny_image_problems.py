@@ -41,16 +41,6 @@ full_problem_file = os.path.join(pkl_dir, problem_file)
 #
 data_piece_filter = lambda x : x.find('_data')!=-1
 
-# pull down base problem file
-s3.local_dir=pkl_dir
-if not s3.is_local(problem_file):
-    s3.get_s3(problem_file)
-base_problem = rf.unpickle(full_problem_file)
-pca_components = base_problem['pca_components']
-medians = base_problem['medians']
-print datetime.datetime.now()
-print 'Done unpickling base problem'
-
 # make sure data files are in place
 if not os.path.isdir(local_dir): os.makedirs(local_dir)
 s3 = s3_helper.S3_helper(
@@ -65,6 +55,16 @@ for data_file in data_files[:max_num_pieces]:
     s3.verify_file(data_file)
 print datetime.datetime.now()
 print 'Done copying down files'
+
+# pull down base problem file
+s3.local_dir=pkl_dir
+if not s3.is_local(problem_file):
+    s3.get_s3(problem_file)
+base_problem = rf.unpickle(full_problem_file)
+pca_components = base_problem['pca_components']
+medians = base_problem['medians']
+print datetime.datetime.now()
+print 'Done unpickling base problem'
 
 # read in all the data
 image_data = numpy.ndarray(
