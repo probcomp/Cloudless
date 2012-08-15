@@ -78,6 +78,8 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file(self.num_nodes, run_key, str(-1))
         pickle_full_file = os.path.join(settings.data_dir,pickle_file)
+        import pdb # FIXME : REMOVE
+        pdb.set_trace() # FIXME : REMOVE
         rf.pickle(summary, pickle_full_file)
         # pull out the values to pass on
         last_valid_zs = summary['last_valid_zs']
