@@ -552,7 +552,9 @@ def pickle(var,file_str):
 def unpickle(file_str):
     from numpy import array
     if file_str[-3:] == ".gz":
-        my_open = gzip.open
+        # my_open = gzip.open
+        my_open = lambda filename : \
+            (lambda mode : os.popen('gunzip -c ' + filename,mode))
     else:
         my_open = open
     with my_open(file_str,"rb") as fh:
