@@ -1,6 +1,7 @@
 #!python
 import datetime
 import os
+import hashlib
 #
 import numpy
 from mrjob.job import MRJob
@@ -70,7 +71,7 @@ class MRSeedInferer(MRJob):
         infer_problem_delta_t = hf.delta_since(infer_problem_start)
         # pickle up summary
         summary = summaries[-1]
-        summary['problem'] = problem
+        summary['problem_hexdigest'] = hashlib.sha224(str(problem)).hexdigest()
         summary['timing'] = {'start_time':datetime.datetime.now(),
                              'gen_problem_delta_t':gen_problem_delta_t,
                              'infer_problem_delta_t':infer_problem_delta_t}
@@ -78,8 +79,6 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file(self.num_nodes, run_key, str(-1))
         pickle_full_file = os.path.join(settings.data_dir,pickle_file)
-        import pdb # FIXME : REMOVE
-        pdb.set_trace() # FIXME : REMOVE
         rf.pickle(summary, pickle_full_file)
         # pull out the values to pass on
         last_valid_zs = summary['last_valid_zs']
