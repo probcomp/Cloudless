@@ -65,12 +65,15 @@ class MRSeedInferer(MRJob):
         gen_problem_start = datetime.datetime.now()
         problem = rf.gen_problem(run_spec['dataset_spec'])
         gen_problem_delta_t = hf.delta_since(gen_problem_start)
+        infer_problem_start = datetime.datetime.now()
         summaries = rf.infer(run_spec, problem)
+        infer_problem_delta_t = hf.delta_since(infer_problem_start)
         # pickle up summary
         summary = summaries[-1]
         summary['problem'] = problem
         summary['timing'] = {'start_time':datetime.datetime.now(),
-                             'gen_problem_delta_t':gen_problem_delta_t}
+                             'gen_problem_delta_t':gen_problem_delta_t,
+                             'infer_problem_delta_t':infer_problem_delta_t}
         iter_num = 0
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file(self.num_nodes, run_key, str(-1))
