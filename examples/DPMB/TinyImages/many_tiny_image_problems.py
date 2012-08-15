@@ -21,6 +21,8 @@ reload(bpr)
 # set some read args
 num_pieces = 4
 num_pca_train_pieces = 1
+num_pieces_list = [8,16,32]
+max_num_pieces = max(num_pieces_list)
 
 # set some parameters
 images_per_piece = 10000
@@ -49,7 +51,7 @@ all_files = [key.name for key in s3.bucket.list(prefix=s3.bucket_dir)]
 data_files = filter(data_piece_filter, all_files)
 data_files = [os.path.split(data_file)[-1] for data_file in data_files]
 #
-for data_file in data_files[:num_pieces]:
+for data_file in data_files[:max_num_pieces]:
     s3.verify_file(data_file)
 print datetime.datetime.now()
 print 'Done copying down files'
@@ -65,8 +67,6 @@ print datetime.datetime.now()
 print 'Done unpickling base problem'
 
 # read in all the data
-num_pieces_list = [8,16,32]
-max_num_pieces = max(num_pieces_list)
 image_data = numpy.ndarray(
     (max_num_pieces*images_per_piece,pixels_per_image)
     ,dtype=numpy.int32
@@ -110,7 +110,7 @@ for num_pieces in num_pieces_list:
 
     rf.pickle(problem, full_problem_file)
     print datetime.datetime.now()
-    print 'Done pickling problem'
+    print 'Done pickling problem: ' + problem_file
     s3.local_dir = pkl_dir
     s3.put_s3(problem_file)
     print datetime.datetime.now()
