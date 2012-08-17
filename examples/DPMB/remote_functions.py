@@ -77,7 +77,7 @@ def run_spec_from_model_specs(model_specs,seed_inferer):
     gen_alpha_beta = 3.0
     #
     (x_indices, zs, gen_seed, inf_seed, master_alpha, betas,
-     master_inf_seed, iter_num) = model_specs
+     master_inf_seed, iter_num, child_counter) = model_specs
     # gen dataset_spec
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
