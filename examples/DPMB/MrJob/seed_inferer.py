@@ -91,25 +91,29 @@ class MRSeedInferer(MRJob):
 
     def distribute_data(self, run_key, yielded_tuple):
         print 'distribute data'
+        child_counter = 0
         (init_z, master_alpha, betas, master_inf_seed, iter_num) = yielded_tuple
+        # does distribute_data permute random_state?
         node_data_indices, node_zs, child_gen_seed_list, \
             child_inf_seed_list, master_inf_seed = \
             rf.distribute_data(inf_seed=master_inf_seed,
                                num_nodes=self.num_nodes,
                                init_z=init_z)
-        # does distribute_data permute random_state?
         for x_indices, zs, child_gen_seed, child_inf_seed in zip(
             node_data_indices, node_zs, child_gen_seed_list, child_inf_seed_list):
             if len(zs) == 0:
                 continue
             yielded_tuple = (x_indices, zs, child_gen_seed, child_inf_seed,
-                             master_alpha, betas, master_inf_seed, iter_num)
+                             master_alpha, betas, master_inf_seed, iter_num,
+                             child_counter)
+            child_counter += 1
             yield run_key, yielded_tuple
 
     def infer(self, run_key, model_specs):
         print 'infer'
         x_indices, zs, child_gen_seed, child_inf_seed, \
-                   master_alpha, betas, master_inf_seed, iter_num = model_specs
+                   master_alpha, betas, master_inf_seed, iter_num, child_counter \
+                   = model_specs
         run_spec = rf.run_spec_from_model_specs(model_specs, self)
         # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
         orig_problem = rf.unpickle(os.path.join(settings.data_dir, problem_file))
@@ -133,7 +137,8 @@ class MRSeedInferer(MRJob):
                 pickle_str = os.path.join(
                     settings.data_dir,
                     create_pickle_file(
-                        self.num_nodes, run_key+'_children', child_iter_num)
+                        self.num_nodes, run_key+'_child'+str(child_counter),
+                        child_iter_num)
                     )
                 rf.pickle(child_summary, pickle_str)
         else:
