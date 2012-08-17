@@ -23,6 +23,7 @@ class CloudlessSetup(ClusterSetup):
 
           for node in nodes:
                log.info("Installing Cloudless on %s" % node.alias)
+               #
                node.ssh.execute('git clone ' + git_repo)
                node.ssh.execute('rm -rf ' + cloudless_dir)
                node.ssh.execute(
@@ -30,6 +31,10 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute(
                     'cd ' + cloudless_dir + ' && git checkout mrjobify')
+               # start swap creation ASAP
+               node.ssh.execute_async(
+                    'bash ' + os.path.join(cloudless_dir,'make_swap.sh'))
+               #
                node.ssh.execute(
                     'python -c \'import Cloudless.examples.DPMB.settings\'')
                node.ssh.execute('python -c \'import matplotlib\'')
@@ -37,9 +42,6 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('easy_install scikits.learn')
                node.ssh.execute('mkdir /mnt/TinyImages')
                node.ssh.execute('chown sgeadmin /mnt/TinyImages')
-               #
-               node.ssh.execute(
-                    'bash ' + os.path.join(cloudless_dir,'make_swap.sh'))
                #
                remote_home_dir = '/home/sgeadmin/'
                node.ssh.put(settings.ec2_credentials_file,remote_home_dir)
