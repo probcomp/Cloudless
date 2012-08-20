@@ -39,7 +39,7 @@ def get_summaries_dict(summary_names,data_dir):
     return summaries_dict
 
 def process_timing(summaries):
-    delta_ts = []
+    delta_ts = [0]
     if 'run_sum' in summaries[0]['timing']:
         for summary in summaries[1:]:
             delta_ts.append('%.2f' % summary['timing']['run_sum'])
