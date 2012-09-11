@@ -11,7 +11,7 @@ if os.sys.platform in {'cygwin':None,"win32":None}:
     is_windows = True
 else:
     root_dir = os.path.join(os.path.sep,"usr","local")
-    is_window = False
+    is_windows = False
 base_dir = os.path.join(root_dir,"Cloudless","examples","DPMB")
 #
 if not os.path.isdir(base_dir): # assume AWS
