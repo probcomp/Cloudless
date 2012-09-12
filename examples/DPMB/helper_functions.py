@@ -2,14 +2,15 @@ import datetime
 import os
 import sys
 import pdb
-##
+from timeit import default_timer
+#
 import pylab
 import matplotlib
 import pandas
 import numpy as np
 import scipy.special as ss
 from numpy.random import RandomState
-##
+#
 import DPMB_State as ds
 # reload(ds) # reloading this causes an import loop of some sort
 import pyx_functions as pf
@@ -361,3 +362,17 @@ def gen_contingency_data(group_idx_list_1,group_idx_list_2):
     Bs = Ns.sum(axis=0)
     return Ns,As,Bs
 
+class Timer(object):
+    def __init__(self, task='action', verbose=False):
+        self.task = task
+        self.verbose = verbose
+        self.timer = default_timer
+    def __enter__(self):
+        self.start = self.timer()
+        return self
+    def __exit__(self, *args):
+        end = self.timer()
+        self.elapsed_secs = end - self.start
+        self.elapsed = self.elapsed_secs * 1000 # millisecs
+        if self.verbose:
+            print '%s took:\t% 7d ms' % (self.task, self.elapsed)
