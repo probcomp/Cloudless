@@ -55,7 +55,7 @@ def calculate_cluster_conditional(state,vector,randv):
     ##vector should be unassigned
 
     cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
-    cdef np.ndarray[np.int_t,ndim=1] data = vector.data
+    cdef np.ndarray[np.int_t,ndim=1] data = np.array(vector.data,dtype=int)
     cdef int num_clusters = len(state.cluster_list)
     cdef int num_cols = len(betas)
     cdef int state_num_vectors = len(state.get_all_vectors())
@@ -118,7 +118,7 @@ def cluster_vector_joint(vector,cluster,state):
         return alpha_term+data_term,alpha_term,data_term
 
     cdef np.ndarray[np.float64_t,ndim=1] betas = state.betas
-    cdef np.ndarray[np.int_t,ndim=1] data = vector.data
+    cdef np.ndarray[np.int_t,ndim=1] data = np.array(vector.data, dtype=int)
     cdef np.ndarray[np.float64_t,ndim=1] column_sums = cluster.column_sums
     #
     alpha_term = log(cluster_num_vectors) - log(state_num_vectors-1+alpha)
