@@ -1009,14 +1009,13 @@ class Bunch:
         self.__dict__.update(kwds)
 
 def distribute_data(inf_seed,num_nodes,init_z):
-
     random_state = hf.generate_random_state(inf_seed)
     mus = np.repeat(1.0/num_nodes,num_nodes)
 
     # group x_indices
     # zs must be canonicalized!!!
     cluster_data_indices = {}
-    for x_index,z in zip(xrange(len(init_z)),init_z):
+    for x_index,z in enumerate(init_z):
         cluster_data_indices.setdefault(z,[]).append(x_index)
 
     # deal out data to states
@@ -1024,18 +1023,18 @@ def distribute_data(inf_seed,num_nodes,init_z):
     node_zs = [[] for node_idx in xrange(num_nodes)]
     num_clusters = len(cluster_data_indices)
     # determine node choices in bulk
-    bulk_counts = np.random.multinomial(num_clusters,mus)
+    bulk_counts = random_state.multinomial(num_clusters,mus)
     node_choices = []
     for cluster_idx,cluster_count in enumerate(bulk_counts):
         node_choices.extend(np.repeat(cluster_idx,cluster_count))
-    node_choices = np.random.permutation(node_choices)
+    node_choices = random_state.permutation(node_choices)
     #
-    for cluster_idx,draw in zip(xrange(num_clusters),node_choices):
+    for cluster_idx,dest_node in enumerate(node_choices):
         vector_index_list = cluster_data_indices[cluster_idx]
-        node_data_indices[draw].extend(vector_index_list)
-        new_zs_value = node_zs[draw][-1] + 1 \
-            if len(node_zs[draw]) > 0 else 0
-        node_zs[draw].extend(np.repeat(new_zs_value,len(vector_index_list)))
+        node_data_indices[dest_node].extend(vector_index_list)
+        new_zs_value = node_zs[dest_node][-1] + 1 \
+            if len(node_zs[dest_node]) > 0 else 0
+        node_zs[dest_node].extend(np.repeat(new_zs_value,len(vector_index_list)))
 
     gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
     inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
