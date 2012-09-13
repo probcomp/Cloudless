@@ -23,7 +23,8 @@ data_dir = settings.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_10000_nPcaTrain_10000.pkl.gz'
-resume_file = 'summary_numnodes2_seed1_iternum-1.pkl.gz'
+# resume_file = 'summary_numnodes2_seed1_iternum-1.pkl.gz'
+resume_file = None
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -94,16 +95,17 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
-        yielded_tuple = [last_valid_zs, master_alpha, betas,
-                         master_inf_seed, iter_num]
-        yield run_key, yielded_tuple
+        master_state_tuple = (last_valid_zs, master_alpha, betas,
+                         master_inf_seed, iter_num)
+        yield run_key, master_state_tuple
 
-    def distribute_data(self, run_key, yielded_tuple):
+    def distribute_data(self, run_key, master_state_tuple):
         print 'distribute data'
         child_counter = 0
         num_nodes = self.num_nodes
         #
-        (init_z, master_alpha, betas, master_inf_seed, iter_num) = yielded_tuple
+        (init_z, master_alpha, betas, master_inf_seed, iter_num) = \
+            master_state_tuple
         node_data_indices, node_zs, child_gen_seed_list, \
             child_inf_seed_list, master_inf_seed = \
             rf.distribute_data(inf_seed=master_inf_seed,
@@ -115,11 +117,11 @@ class MRSeedInferer(MRJob):
 
             if len(zs) == 0:
                 continue
-            yielded_tuple = (x_indices, zs, child_gen_seed, child_inf_seed,
+            child_state_tuple = (x_indices, zs, child_gen_seed, child_inf_seed,
                              master_alpha, betas, master_inf_seed, iter_num,
                              child_counter)
             child_counter += 1
-            yield run_key, yielded_tuple
+            yield run_key, child_state_tuple
 
     def infer(self, run_key, model_specs):
         print 'infer'
@@ -160,12 +162,12 @@ class MRSeedInferer(MRJob):
         new_iter_num = iter_num + 1
         # FIXME : to robustify, should be checking for failure conditions
         # FIXME : here is where you pass timing if desired
-        yielded_tuple = (last_valid_zs, x_indices,
+        infer_output_tuple = (last_valid_zs, x_indices,
                          master_alpha, betas,
                          master_inf_seed, new_iter_num)
-        yield run_key, yielded_tuple
+        yield run_key, infer_output_tuple
 
-    def consolidate_data(self, run_key, yielded_val_generator):
+    def consolidate_data(self, run_key, child_infer_output_generator):
         print 'consolidate data'
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
@@ -174,10 +176,12 @@ class MRSeedInferer(MRJob):
         #
         for (child_zs, child_x_indices, master_alpha, betas,
              master_inf_seed, iter_num) in \
-                yielded_val_generator:
-            zs_list.append(child_zs)
-            x_indices_list.append(child_x_indices)
-            # master_alpha, betas, master_inf_seed fall through
+             child_infer_output_generator:
+
+             zs_list.append(child_zs)
+             x_indices_list.append(child_x_indices)
+             # master_alpha, betas, master_inf_seed fall through
+
         jumbled_zs = rf.consolidate_zs(zs_list)
         x_indices = [y for x in x_indices_list for y in x]
         zs = [
@@ -232,9 +236,9 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
-        yielded_tuple = [last_valid_zs, master_alpha, betas,
+        master_state_tuple = [last_valid_zs, master_alpha, betas,
                          master_inf_seed, iter_num]
-        yield run_key, yielded_tuple
+        yield run_key, master_state_tuple
 
     def steps(self):
         step_list = [self.mr(self.init)]
