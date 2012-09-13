@@ -32,6 +32,7 @@ create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
         'seed' + seed_str,
         'iternum' + str(iter_num) + '.pkl.gz'
         ])
+get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
 
 class MRSeedInferer(MRJob):
 
@@ -78,13 +79,13 @@ class MRSeedInferer(MRJob):
                 summaries = rf.infer(run_spec, problem)
         # pickle up summary
         summary = summaries[-1]
-        summary['problem_hexdigest'] = hashlib.sha224(str(problem)).hexdigest()
+        summary['problem_hexdigest'] = get_hexdigest(problem)
         summary['timing'] = {
             'start_time':start_dt,
             'gen_problem_delta_t':gen_problem_timer.elapsed_secs,
             'infer_problem_delta_t':infer_timer.elapsed_secs,
             }
-        iter_num = 0
+        iter_num = summary.get('iter_num', 0)
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
@@ -107,7 +108,7 @@ class MRSeedInferer(MRJob):
             child_inf_seed_list, master_inf_seed = \
             rf.distribute_data(inf_seed=master_inf_seed,
                                num_nodes=num_nodes,
-                               init_z=init_z)
+                               zs=init_z)
         for x_indices, zs, child_gen_seed, child_inf_seed in zip(
             node_data_indices, node_zs, child_gen_seed_list,
             child_inf_seed_list):
@@ -148,7 +149,7 @@ class MRSeedInferer(MRJob):
                 numpy.array(orig_problem['test_xs'],dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
-            child_summaries = rf.infer(run_spec, sub_problem)
+            child_summaries = rf.infer(run_spec, sub_problem, send_zs=True)
             for child_iter_num,child_summary in enumerate(child_summaries):
                 pkl_file = get_child_pkl_file(child_iter_num)
                 rf.pickle(child_summary, pkl_file, dir=data_dir)
@@ -218,6 +219,7 @@ class MRSeedInferer(MRJob):
             'consolidate_delta':consolidate_delta,
             'score_delta':score_delta_timer.elapsed_secs,
             }
+        summary['iter_num'] = iter_num
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
