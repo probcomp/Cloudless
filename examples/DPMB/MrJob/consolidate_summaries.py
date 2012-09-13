@@ -92,9 +92,9 @@ def main():
     summaries_dict = {}
     for data_dir in data_dirs:
         summary_names = get_summary_names(data_dir)
-        temp_summaries_dict = get_summaries_dict(summary_names,data_dir)
-        print_info(summaries_dict)
-        summaries_dict.update(temp_summaries_dict)
+        working_summaries_dict = get_summaries_dict(summary_names,data_dir)
+        print_info(working_summaries_dict)
+        summaries_dict.update(working_summaries_dict)
 
     # create test_lls plot
     pylab.figure()
