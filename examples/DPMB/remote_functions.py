@@ -326,7 +326,7 @@ def plot_helper(name, state):
     state.plot(show=False,save_str = name + "-" + "%3d" % count + ".png")
     counts[state] += 1
 
-def infer(run_spec,problem=None):
+def infer(run_spec, problem=None, send_zs=False):
     dataset_spec = run_spec["dataset_spec"]
     if problem is None:
         problem = gen_problem(dataset_spec)
@@ -403,7 +403,9 @@ def infer(run_spec,problem=None):
         next_summary = transitioner.extract_state_summary(
             # true_zs=problem["zs"],
             verbose_state=verbose_state,
-            test_xs=problem["test_xs"])
+            test_xs=problem["test_xs"],
+            send_zs=send_zs,
+            )
         time_elapsed_str = "%.1f" % next_summary["timing"].get("run_sum",0)
         hf.printTS("time elapsed: " + time_elapsed_str)
         if type(transition_return) == dict:
@@ -1012,14 +1014,14 @@ class Bunch:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
-def distribute_data(inf_seed,num_nodes,init_z):
+def distribute_data(inf_seed, num_nodes, zs):
     random_state = hf.generate_random_state(inf_seed)
-    mus = np.repeat(1.0/num_nodes,num_nodes)
+    mus = np.repeat(1.0/num_nodes, num_nodes)
 
     # group x_indices
     # zs must be canonicalized!!!
     cluster_data_indices = {}
-    for x_index,z in enumerate(init_z):
+    for x_index, z in enumerate(zs):
         cluster_data_indices.setdefault(z,[]).append(x_index)
 
     # deal out data to states
@@ -1039,11 +1041,10 @@ def distribute_data(inf_seed,num_nodes,init_z):
         new_zs_value = node_zs[dest_node][-1] + 1 \
             if len(node_zs[dest_node]) > 0 else 0
         node_zs[dest_node].extend(np.repeat(new_zs_value,len(vector_index_list)))
-
     gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
     inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
 
-    return node_data_indices,node_zs,gen_seed_list,inf_seed_list,random_state
+    return node_data_indices, node_zs, gen_seed_list, inf_seed_list, random_state
 
 def consolidate_zs(zs_list):
     single_state = None
