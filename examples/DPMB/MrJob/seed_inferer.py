@@ -19,11 +19,11 @@ import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
 
+data_dir = settings.data_dir
+#
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_10000_nPcaTrain_10000.pkl.gz'
-problem_full_file = os.path.join(settings.data_dir, problem_file)
 resume_file = 'summary_numnodes2_seed1_iternum-1.pkl.gz'
-resume_full_file = os.path.join(settings.data_dir, resume_file)
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -72,8 +72,8 @@ class MRSeedInferer(MRJob):
         with hf.Timer('gen_problem') as gen_problem_timer:
             problem = rf.gen_problem(run_spec['dataset_spec'])
         with hf.Timer('init/resume') as infer_timer:
-            if resume_full_file:
-                summaries = [rf.unpickle(resume_full_file)]
+            if resume_file:
+                summaries = [rf.unpickle(resume_file, dir=data_dir)]
             else:
                 summaries = rf.infer(run_spec, problem)
         # pickle up summary
@@ -87,8 +87,7 @@ class MRSeedInferer(MRJob):
         iter_num = 0
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
-        pickle_full_file = os.path.join(settings.data_dir,pickle_file)
-        rf.pickle(summary, pickle_full_file)
+        rf.pickle(summary, pickle_file, dir=data_dir)
         # pull out the values to pass on
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
@@ -131,7 +130,7 @@ class MRSeedInferer(MRJob):
                    = model_specs
         run_spec = rf.run_spec_from_model_specs(model_specs, self)
         # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
-        orig_problem = rf.unpickle(problem_full_file)
+        orig_problem = rf.unpickle(problem_file, dir=data_dir)
         problem_xs = numpy.array(orig_problem['xs'],dtype=numpy.int32)
         init_x = [
             orig_problem['xs'][x_index]
@@ -152,8 +151,7 @@ class MRSeedInferer(MRJob):
             child_summaries = rf.infer(run_spec, sub_problem)
             for child_iter_num,child_summary in enumerate(child_summaries):
                 pkl_file = get_child_pkl_file(child_iter_num)
-                pkl_full_file = os.path.join(settings.data_dir, pkl_file)
-                rf.pickle(child_summary, pkl_full_file)
+                rf.pickle(child_summary, pkl_file, dir=data_dir)
         else:
             child_summaries = rf.infer(run_spec, sub_problem)
         #
@@ -186,7 +184,7 @@ class MRSeedInferer(MRJob):
             for reorder_index in numpy.argsort(x_indices)
             ]
         #
-        problem = rf.unpickle(problem_full_file)
+        problem = rf.unpickle(problem_file, dir=data_dir)
         init_x = numpy.array(problem['xs'],dtype=numpy.int32)
         true_zs, cluster_idx = None, None
         if 'zs' in  problem:
@@ -222,8 +220,7 @@ class MRSeedInferer(MRJob):
             }
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
-        pkl_full_file = os.path.join(settings.data_dir, pkl_file)
-        rf.pickle(summary, pkl_full_file)
+        rf.pickle(summary, pkl_file, dir=data_dir)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']

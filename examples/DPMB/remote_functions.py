@@ -541,24 +541,28 @@ def extract_dataset_specs_from_memo(asyncmemo):
                          for spec_str in list(sets.Set(ALL_DATASET_SPEC_STRS))]
     return ALL_DATASET_SPECS
 
-def pickle(var,file_str):
+def get_open(file_str):
     if file_str[-3:] == ".gz":
         my_open = gzip.open
     else:
         my_open = open
-    with my_open(file_str,"wb") as fh:
-        cPickle.dump(var,fh)
+    return my_open
 
-def unpickle(file_str):
+def pickle(var_to_pkl, file_str, dir=None):
+    my_open = get_open(file_str)
+    if dir:
+        file_str = os.path.join(dir, file_str)
+    with my_open(file_str, 'wb') as fh:
+        cPickle.dump(var_to_pkl, fh)
+
+def unpickle(file_str, dir=None):
     from numpy import array
-    if file_str[-3:] == ".gz":
-        my_open = gzip.open
-        # my_open = lambda filename, mode : os.popen('gunzip -c ' + filename,mode)
-    else:
-        my_open = open
-    with my_open(file_str,"rb") as fh:
-        var = cPickle.load(fh)
-    return var
+    my_open = get_open(file_str)
+    if dir:
+        file_str = os.path.join(dir, file_str)
+    with my_open(file_str, 'rb') as fh:
+        var_from_pkl = cPickle.load(fh)
+    return var_from_pkl
 
 def pickle_asyncmemoize(asyncmemo,file_str):
     pickle(asyncmemo.memo,file_str)
