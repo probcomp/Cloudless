@@ -121,6 +121,8 @@ def main():
     pylab.xlabel('time (seconds)')
     pylab.ylabel('model score')
     pylab.savefig('scores')
+    
+    return summaries_dict
 
 if __name__ == '__main__':
-    main()
+    summaries_dict = main()
