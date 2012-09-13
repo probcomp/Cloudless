@@ -190,6 +190,10 @@ class MRSeedInferer(MRJob):
         true_zs, cluster_idx = None, None
         if 'zs' in  problem:
             true_zs, cluster_idx = hf.canonicalize_list(problem['zs'])
+
+        # FIXME: is this (NEW) canonicaliziation necessary?
+        zs, cluster_idx = hf.canonicalize_list(zs) # FIXME
+
         test_xs = numpy.array(problem['test_xs'],dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
             gen_seed=0, # FIXME : generate random variate from master_inf_seed?
