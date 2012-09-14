@@ -2,6 +2,7 @@
 import datetime
 import os
 import hashlib
+from collections import namedtuple
 #
 import numpy
 from mrjob.job import MRJob
@@ -33,6 +34,16 @@ create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
         'iternum' + str(iter_num) + '.pkl.gz'
         ])
 get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
+master_state_tuple = namedtuple(
+    'master_state_tuple',
+    'last_valid_zs master_alpha betas master_inf_seed iter_num '
+    )
+child_state_tuple = namedtuple(
+    'child_state_tuple',
+    ' x_indices zs '
+    ' master_alpha betas master_inf_seed iter_num '
+    ' child_inf_seed child_gen_seed child_counter '
+    )
 
 class MRSeedInferer(MRJob):
 
@@ -95,17 +106,22 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
-        master_state_tuple = (last_valid_zs, master_alpha, betas,
-                         master_inf_seed, iter_num)
-        yield run_key, master_state_tuple
+        master_state = master_state_tuple(
+            last_valid_zs, master_alpha, betas,
+            master_inf_seed=master_inf_seed, iter_num=iter_num)
+        yield run_key, master_state
 
-    def distribute_data(self, run_key, master_state_tuple):
+    def distribute_data(self, run_key, master_state):
         print 'distribute data'
         child_counter = 0
         num_nodes = self.num_nodes
         #
-        (init_z, master_alpha, betas, master_inf_seed, iter_num) = \
-            master_state_tuple
+        init_z = master_state.last_valid_zs
+        master_alpha = master_state.master_alpha
+        betas = master_state.betas
+        master_inf_seed = master_state.master_inf_seed
+        iter_num = master_state.iter_num
+        #
         node_data_indices, node_zs, child_gen_seed_list, \
             child_inf_seed_list, master_inf_seed = \
             rf.distribute_data(inf_seed=master_inf_seed,
@@ -117,21 +133,29 @@ class MRSeedInferer(MRJob):
 
             if len(zs) == 0:
                 continue
-            child_state_tuple = (x_indices, zs, child_gen_seed, child_inf_seed,
-                             master_alpha, betas, master_inf_seed, iter_num,
-                             child_counter)
+            child_state = child_state_tuple(
+                x_indices, zs, 
+                master_alpha, betas, master_inf_seed, iter_num,
+                child_inf_seed, child_gen_seed, child_counter)
             child_counter += 1
-            yield run_key, child_state_tuple
+            yield run_key, child_state
 
-    def infer(self, run_key, model_specs):
+    def infer(self, run_key, child_state_in):
         print 'infer'
         num_nodes = self.num_nodes
         #
-        x_indices, zs, child_gen_seed, child_inf_seed, \
-                   master_alpha, betas, master_inf_seed, \
-                   iter_num, child_counter \
-                   = model_specs
-        run_spec = rf.run_spec_from_model_specs(model_specs, self)
+        x_indices = child_state_in.x_indices
+        zs = child_state_in.zs
+        master_alpha = child_state_in.master_alpha
+        betas = child_state_in.betas
+        master_inf_seed = child_state_in.master_inf_seed
+        iter_num = child_state_in.iter_num
+        child_inf_seed = child_state_in.child_inf_seed
+        child_gen_seed = child_state_in.child_gen_seed
+        child_counter = child_state_in.child_counter
+        #
+        run_spec = rf.run_spec_from_child_state_tuple(
+            child_state_in, self.num_iters_per_step, self.num_nodes)
         # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
         orig_problem = rf.unpickle(problem_file, dir=data_dir)
         problem_xs = numpy.array(orig_problem['xs'],dtype=numpy.int32)
@@ -162,10 +186,12 @@ class MRSeedInferer(MRJob):
         new_iter_num = iter_num + 1
         # FIXME : to robustify, should be checking for failure conditions
         # FIXME : here is where you pass timing if desired
-        infer_output_tuple = (last_valid_zs, x_indices,
-                         master_alpha, betas,
-                         master_inf_seed, new_iter_num)
-        yield run_key, infer_output_tuple
+        child_state_out = child_state_tuple(
+            x_indices, last_valid_zs,
+            master_alpha, betas, master_inf_seed, new_iter_num,
+            None, None, None
+            )
+        yield run_key, child_state_out
 
     def consolidate_data(self, run_key, child_infer_output_generator):
         print 'consolidate data'
@@ -174,13 +200,14 @@ class MRSeedInferer(MRJob):
         zs_list = []
         x_indices_list = []
         #
-        for (child_zs, child_x_indices, master_alpha, betas,
-             master_inf_seed, iter_num) in \
-             child_infer_output_generator:
-
-             zs_list.append(child_zs)
-             x_indices_list.append(child_x_indices)
-             # master_alpha, betas, master_inf_seed fall through
+        for child_state_out in child_infer_output_generator:
+             zs_list.append(child_state_out.zs)
+             x_indices_list.append(child_state_out.x_indices)
+        # all master_alpha, betas, master_inf_seed fall are the same
+        master_alpha = child_state_out.master_alpha
+        betas = child_state_out.betas
+        master_inf_seed = child_state_out.master_inf_seed
+        iter_num = child_state_out.iter_num
 
         jumbled_zs = rf.consolidate_zs(zs_list)
         x_indices = [y for x in x_indices_list for y in x]
@@ -200,7 +227,7 @@ class MRSeedInferer(MRJob):
 
         test_xs = numpy.array(problem['test_xs'],dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
-            gen_seed=0, # FIXME : generate random variate from master_inf_seed?
+            gen_seed=0, # FIXME : random variate from master_inf_seed?
             num_cols=len(betas),
             num_rows=len(zs),
             init_alpha=master_alpha,
@@ -236,9 +263,10 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
-        master_state_tuple = [last_valid_zs, master_alpha, betas,
-                         master_inf_seed, iter_num]
-        yield run_key, master_state_tuple
+        master_state = master_state_tuple(
+            last_valid_zs, master_alpha, betas,
+            master_inf_seed=master_inf_seed, iter_num=iter_num)
+        yield run_key, master_state
 
     def steps(self):
         step_list = [self.mr(self.init)]

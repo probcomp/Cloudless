@@ -72,12 +72,16 @@ def modify_jobspec_to_results(jobspec,job_value):
     jobspec["infer_init_z"] = arr_copy(last_summary["last_valid_zs"])
     jobspec["decanon_indices"] = arr_copy(last_summary["decanon_indices"])
 
-def run_spec_from_model_specs(model_specs,seed_inferer):
+def run_spec_from_child_state_tuple(child_state, num_iters_per_step, num_nodes):
     num_cols = 256 # FIXME : hardcoded
     gen_alpha_beta = 3.0
     #
-    (x_indices, zs, gen_seed, inf_seed, master_alpha, betas,
-     master_inf_seed, iter_num, child_counter) = model_specs
+    x_indices = child_state.x_indices
+    zs = child_state.zs
+    master_alpha = child_state.master_alpha
+    betas = child_state.betas
+    inf_seed = child_state.child_inf_seed
+    gen_seed = child_state.child_gen_seed
     # gen dataset_spec
     dataset_spec = {}
     dataset_spec["gen_seed"] = 0
@@ -90,11 +94,11 @@ def run_spec_from_model_specs(model_specs,seed_inferer):
     # gen run_spec
     run_spec = {}
     run_spec["dataset_spec"] = dataset_spec
-    run_spec["num_iters"] = seed_inferer.num_iters_per_step
+    run_spec["num_iters"] = num_iters_per_step
     run_spec["num_nodes"] = 1
     run_spec["infer_seed"] = inf_seed
     # sub_alpha = alpha/num_nodes
-    run_spec["infer_init_alpha"] = master_alpha/seed_inferer.num_nodes
+    run_spec["infer_init_alpha"] = master_alpha / num_nodes
     run_spec["infer_init_betas"] = betas
     # no hypers in child state inference
     run_spec["infer_do_alpha_inference"] = False
