@@ -397,6 +397,7 @@ def infer(run_spec, problem=None, send_zs=False):
     print "saved initialization"
     #
     last_valid_zs = transitioner.state.getZIndices()
+    last_valid_list_of_x_indices = transitioner.state.get_list_of_x_indices()
     last_valid_seed = transitioner.random_state.get_state()
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
     for i in range(run_spec["num_iters"]):
@@ -422,9 +423,12 @@ def infer(run_spec, problem=None, send_zs=False):
         hf.printTS("finished saving iteration " + str(i))
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
+            last_valid_list_of_x_indices = \
+                transitioner.state.get_list_of_x_indices()
             last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
     summaries[-1]["last_valid_zs"] = last_valid_zs
+    summaries[-1]["last_valid_list_of_x_indices"] = last_valid_list_of_x_indices
     summaries[-1]["last_valid_seed"] = last_valid_seed
     summaries[-1]["decanon_indices"] = decanon_indices
     return summaries

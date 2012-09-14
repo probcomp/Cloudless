@@ -265,6 +265,15 @@ class DPMB_State():
             data.append(vec.data)
         return data
 
+    def get_list_of_x_indices(self):
+        list_of_x_indices = []
+        for vector_idx, vector in enumerate(self.vector_list):
+            vector.idx = vector_idx
+        for cluster_idx, cluster in enumerate(self.cluster_list):
+            x_indices = [vector.idx for vector in cluster.vector_list]
+            list_of_x_indices.append(x_indices)
+        return list_of_x_indices
+
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
         self.score += -scoreDelta

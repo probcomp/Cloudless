@@ -36,11 +36,12 @@ create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
 get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
 master_state_tuple = namedtuple(
     'master_state_tuple',
-    'last_valid_zs master_alpha betas master_inf_seed iter_num '
+    ' list_of_x_indices last_valid_zs '
+    ' master_alpha betas master_inf_seed iter_num '
     )
 child_state_tuple = namedtuple(
     'child_state_tuple',
-    ' x_indices zs '
+    'list_of_x_indices x_indices zs '
     ' master_alpha betas master_inf_seed iter_num '
     ' child_inf_seed child_gen_seed child_counter '
     )
@@ -103,11 +104,13 @@ class MRSeedInferer(MRJob):
         rf.pickle(summary, pickle_file, dir=data_dir)
         # pull out the values to pass on
         last_valid_zs = summary.get('last_valid_zs',summary.get('zs',None))
+        list_of_x_indices = \
+            summary.get('last_valid_list_of_x_indices', None)
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
         master_state = master_state_tuple(
-            last_valid_zs, master_alpha, betas,
+            list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
         yield run_key, master_state
 
@@ -134,7 +137,7 @@ class MRSeedInferer(MRJob):
             if len(zs) == 0:
                 continue
             child_state = child_state_tuple(
-                x_indices, zs, 
+                None, x_indices, zs, 
                 master_alpha, betas, master_inf_seed, iter_num,
                 child_inf_seed, child_gen_seed, child_counter)
             child_counter += 1
@@ -183,11 +186,12 @@ class MRSeedInferer(MRJob):
             child_summaries = rf.infer(run_spec, sub_problem)
         #
         last_valid_zs = child_summaries[-1]['last_valid_zs']
+        list_of_x_indices = child_summaries[-1]['last_valid_list_of_x_indices']
         new_iter_num = iter_num + 1
         # FIXME : to robustify, should be checking for failure conditions
         # FIXME : here is where you pass timing if desired
         child_state_out = child_state_tuple(
-            x_indices, last_valid_zs,
+            list_of_x_indices, x_indices, last_valid_zs,
             master_alpha, betas, master_inf_seed, new_iter_num,
             None, None, None
             )
@@ -199,10 +203,12 @@ class MRSeedInferer(MRJob):
         num_nodes = self.num_nodes
         zs_list = []
         x_indices_list = []
+        list_of_x_indices = []
         #
         for child_state_out in child_infer_output_generator:
              zs_list.append(child_state_out.zs)
              x_indices_list.append(child_state_out.x_indices)
+             list_of_x_indices.extend(child_state_out.list_of_x_indices)
         # all master_alpha, betas, master_inf_seed fall are the same
         master_alpha = child_state_out.master_alpha
         betas = child_state_out.betas
@@ -249,6 +255,7 @@ class MRSeedInferer(MRJob):
                 true_zs=true_zs,
                 test_xs=test_xs)
         summary['last_valid_zs'] = transitioner.state.getZIndices()
+        summary['list_of_x_indices'] = transitioner.state.get_list_of_x_indices()
         summary['timing'] = {
             'timestamp':datetime.datetime.now(),
             'consolidate_delta':consolidate_delta,
@@ -264,7 +271,7 @@ class MRSeedInferer(MRJob):
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
         master_state = master_state_tuple(
-            last_valid_zs, master_alpha, betas,
+            list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
         yield run_key, master_state
 
