@@ -81,21 +81,21 @@ class MRSeedInferer(MRJob):
             infer_seed=master_infer_seed,
             num_iters=0 # no inference, just init
            )
-        with hf.Timer('gen_problem') as gen_problem_timer:
-            # FIXME: should I pass permute=False here?
-            problem = rf.gen_problem(run_spec['dataset_spec'])
-        with hf.Timer('init/resume') as infer_timer:
+        problem_hexdigest = None
+        with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
                 summaries = [rf.unpickle(resume_file, dir=data_dir)]
             else:
+                # FIXME: should I pass permute=False here?
+                problem = rf.gen_problem(run_spec['dataset_spec'])
                 summaries = rf.infer(run_spec, problem)
+                problem_hexdigest = get_hexdigest(problem)
         # pickle up summary
         summary = summaries[-1]
-        summary['problem_hexdigest'] = get_hexdigest(problem)
+        summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'] = {
             'start_time':start_dt,
-            'gen_problem_delta_t':gen_problem_timer.elapsed_secs,
-            'infer_problem_delta_t':infer_timer.elapsed_secs,
+            'infer_problem_delta_t':init_resume_timer.elapsed_secs,
             }
         iter_num = summary.get('iter_num', 0)
         # FIXME : infer will pickle over this
