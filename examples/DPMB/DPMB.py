@@ -213,10 +213,10 @@ class DPMB():
             ,"inf_seed":self.random_state.get_state()
             }
 
+        ari = None
         if true_zs is not None:
-            state_dict["ari"] = hf.calc_ari(true_zs,self.state.getZIndices())
-        else:
-            state_dict["ari"] = None
+            ari = hf.calc_ari(true_zs,self.state.getZIndices())
+        state_dict['ari'] = ari
 
         if verbose_state or send_zs:
             state_dict["zs"] = self.state.getZIndices()
