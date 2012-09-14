@@ -258,13 +258,15 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     if "pkl_file" in dataset_spec:
         # make sure the file is local
         pkl_file = dataset_spec['pkl_file']
+        pkl_full_file = os.path.join(settings.data_dir,pkl_file)
         permute = False # presume data is already permuted
                         # repermuting now makes tracking ground truth hard
-        have_file = s3h.S3_helper().verify_file(pkl_file)
-        if not have_file:
-            raise Exception('gen_problem couldn\'t get pkl_file: ' + pkl_file)
-        full_pkl_file = os.path.join(settings.data_dir,dataset_spec['pkl_file'])
-        pkl_data = unpickle(full_pkl_file)
+        if not os.path.isfile(pkl_full_file):
+            have_file = s3h.S3_helper().verify_file(pkl_file)
+            if not have_file:
+                exception_str = 'gen_problem couldn\'t get pkl_file: ' + pkl_file
+                raise Exception(exception_str)
+        pkl_data = unpickle(pkl_full_file)
         # set problem variables
         xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
