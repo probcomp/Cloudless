@@ -23,7 +23,6 @@ data_dir = settings.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_10000_nPcaTrain_10000.pkl.gz'
-# resume_file = 'summary_numnodes2_seed1_iternum-1.pkl.gz'
 resume_file = None
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
@@ -72,6 +71,7 @@ class MRSeedInferer(MRJob):
             num_iters=0 # no inference, just init
            )
         with hf.Timer('gen_problem') as gen_problem_timer:
+            # FIXME: should I pass permute=False here?
             problem = rf.gen_problem(run_spec['dataset_spec'])
         with hf.Timer('init/resume') as infer_timer:
             if resume_file:
@@ -91,7 +91,7 @@ class MRSeedInferer(MRJob):
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
         # pull out the values to pass on
-        last_valid_zs = summary['last_valid_zs']
+        last_valid_zs = summary.get('last_valid_zs',summary.get('zs',None))
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
