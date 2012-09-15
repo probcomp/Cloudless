@@ -1040,6 +1040,8 @@ def gen_cluster_dest_nodes(inf_seed, num_nodes, num_clusters):
         cluster_dest_nodes.append(front)
         permuted_cluster_indices = back
     node_info_tuples = zip(cluster_dest_nodes, inf_seed_list, gen_seed_list)
+    is_nonempty_node = lambda x: len(x[0]) != 0
+    node_info_tuples = filter(is_nonempty_node, node_info_tuples)
     return node_info_tuples, random_state
 
 def list_of_x_indices_to_xs_and_zs(list_of_x_indices):

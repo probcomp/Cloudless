@@ -133,7 +133,6 @@ class MRSeedInferer(MRJob):
         # actually distribute
         for child_counter, node_info in enumerate(node_info_tuples):
             cluster_indices, child_inf_seed, child_gen_seed = node_info
-            if len(cluster_indices) == 0: continue # empty node
             child_list_of_x_indices = \
                 [list_of_x_indices[idx] for idx in cluster_indices]
             xs, zs = rf.list_of_x_indices_to_xs_and_zs(child_list_of_x_indices)
