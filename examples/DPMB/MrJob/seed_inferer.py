@@ -124,20 +124,25 @@ class MRSeedInferer(MRJob):
         betas = master_state.betas
         master_inf_seed = master_state.master_inf_seed
         iter_num = master_state.iter_num
+        list_of_x_indices = master_state.list_of_x_indices
         #
-        node_data_indices, node_zs, child_gen_seed_list, \
-            child_inf_seed_list, master_inf_seed = \
-            rf.distribute_data(inf_seed=master_inf_seed,
-                               num_nodes=num_nodes,
-                               zs=init_z)
-        for x_indices, zs, child_gen_seed, child_inf_seed in zip(
-            node_data_indices, node_zs, child_gen_seed_list,
-            child_inf_seed_list):
-
-            if len(zs) == 0:
-                continue
+        num_clusters = len(list_of_x_indices)
+        cluster_dest_nodes, random_state = rf.gen_cluster_dest_nodes(
+            master_inf_seed, num_nodes, num_clusters)
+        gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+        inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+        #
+        child_counter = 0
+        for cluster_indices, child_gen_seed, child_inf_seed in \
+                zip(cluster_dest_nodes, gen_seed_list, inf_seed_list):
+            if len(cluster_indices) == 0: continue # empty node
+            child_list_of_x_indices = \
+                [list_of_x_indices[idx] for idx in cluster_indices]
+            # a temporary step, remove when done converting to list_of_x_indices
+            xs, zs = rf.list_of_x_indices_to_xs_and_zs(child_list_of_x_indices)
+            
             child_state = child_state_tuple(
-                None, x_indices, zs, 
+                child_list_of_x_indices, xs, zs,
                 master_alpha, betas, master_inf_seed, iter_num,
                 child_inf_seed, child_gen_seed, child_counter)
             child_counter += 1
@@ -183,13 +188,18 @@ class MRSeedInferer(MRJob):
                 pkl_file = get_child_pkl_file(child_iter_num)
                 rf.pickle(child_summary, pkl_file, dir=data_dir)
         else:
+            # FIXME : to robustify, should be checking for failure conditions
             child_summaries = rf.infer(run_spec, sub_problem)
-        #
+
         last_valid_zs = child_summaries[-1]['last_valid_zs']
-        list_of_x_indices = child_summaries[-1]['last_valid_list_of_x_indices']
+        last_valid_list_of_x_indices = \
+            child_summaries[-1]['last_valid_list_of_x_indices']
+        list_of_x_indices = child_state_in.list_of_x_indices
+        list_of_x_indices = [
+            [x_indices[idx] for idx in cluster_indices]
+            for cluster_indices in last_valid_list_of_x_indices
+            ]
         new_iter_num = iter_num + 1
-        # FIXME : to robustify, should be checking for failure conditions
-        # FIXME : here is where you pass timing if desired
         child_state_out = child_state_tuple(
             list_of_x_indices, x_indices, last_valid_zs,
             master_alpha, betas, master_inf_seed, new_iter_num,

@@ -1024,37 +1024,30 @@ class Bunch:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
-def distribute_data(inf_seed, num_nodes, zs):
+def gen_cluster_dest_nodes(inf_seed, num_nodes, num_clusters):
     random_state = hf.generate_random_state(inf_seed)
     mus = np.repeat(1.0/num_nodes, num_nodes)
-
-    # group x_indices
-    # zs must be canonicalized!!!
-    cluster_data_indices = {}
-    for x_index, z in enumerate(zs):
-        cluster_data_indices.setdefault(z,[]).append(x_index)
-
-    # deal out data to states
-    node_data_indices = [[] for node_idx in xrange(num_nodes)]
-    node_zs = [[] for node_idx in xrange(num_nodes)]
-    num_clusters = len(cluster_data_indices)
     # determine node choices in bulk
     bulk_counts = random_state.multinomial(num_clusters,mus)
+    cluster_indices = random_state.permutation(range(num_clusters))
     node_choices = []
-    for cluster_idx,cluster_count in enumerate(bulk_counts):
-        node_choices.extend(np.repeat(cluster_idx,cluster_count))
-    node_choices = random_state.permutation(node_choices)
-    #
-    for cluster_idx,dest_node in enumerate(node_choices):
-        vector_index_list = cluster_data_indices[cluster_idx]
-        node_data_indices[dest_node].extend(vector_index_list)
-        new_zs_value = node_zs[dest_node][-1] + 1 \
-            if len(node_zs[dest_node]) > 0 else 0
-        node_zs[dest_node].extend(np.repeat(new_zs_value,len(vector_index_list)))
-    gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-    inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+    for cluster_count in bulk_counts:
+        front = cluster_indices[:cluster_count]
+        back = cluster_indices[cluster_count:]
+        #
+        node_choices.append(front)
+        cluster_indices = back
+    return node_choices, random_state
 
-    return node_data_indices, node_zs, gen_seed_list, inf_seed_list, random_state
+def list_of_x_indices_to_xs_and_zs(list_of_x_indices):
+    xs = []
+    zs = []
+    for cluster_idx, x_indices in enumerate(list_of_x_indices):
+        cluster_count = len(x_indices)
+        new_zs = np.repeat(cluster_idx, cluster_count)
+        xs.extend(x_indices)
+        zs.extend(new_zs)
+    return xs, zs
 
 def consolidate_zs(zs_list):
     single_state = None
