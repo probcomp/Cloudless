@@ -156,8 +156,9 @@ class MRSeedInferer(MRJob):
         child_gen_seed = child_state_in.child_gen_seed
         child_counter = child_state_in.child_counter
         #
-        run_spec = rf.run_spec_from_child_state_tuple(
-            child_state_in, num_iters_per_step, num_nodes)
+        run_spec = rf.run_spec_from_child_state_info(
+            zs, master_alpha, betas, child_inf_seed, child_gen_seed,
+            num_iters_per_step, num_nodes)
         # FIXME : write a new routine to read only those xs necessary
         # FIXME : look to 80MM TinyImages reader
         orig_problem = rf.unpickle(problem_file, dir=data_dir)
@@ -172,13 +173,14 @@ class MRSeedInferer(MRJob):
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
         child_summaries = None
         if num_nodes == 1:
-            # FIXME : would be nice if intermediate results were pickled
-            # FIXME : else, no way to tell how much progress has been made
             sub_problem['test_xs'] = \
                 numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
+            # FIXME : would be nice if intermediate results were pickled
+            # FIXME : else, no way to tell how much progress has been made
             child_summaries = rf.infer(run_spec, sub_problem, send_zs=True)
+            # FIXME: for now, pickle after the fact
             for child_iter_num, child_summary in enumerate(child_summaries):
                 pkl_file = get_child_pkl_file(child_iter_num)
                 rf.pickle(child_summary, pkl_file, dir=data_dir)
