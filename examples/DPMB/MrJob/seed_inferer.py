@@ -77,6 +77,7 @@ class MRSeedInferer(MRJob):
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
         #
+        # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
@@ -96,9 +97,11 @@ class MRSeedInferer(MRJob):
             'start_time':start_dt,
             'infer_problem_delta_t':init_resume_timer.elapsed_secs,
             }
+        #
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
+        #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
@@ -106,14 +109,12 @@ class MRSeedInferer(MRJob):
         betas = summary['betas']
         master_inf_seed = summary['inf_seed']
         iter_num = summary.get('iter_num', 0)
-        #
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed, iter_num)
         yield run_key, master_state
 
     def distribute_data(self, run_key, master_state):
-        print 'distribute data'
         child_counter = 0
         num_nodes = self.num_nodes
         # pull variables out of master_state
@@ -123,33 +124,29 @@ class MRSeedInferer(MRJob):
         betas = master_state.betas
         master_inf_seed = master_state.master_inf_seed
         iter_num = master_state.iter_num
+        #
         # generate child state info
         num_clusters = len(list_of_x_indices)
-        cluster_dest_nodes, random_state = rf.gen_cluster_dest_nodes(
+        node_info_tuples, random_state = rf.gen_cluster_dest_nodes(
             master_inf_seed, num_nodes, num_clusters)
-        inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-        gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
+        #
         # actually distribute
-        child_counter = 0
-        for cluster_indices, child_inf_seed, child_gen_seed in \
-                zip(cluster_dest_nodes, inf_seed_list, gen_seed_list):
+        for child_counter, node_info in enumerate(node_info_tuples):
+            cluster_indices, child_inf_seed, child_gen_seed = node_info
             if len(cluster_indices) == 0: continue # empty node
             child_list_of_x_indices = \
                 [list_of_x_indices[idx] for idx in cluster_indices]
-            # a temporary step, remove when done converting to list_of_x_indices
             xs, zs = rf.list_of_x_indices_to_xs_and_zs(child_list_of_x_indices)
-            
+            #
             child_state = child_state_tuple(
                 child_list_of_x_indices, xs, zs,
                 master_alpha, betas, master_inf_seed, iter_num,
                 child_inf_seed, child_gen_seed, child_counter)
-            child_counter += 1
             yield run_key, child_state
 
     def infer(self, run_key, child_state_in):
-        print 'infer'
         num_nodes = self.num_nodes
-        #
+        num_iters_per_step = self.num_iters_per_step
         x_indices = child_state_in.x_indices
         zs = child_state_in.zs
         master_alpha = child_state_in.master_alpha
@@ -161,8 +158,9 @@ class MRSeedInferer(MRJob):
         child_counter = child_state_in.child_counter
         #
         run_spec = rf.run_spec_from_child_state_tuple(
-            child_state_in, self.num_iters_per_step, self.num_nodes)
-        # FIXME : Perhaps problem can be generated in run_spec_from_model_specs?
+            child_state_in, num_iters_per_step, num_nodes)
+        # FIXME : write a new routine to read only those xs necessary
+        # FIXME : look to 80MM TinyImages reader
         orig_problem = rf.unpickle(problem_file, dir=data_dir)
         problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
         init_x = [
@@ -206,7 +204,6 @@ class MRSeedInferer(MRJob):
         yield run_key, child_state_out
 
     def consolidate_data(self, run_key, child_infer_output_generator):
-        print 'consolidate data'
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
         zs_list = []
@@ -223,6 +220,7 @@ class MRSeedInferer(MRJob):
         master_inf_seed = child_state_out.master_inf_seed
         iter_num = child_state_out.iter_num
 
+        # 
         jumbled_zs = rf.consolidate_zs(zs_list)
         x_indices = [y for x in x_indices_list for y in x]
         zs = [
