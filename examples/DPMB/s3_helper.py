@@ -1,5 +1,6 @@
 import sys
 import os
+import argparse
 #
 import boto
 #
@@ -68,3 +69,22 @@ class S3_helper():
         for filename in file_list:
             results[filename] = self.verify_file(filename,write_s3)
         return results
+
+def main():
+    parser = argparse.ArgumentParser('s3_helper')
+    parser.add_argument('filenames',nargs='+',type=str)
+    args = parser.parse_args()
+    filenames = args.filenames
+    
+    s3 = S3_helper()
+    for filename in filenames:
+        try:
+            s3.put_s3(filename)
+        except Exception, e:
+            except_str = 'failed to put_s3(' + filename + ')'
+            print except_str
+            print str(e)
+    return s3, filenames
+
+if __name__ == '__main__':
+    s3, filenames = main()
