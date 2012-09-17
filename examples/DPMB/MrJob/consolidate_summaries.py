@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+from multiprocessing import Pool, cpu_count
 #
 import matplotlib
 matplotlib.use('Agg')
@@ -15,29 +16,39 @@ reload(settings)
 
 # helper functions
 is_summary = lambda x : x[:8] == 'summary_'
-split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl.gz')
+split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
-create_summary_str = lambda summary_name, iter_num : \
-    summary_name + str(iter_num) + '.pkl.gz'
 
-def get_summary_names(data_dir):
+def get_summary_tuples(data_dir):
     data_files = os.listdir(data_dir)
     summary_files = filter(is_summary,data_files)
     summary_names = {}
     for summary_file in sorted(summary_files):
-        summary_name,iter_num_str = split_summary(summary_file)
-        summary_names.setdefault(summary_name,[]).append(int(iter_num_str))
+        summary_name, iter_num_str = split_summary(summary_file)
+        iter_num = int(iter_num_str)
+        full_filename = os.path.join(data_dir, summary_file)
+        summary_tuple = (full_filename, iter_num)
+        summary_names.setdefault(summary_name,[]).append(summary_tuple)
     return summary_names
 
+num_workers = cpu_count()
+#
+def read_tuple(in_tuple):
+    full_filename, iter_num = in_tuple
+    return rf.unpickle(full_filename), iter_num
+#
 def get_summaries_dict(summary_names,data_dir):
     summaries_dict = {}
-    for summary_name, iter_list in summary_names.iteritems():
-        iter_list = sorted(iter_list)
-        for iter_num in iter_list:
-            filename = create_summary_str(summary_name,iter_num)
-            filename = os.path.join(data_dir,filename)
-            new_summary = rf.unpickle(filename)
-            summaries_dict.setdefault(summary_name,[]).append(new_summary)
+    p = Pool(num_workers)
+    for summary_name, tuple_list in summary_names.iteritems():
+        result = p.map_async(read_tuple, tuple_list)
+        result.wait(60)
+        if not result.successful():
+            raise Exception('pool not successful')
+        sort_by_second_el = lambda x, y: cmp(x[1], y[1])
+        sorted_results = sorted(result.get(), cmp=sort_by_second_el)
+        sorted_results = map(lambda x: x[0], sorted_results)
+        summaries_dict[summary_name] = sorted_results
     return summaries_dict
 
 def process_timing(summaries):
@@ -91,8 +102,8 @@ def main():
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
-        summary_names = get_summary_names(data_dir)
-        working_summaries_dict = get_summaries_dict(summary_names,data_dir)
+        summary_tuples = get_summary_tuples(data_dir)
+        working_summaries_dict = get_summaries_dict(summary_tuples,data_dir)
         print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
 
