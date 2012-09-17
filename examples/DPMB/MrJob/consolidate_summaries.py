@@ -8,11 +8,14 @@ import matplotlib
 matplotlib.use('Agg')
 import pylab
 import numpy
+import scipy
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
+import Cloudless.examples.DPMB.plot_utils as pu
+reload(pu)
 
 # helper functions
 is_summary = lambda x : x[:8] == 'summary_'
@@ -68,6 +71,18 @@ extract_score = lambda summaries : [
     ('%.2f' % summary['score'])
     for summary in summaries
     ]
+extract_log10_alpha = lambda summaries : [
+    ('%.2f' % numpy.log10(summary['alpha']))
+    for summary in summaries
+    ]
+extract_beta = lambda summaries : [
+    summary['betas']
+    for summary in summaries
+    ]
+extract_num_clusters = lambda summaries : [
+    summary['num_clusters']
+    for summary in summaries
+    ]
 extract_test_lls = lambda summaries : [
     ('%.2f' % numpy.mean(summary['test_lls']))
     for summary in summaries
@@ -89,6 +104,18 @@ def print_info(summaries_dict):
             print extract_func(summaries)
         print
 
+shorten_name = lambda x: x[8:-8]
+def plot_vs_time(summaries_dict, extract_func, new_fig=True):
+    if new_fig:
+        pylab.figure()
+    for summaries_name, summaries in summaries_dict.iteritems():
+        timing = numpy.array(extract_delta_t(summaries),dtype=float)
+        extract_vals = numpy.array(extract_func(summaries),dtype=float)
+        pylab.plot(timing,extract_vals)
+    legend_list = map(shorten_name,summaries_dict.keys())
+    pylab.legend(legend_list) # ,loc='lower right')
+    pylab.xlabel('time (seconds)')
+    
 def main():
 
     # parse some args
@@ -96,8 +123,6 @@ def main():
     parser.add_argument('data_dirs',nargs='+',type=str)
     args = parser.parse_args()
     data_dirs = args.data_dirs
-
-    shorten_name = lambda x: x[8:-8]
 
     # read the summaries
     summaries_dict = {}
@@ -107,32 +132,61 @@ def main():
         print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
 
-    # create test_lls plot
-    pylab.figure()
-    for summaries_name, summaries in summaries_dict.iteritems():
-        timing = numpy.array(extract_delta_t(summaries),dtype=float)
-        test_lls = numpy.array(extract_test_lls(summaries),dtype=float)
-        pylab.plot(timing,test_lls)
-    legend_list = map(shorten_name,summaries_dict.keys())
-    pylab.legend(legend_list,loc='lower right')
-    pylab.title('test_lls')
-    pylab.xlabel('time (seconds)')
-    pylab.ylabel('test set mean log likelihood')
-    pylab.savefig('test_lls')
+    gs = pu.get_gridspec(3)
 
-    # create score plot
+
+    gs_i = 0
     pylab.figure()
-    for summaries_name, summaries in summaries_dict.iteritems():
-        timing = numpy.array(extract_delta_t(summaries),dtype=float)
-        scores = numpy.array(extract_score(summaries),dtype=float)
-        pylab.plot(timing,scores)
-    legend_list = map(shorten_name,summaries_dict.keys())
-    pylab.legend(legend_list,loc='lower right')
+    #
+    # create test_lls plot
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    plot_vs_time(summaries_dict, extract_test_lls, new_fig=False)
+    pylab.title('test_lls')
+    pylab.ylabel('test set mean log likelihood')
+    #
+    # create score plot
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    plot_vs_time(summaries_dict, extract_score, new_fig=False)
     pylab.title('scores')
-    pylab.xlabel('time (seconds)')
     pylab.ylabel('model score')
-    pylab.savefig('scores')
-    
+    #
+    # create num_clusters plot
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
+    pylab.title('num clusters')
+    pylab.ylabel('num clusters')
+    pylab.savefig('test_lls_score_num_clusters')
+
+    gs_i = 0
+    pylab.figure()
+    # create alpha plot
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    plot_vs_time(summaries_dict, extract_log10_alpha, new_fig=False)
+    pylab.title('log10 alpha')
+    pylab.ylabel('log10 alpha')
+    #
+    # betas distribution
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    betas = extract_beta(summaries_dict.values()[0])
+    betas = numpy.array(betas).T
+    pylab.boxplot(numpy.log10(betas))
+    pylab.title('beta boxplot')
+    pylab.xlabel('time (seconds)')
+    pylab.ylabel('log10 beta')
+    #
+    # create num_clusters plot
+    pylab.subplot(gs[gs_i])
+    gs_i += 1
+    plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
+    pylab.title('num clusters')
+    pylab.ylabel('num clusters')
+    pylab.savefig('alpha_beta_num_clusters')
+
     return summaries_dict
 
 if __name__ == '__main__':
