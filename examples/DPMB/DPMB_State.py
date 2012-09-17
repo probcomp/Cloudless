@@ -24,9 +24,12 @@ class DPMB_State():
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.alpha_min = alpha_min
-        self.alpha_max = alpha_max
         self.beta_min = beta_min
-        self.beta_max = beta_max
+        # self.alpha_max = alpha_max
+        # self.beta_max = beta_max
+        calc_pow10_ceil = lambda x: 10.0 ** np.ceil(np.log10(x))
+        self.alpha_max = calc_pow10_ceil(num_rows) / 10.
+        self.beta_max = calc_pow10_ceil(num_rows)
         self.grid_N = grid_N
         ##
         self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
