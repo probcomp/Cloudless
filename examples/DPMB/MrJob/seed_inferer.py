@@ -23,7 +23,7 @@ reload(settings)
 data_dir = settings.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
-problem_file = 'tiny_image_problem_nImages_10000_nPcaTrain_10000.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_160000_nPcaTrain_10000.pkl.gz'
 resume_file = None
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
