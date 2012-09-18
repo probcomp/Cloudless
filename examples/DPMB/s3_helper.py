@@ -73,10 +73,17 @@ class S3_helper():
 def main():
     parser = argparse.ArgumentParser('s3_helper')
     parser.add_argument('filenames',nargs='+',type=str)
+    parser.add_argument('--bucket_str',default=None,type=str)
+    parser.add_argument('--bucket_dir',default=None,type=str)
+    parser.add_argument('--local_dir',default=None,type=str)
     args = parser.parse_args()
     filenames = args.filenames
+    bucket_str = args.bucket_str
+    bucket_dir = args.bucket_dir
+    local_dir = args.local_dir
     
-    s3 = S3_helper()
+    s3 = S3_helper(
+        bucket_str=bucket_str,bucket_dir=bucket_dir,local_dir=local_dir)
     for filename in filenames:
         try:
             s3.put_s3(filename)
