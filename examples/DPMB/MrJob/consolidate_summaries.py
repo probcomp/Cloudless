@@ -131,7 +131,11 @@ def main():
         working_summaries_dict = get_summaries_dict(summary_tuples,data_dir)
         print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
-    numnodes1_seed1 = summaries_dict.pop('summary_numnodes1_seed1_iternum')
+
+    # pop off the one_node parent key
+    bad_key = 'summary_numnodes1_seed1_iternum'
+    if bad_key in summaries_dict:
+        numnodes1_seed1 = summaries_dict.pop(bad_key)
         
     gs = pu.get_gridspec(3)
     subplots_hspace = .25
