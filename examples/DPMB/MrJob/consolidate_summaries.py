@@ -105,7 +105,7 @@ def print_info(summaries_dict):
         print
 
 shorten_name = lambda x: x[8:-8]
-def plot_vs_time(summaries_dict, extract_func, new_fig=True):
+def plot_vs_time(summaries_dict, extract_func, new_fig=True, do_legend=True):
     if new_fig:
         pylab.figure()
     for summaries_name, summaries in summaries_dict.iteritems():
@@ -113,8 +113,8 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=True):
         extract_vals = numpy.array(extract_func(summaries),dtype=float)
         pylab.plot(timing,extract_vals)
     legend_list = map(shorten_name,summaries_dict.keys())
-    pylab.legend(legend_list) # ,loc='lower right')
-    pylab.xlabel('time (seconds)')
+    if do_legend:
+        pylab.legend(legend_list,prop={"size":"medium"}) # ,loc='lower right')
     
 def main():
 
@@ -131,9 +131,10 @@ def main():
         working_summaries_dict = get_summaries_dict(summary_tuples,data_dir)
         print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
-
+    numnodes1_seed1 = summaries_dict.pop('summary_numnodes1_seed1_iternum')
+        
     gs = pu.get_gridspec(3)
-
+    subplots_hspace = .25
 
     gs_i = 0
     pylab.figure()
@@ -141,23 +142,24 @@ def main():
     # create test_lls plot
     pylab.subplot(gs[gs_i])
     gs_i += 1
-    plot_vs_time(summaries_dict, extract_test_lls, new_fig=False)
-    pylab.title('test_lls')
-    pylab.ylabel('test set mean log likelihood')
+    plot_vs_time(
+        summaries_dict, extract_test_lls, new_fig=False, do_legend=False)
+    pylab.ylabel('test set\nmean log likelihood')
     #
     # create score plot
     pylab.subplot(gs[gs_i])
     gs_i += 1
-    plot_vs_time(summaries_dict, extract_score, new_fig=False)
-    pylab.title('scores')
+    plot_vs_time(summaries_dict, extract_score, new_fig=False, do_legend=False)
     pylab.ylabel('model score')
     #
     # create num_clusters plot
     pylab.subplot(gs[gs_i])
     gs_i += 1
     plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
-    pylab.title('num clusters')
     pylab.ylabel('num clusters')
+    #
+    pylab.xlabel('time (seconds)')
+    pylab.subplots_adjust(hspace=subplots_hspace)
     pylab.savefig('test_lls_score_num_clusters')
 
     gs_i = 0
@@ -165,26 +167,28 @@ def main():
     # create alpha plot
     pylab.subplot(gs[gs_i])
     gs_i += 1
-    plot_vs_time(summaries_dict, extract_log10_alpha, new_fig=False)
-    pylab.title('log10 alpha')
+    plot_vs_time(
+        summaries_dict, extract_log10_alpha, new_fig=False, do_legend=False)
     pylab.ylabel('log10 alpha')
     #
     # betas distribution
     pylab.subplot(gs[gs_i])
     gs_i += 1
-    betas = extract_beta(summaries_dict.values()[0])
-    betas = numpy.array(betas).T
-    pylab.boxplot(numpy.log10(betas))
+    for values in summaries_dict.values():
+        betas = extract_beta(values)
+        betas = numpy.array(betas).T
+        pylab.boxplot(numpy.log10(betas))
     pylab.title('beta boxplot')
-    pylab.xlabel('time (seconds)')
     pylab.ylabel('log10 beta')
     #
     # create num_clusters plot
     pylab.subplot(gs[gs_i])
     gs_i += 1
     plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
-    pylab.title('num clusters')
     pylab.ylabel('num clusters')
+    #
+    pylab.xlabel('time (seconds)')
+    pylab.subplots_adjust(hspace=subplots_hspace)
     pylab.savefig('alpha_beta_num_clusters')
 
     return summaries_dict
