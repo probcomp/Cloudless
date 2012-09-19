@@ -16,6 +16,8 @@ import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
+import Cloudless.examples.DPMB.s3_helper as s3h
+reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 # importing csmp will create a structured problem
@@ -103,6 +105,7 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
+        s3h.S3_helper().put_s3(pickle_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
@@ -274,6 +277,7 @@ class MRSeedInferer(MRJob):
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
+        s3h.S3_helper().put_s3(pkl_file)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
