@@ -93,12 +93,12 @@ def main():
     parser.add_argument('--sleep_dur',default=0.11,type=float)
     parser.add_argument(
         '--auth_file',
-        default=settings.auth_file,
+        default=settings.gdocs.auth_file,
         type=str,
         )
     parser.add_argument(
         '--folder',
-        default=settings.gdocs_folder_default,
+        default=settings.gdocs.gdocs_folder_default,
         type=str,
         )
     parser.add_argument('--replace',action='store_true')

@@ -12,9 +12,9 @@ class S3_helper():
 
     def __init__(self,bucket_str=None,bucket_dir=None,local_dir=None):
         if bucket_str is None:
-            bucket_str = settings.bucket_str
+            bucket_str = settings.s3.bucket_str
         if bucket_dir is None:
-            bucket_dir = settings.bucket_dir
+            bucket_dir = settings.s3.bucket_dir
         if local_dir is None:
             local_dir = settings.data_dir
         #
