@@ -18,12 +18,14 @@ import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
-
+# importing csmp will create a structured problem
+# import Cloudless.examples.DPMB.MrJob.create_synthetic_mrjob_problem as csmp
 
 data_dir = settings.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
-problem_file = 'tiny_image_problem_nImages_160000_nPcaTrain_10000.pkl.gz'
+# problem_file = 'tiny_image_problem_nImages_160000_nPcaTrain_10000.pkl.gz'
+problem_file = 'structured_problem.pkl.gz'
 resume_file = None
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
