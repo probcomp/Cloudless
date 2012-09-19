@@ -80,8 +80,8 @@ tiny_image_problem_file = 'tiny_image_problem_nImages_' \
 
 
 class s3():
-    bucket_str = 'dpmb.mitprobabilisticcomputingproj'
-    # bucket_str = 'mitpcp_test_bucket'
+    # bucket_str = 'dpmb.mitprobabilisticcomputingproj'
+    bucket_str = 'mitpcp-test-bucket'
     bucket_dir = ''
     #
     # ec2_auth_key = os.path.expanduser('~/awsKeyPair.pem')
