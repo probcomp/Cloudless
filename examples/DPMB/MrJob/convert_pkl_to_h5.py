@@ -1,12 +1,13 @@
 import os
 #
-import h5py
 import numpy
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
+import Cloudless.examples.DPMB.h5_functions as h5
+reload(h5)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
 
@@ -25,16 +26,16 @@ for problem_file in problem_files:
     problem = rf.unpickle(problem_file, dir=data_dir)
 
   with hf.Timer('create_store', verbose=True) as create_store_timer:
-    with rf.h5_context(h5_file, dir=data_dir) as my_h5:
+    with h5.h5_context(h5_file, dir=data_dir) as my_h5:
       for key, value in problem.iteritems():
-        rf.h5ify(key, value, my_h5)
+        h5.h5ify(key, value, my_h5)
 
 # # # how to read
 # store_contents = dict()
 # with hf.Timer('read_store', verbose=True) as create_store_timer:
-#   with rf.h5_context(h5_file, dir=data_dir) as my_h5:
+#   with h5.h5_context(h5_file, dir=data_dir) as my_h5:
 #     for key, value in my_h5.iteritems():
-#       store_contents[key] = rf.unh5ify(key, my_h5)
+#       store_contents[key] = h5.unh5ify(key, my_h5)
 
 # # how to operate on summaries
 # summary_file = 'summary_numnodes2_seed1_iternum2.pkl.gz'
@@ -42,11 +43,11 @@ for problem_file in problem_files:
 #   summary = rf.unpickle(summary_file, dir=data_dir)
 
 # h5_file = get_h5_name_from_pkl_name(summary_file)
-# with rf.h5_context(h5_file, dir=data_dir) as my_h5:
-#   rf.h5ify_dict(summary, my_h5)
+# with h5.h5_context(h5_file, dir=data_dir) as my_h5:
+#   h5.h5ify_dict(summary, my_h5)
 
-# with rf.h5_context(h5_file, dir=data_dir) as my_h5:
-#   store_dict = rf.unh5ify_dict(my_h5)
+# with h5.h5_context(h5_file, dir=data_dir) as my_h5:
+#   store_dict = h5.unh5ify_dict(my_h5)
 
 
 
