@@ -5,8 +5,8 @@ import pdb
 from timeit import default_timer
 #
 import pylab
+# import pandas # imported below only in case actually used
 import matplotlib
-import pandas
 import numpy as np
 import scipy.special as ss
 from numpy.random import RandomState
@@ -286,6 +286,7 @@ def canonicalize_list(in_list):
     return z_indices,cluster_ids
 
 def create_links(filename_or_series,source_dir,dest_dir):
+    import pandas
     series = None
     if isinstance(filename_or_series,str):
         series = pandas.Series.from_csv(filename_or_series)
