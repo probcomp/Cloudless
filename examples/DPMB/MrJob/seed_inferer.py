@@ -28,8 +28,12 @@ summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
-problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
+# problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_40000_nPcaTrain_10000.pkl.gz'
+# problem_file = 'structured_problem.pkl.gz'
+# resume_file = 'gibbs_init_baseline_10K_10K.pkl.gz'
 resume_file = None
+push_to_s3 = False
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -84,7 +88,10 @@ class MRSeedInferer(MRJob):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
-        s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(problem_file)
+        problem_full_file = os.path.join(data_dir, problem_file)
+        if not os.path.isfile(problem_full_file):
+            s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
+                problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
@@ -110,7 +117,8 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
-        s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pickle_file)
+        if push_to_s3:
+            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pickle_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
@@ -197,7 +205,8 @@ class MRSeedInferer(MRJob):
             for child_iter_num, child_summary in enumerate(child_summaries):
                 pkl_file = get_child_pkl_file(child_iter_num)
                 rf.pickle(child_summary, pkl_file, dir=data_dir)
-                s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+                if push_to_s3:
+                    s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
             # FIXME : to robustify, should be checking for failure conditions
             child_summaries = rf.infer(run_spec, sub_problem)
@@ -286,7 +295,8 @@ class MRSeedInferer(MRJob):
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
-        s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+        if push_to_s3:
+            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
