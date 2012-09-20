@@ -24,7 +24,7 @@ reload(settings)
 # import Cloudless.examples.DPMB.MrJob.create_synthetic_mrjob_problem as csmp
 
 data_dir = settings.data_dir
-summary_bucket_dir = 'tiny_image_summaries'
+summary_bucket_dir = settings.s3.summary_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'

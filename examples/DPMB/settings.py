@@ -83,6 +83,8 @@ class s3():
     # bucket_str = 'dpmb.mitprobabilisticcomputingproj'
     bucket_str = 'mitpcp-dpmb'
     bucket_dir = ''
+    problem_bucket_dir = 'tiny_image_problems'
+    summaries_bucket_dir = 'tiny_image_summaries'
     #
     # ec2_auth_key = os.path.expanduser('~/awsKeyPair.pem')
     ec2_credentials_file = os.path.expanduser('~/.boto')

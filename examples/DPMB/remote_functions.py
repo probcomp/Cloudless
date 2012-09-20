@@ -117,7 +117,7 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
         permute = False # presume data is already permuted
                         # repermuting now makes tracking ground truth hard
         if not os.path.isfile(pkl_full_file):
-            have_file = s3h.S3_helper().verify_file(pkl_file)
+            have_file = s3h.S3_helper(bucket_dir=settings.s3.problem_bucket_dir).verify_file(pkl_file)
             if not have_file:
                 exception_str = 'gen_problem couldn\'t get pkl_file: ' + pkl_file
                 raise Exception(exception_str)
