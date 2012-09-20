@@ -84,7 +84,7 @@ extract_num_clusters = lambda summaries : [
     for summary in summaries
     ]
 extract_test_lls = lambda summaries : [
-    ('%.2f' % numpy.mean(summary['test_lls']))
+    ('%.6f' % numpy.mean(summary['test_lls']))
     for summary in summaries
     ]
 extract_delta_t = process_timing
@@ -133,9 +133,10 @@ def main():
         summaries_dict.update(working_summaries_dict)
 
     # pop off the one_node parent key
-    bad_key = 'summary_numnodes1_seed1_iternum'
-    if bad_key in summaries_dict:
-        numnodes1_seed1 = summaries_dict.pop(bad_key)
+    one_node_children_key = 'summary_numnodes1_seed1_iternum'
+    numnodes1_seed1 = None
+    if one_node_children_key in summaries_dict:
+        numnodes1_seed1 = summaries_dict.pop(one_node_children_key)
         
     gs = pu.get_gridspec(3)
     subplots_hspace = .25
@@ -195,7 +196,7 @@ def main():
     pylab.subplots_adjust(hspace=subplots_hspace)
     pylab.savefig('alpha_beta_num_clusters')
 
-    return summaries_dict
+    return summaries_dict, numnodes1_seed1
 
 if __name__ == '__main__':
-    summaries_dict = main()
+    summaries_dict, numnodes1_seed1 = main()
