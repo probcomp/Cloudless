@@ -238,11 +238,13 @@ def infer(run_spec, problem=None, send_zs=False):
         )
     #
     summaries = []
-    summaries.append(
-        transitioner.extract_state_summary(
-            # true_zs=problem["zs"],
-            verbose_state=verbose_state,
-            test_xs=problem["test_xs"]))
+    init_summary = transitioner.extract_state_summary(
+        # true_zs=problem["zs"],
+        verbose_state=verbose_state,
+        test_xs=problem["test_xs"],
+        send_zs=send_zs,
+        )
+    summaries.append(init_summary)
     summaries[-1]["timing"]["init"] = init_delta_seconds
     #
     print "saved initialization"
@@ -780,12 +782,16 @@ def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
 ####
 
 def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
+    gen_alpha = 50.
+    gen_beta = 50.
+    num_rows = 256
+    #
     dataset_spec = {}
     dataset_spec['pkl_file'] = problem_file
     dataset_spec['gen_seed'] = 0
-    dataset_spec['gen_alpha'] = 1.0
-    dataset_spec['gen_betas'] = np.repeat(2.0,256)
-    dataset_spec['N_test'] = 300
+    dataset_spec['gen_alpha'] = gen_alpha
+    dataset_spec['gen_betas'] = np.repeat(gen_beta, num_rows)
+    dataset_spec['N_test'] = None
     run_spec = {}
     run_spec['infer_seed'] = infer_seed
     run_spec['dataset_spec'] = dataset_spec ## settings.cifar_100_problem_file}
