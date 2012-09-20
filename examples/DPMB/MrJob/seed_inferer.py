@@ -25,6 +25,7 @@ reload(settings)
 
 data_dir = settings.data_dir
 summary_bucket_dir = settings.s3.summary_bucket_dir
+problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
@@ -83,6 +84,7 @@ class MRSeedInferer(MRJob):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
+        s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
