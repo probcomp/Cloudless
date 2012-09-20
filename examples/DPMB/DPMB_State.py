@@ -19,17 +19,14 @@ import pdb
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
-                 ,alpha_min=.01,alpha_max=1E4,beta_min=.01,beta_max=10.
+                 ,alpha_min=.01,alpha_max=1.E6,beta_min=.01,beta_max=1.E6
                  ,grid_N=100):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.alpha_min = alpha_min
         self.beta_min = beta_min
-        # self.alpha_max = alpha_max
-        # self.beta_max = beta_max
-        calc_pow10_ceil = lambda x: 10.0 ** np.ceil(np.log10(x))
-        self.alpha_max = calc_pow10_ceil(num_rows) / 10.
-        self.beta_max = calc_pow10_ceil(num_rows)
+        self.alpha_max = alpha_max
+        self.beta_max = beta_max
         self.grid_N = grid_N
         ##
         self.timing = {"alpha":0,"betas":0,"zs":0,"run_sum":0}
@@ -77,6 +74,7 @@ class DPMB_State():
                 print datetime.datetime.now(), R, len(self.cluster_list) # FIXME : Remove when done analyzing gibbs-init timing
 
     def non_gibbs_type_init(self, num_rows, init_z, init_x, decanon_indices):
+        # init_z, cluster_ids = hf.canonicalize_list(init_z)
 
         for R in xrange(num_rows):
             cluster = None
