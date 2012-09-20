@@ -24,10 +24,10 @@ reload(settings)
 # import Cloudless.examples.DPMB.MrJob.create_synthetic_mrjob_problem as csmp
 
 data_dir = settings.data_dir
+summary_bucket_dir = 'tiny_image_summaries'
 #
 # problem_file = settings.tiny_image_problem_file
-# problem_file = 'tiny_image_problem_nImages_160000_nPcaTrain_10000.pkl.gz'
-problem_file = 'structured_problem.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 resume_file = None
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
@@ -61,12 +61,15 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-steps', type='int', default=None)
         self.add_passthrough_option('--num-iters', type='int', default=8)
         self.add_passthrough_option('--num-nodes', type='int', default=4)
+        self.add_passthrough_option('--time-seatbelt', type='int', default=None)
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
         self.num_steps = self.options.num_steps
         self.num_iters = self.options.num_iters
         self.num_nodes = self.options.num_nodes
+        # time_seatbelt only works on single node inference
+        self.time_seatbelt = self.options.time_seatbelt
         if self.num_steps is None:
             if self.num_nodes == 1 and self.num_iters !=0:
                 self.num_steps = 1
@@ -105,7 +108,7 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         rf.pickle(summary, pickle_file, dir=data_dir)
-        s3h.S3_helper().put_s3(pickle_file)
+        s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pickle_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
@@ -178,6 +181,9 @@ class MRSeedInferer(MRJob):
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
         child_summaries = None
         if num_nodes == 1:
+            # FIXME : keep time seatbelt for single node version?
+            run_spec['time_seatbelt'] = self.time_seatbelt # FIXME
+            #
             sub_problem['test_xs'] = \
                 numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
@@ -189,6 +195,7 @@ class MRSeedInferer(MRJob):
             for child_iter_num, child_summary in enumerate(child_summaries):
                 pkl_file = get_child_pkl_file(child_iter_num)
                 rf.pickle(child_summary, pkl_file, dir=data_dir)
+                s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
             # FIXME : to robustify, should be checking for failure conditions
             child_summaries = rf.infer(run_spec, sub_problem)
@@ -277,7 +284,7 @@ class MRSeedInferer(MRJob):
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
-        s3h.S3_helper().put_s3(pkl_file)
+        s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         #
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
