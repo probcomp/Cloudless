@@ -39,20 +39,13 @@ except OSError, e:
 try:
     import Cloudless.examples.DPMB.pyx_functions
 except ImportError:
+    filestr = __file__
+    rel_path = os.path.split(filestr)[0]
     pyx_filename = 'compile_pyx_functions.sh'
-    system_str = ' '.join(['bash', pyx_filename, '.'])
+    pyx_full_filename = os.path.join(rel_path, pyx_filename)
+    system_str = ' '.join(['bash', pyx_full_filename, rel_path])
     os.system(system_str)
 
-# ensure pandas, mrjob on system
-# FIXME: move this to some dependencies file like pip's requirements
-try:
-    import pandas
-except ImportError:
-    pandas_uri = 'http://pypi.python.org/packages/source/p/pandas/' + \
-        'pandas-0.7.0rc1.tar.gz'
-    system_str = ' '.join(['easy_install', pandas_uri])
-    os.system(system_str)
-#
 try:
     import mrjob
 except ImportError:

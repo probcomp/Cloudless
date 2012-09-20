@@ -285,7 +285,17 @@ def canonicalize_list(in_list):
         z_indices.append(cluster_ids[el])
     return z_indices,cluster_ids
 
+def ensure_pandas():
+    try:
+        import pandas
+    except ImportError:
+        pandas_uri = 'http://pypi.python.org/packages/source/p/pandas/' + \
+            'pandas-0.7.0rc1.tar.gz'
+        system_str = ' '.join(['easy_install', pandas_uri])
+        os.system(system_str)
+
 def create_links(filename_or_series,source_dir,dest_dir):
+    ensure_pandas()
     import pandas
     series = None
     if isinstance(filename_or_series,str):
