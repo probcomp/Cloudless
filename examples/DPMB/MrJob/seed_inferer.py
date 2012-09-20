@@ -28,11 +28,12 @@ summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
-# problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
-problem_file = 'tiny_image_problem_nImages_40000_nPcaTrain_10000.pkl.gz'
+problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 # problem_file = 'structured_problem.pkl.gz'
+#
 # resume_file = 'gibbs_init_baseline_10K_10K.pkl.gz'
 resume_file = None
+#
 push_to_s3 = False
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
@@ -109,10 +110,10 @@ class MRSeedInferer(MRJob):
                 summary = rf.infer(run_spec, problem)[-1]
                 problem_hexdigest = get_hexdigest(problem)
         summary['problem_hexdigest'] = problem_hexdigest
-        summary['timing'] = {
+        summary['timing'].update({
             'start_time':start_dt,
             'infer_problem_delta_t':init_resume_timer.elapsed_secs,
-            }
+            })
         #
         # FIXME : infer will pickle over this
         pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
@@ -198,7 +199,7 @@ class MRSeedInferer(MRJob):
                 numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
-            # FIXME : would be nice if intermediate results were pickled
+            # FIXME : nice if intermediate results are pickled ON THE FLY
             # FIXME : else, no way to tell how much progress has been made
             child_summaries = rf.infer(run_spec, sub_problem, send_zs=True)
             # FIXME: for now, pickle after the fact
@@ -258,8 +259,8 @@ class MRSeedInferer(MRJob):
         if 'zs' in  problem:
             true_zs, cluster_idx = hf.canonicalize_list(problem['zs'])
 
-        # FIXME: is this (NEW) canonicaliziation necessary?
-        zs, cluster_idx = hf.canonicalize_list(zs) # FIXME
+        # this is very necessary!
+        zs, cluster_idx = hf.canonicalize_list(zs)
 
         test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
@@ -286,11 +287,11 @@ class MRSeedInferer(MRJob):
                 test_xs=test_xs)
         summary['last_valid_zs'] = transitioner.state.getZIndices()
         summary['list_of_x_indices'] = transitioner.state.get_list_of_x_indices()
-        summary['timing'] = {
+        summary['timing'].update({
             'timestamp':datetime.datetime.now(),
             'consolidate_delta':consolidate_delta,
             'score_delta':score_delta_timer.elapsed_secs,
-            }
+            })
         summary['iter_num'] = iter_num
         #
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
