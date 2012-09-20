@@ -85,4 +85,4 @@ class s3():
     bucket_dir = ''
     #
     # ec2_auth_key = os.path.expanduser('~/awsKeyPair.pem')
-    # ec2_credentials_file = os.path.expanduser('~/.boto')
+    ec2_credentials_file = os.path.expanduser('~/.boto')
