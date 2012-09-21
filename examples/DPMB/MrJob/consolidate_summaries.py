@@ -56,15 +56,16 @@ def get_summaries_dict(summary_names,data_dir):
 
 def process_timing(summaries):
     delta_ts = [0]
-    if 'run_sum' in summaries[0]['timing']:
-        for summary in summaries[1:]:
-            delta_ts.append('%.2f' % summary['timing']['run_sum'])
-    else:
+    if 'start_time' in summaries[0].get('timing',{}):
         start_time = summaries[0]['timing']['start_time']
         get_total_seconds = lambda summary : \
             (summary['timing']['timestamp'] - start_time).total_seconds()
         for summary in summaries[1:]:
             delta_ts.append('%.2f' % get_total_seconds(summary))
+    else:
+    #if 'run_sum' in summaries[0]['timing']:
+        for summary in summaries[1:]:
+            delta_ts.append('%.2f' % summary['timing']['run_sum'])
     return delta_ts
 
 extract_score = lambda summaries : [
@@ -105,16 +106,50 @@ def print_info(summaries_dict):
         print
 
 shorten_name = lambda x: x[8:-8]
+numnodes_to_color = {'1':'red', '2':'yellow', '4':'green', 'other':'black'}
+def get_color(summaries_key):
+    summaries_re = re.compile('.*numnodes(\d+)_.*')
+    summaries_match = summaries_re.match(summaries_key)
+    numnodes_str = None
+    if summaries_match is not None:
+        numnodes_str = summaries_match.groups()[0]
+    else:
+        numnodes_str = 'other'
+    color = numnodes_to_color[numnodes_str]
+    return color
+    
 def plot_vs_time(summaries_dict, extract_func, new_fig=True, do_legend=True):
     if new_fig:
         pylab.figure()
     for summaries_name, summaries in summaries_dict.iteritems():
         timing = numpy.array(extract_delta_t(summaries),dtype=float)
         extract_vals = numpy.array(extract_func(summaries),dtype=float)
-        pylab.plot(timing,extract_vals)
+        color = get_color(summaries_name)
+        pylab.plot(timing,extract_vals,color=color)
     legend_list = map(shorten_name,summaries_dict.keys())
     if do_legend:
         pylab.legend(legend_list,prop={"size":"medium"}) # ,loc='lower right')
+
+def plot_cluster_counts(summary):
+    cluster_counts = summary['cluster_counts']
+    cluster_counter = Counter(cluster_counts)
+    runsum = 0
+    xs = []
+    ys = []
+    for key in sorted(cluster_counter.keys()):
+        value = cluster_counter[key]
+        runsum += key * value
+        xs.append(key)
+        ys.append(runsum)
+    #
+    ys = numpy.array(ys, dtype=float)
+    ys = ys / ys[-1]
+    pylab.figure()
+    pylab.plot(xs, ys, linestyle='steps-post')
+    pylab.xlabel('cluster_size')
+    pylab.ylabel('fraction of data at or below cluster_size')
+    pylab.title('data/cluster size distribution')
+    pylab.savefig('cluster_count_cdf')
     
 def main():
 
