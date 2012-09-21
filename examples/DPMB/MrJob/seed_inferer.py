@@ -67,7 +67,7 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
         self.add_passthrough_option(
-            '--resume_file',type='str', default=default_resume_file)
+            '--resume-file',type='str', default=default_resume_file)
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
