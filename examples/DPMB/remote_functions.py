@@ -782,8 +782,8 @@ def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
 ####
 
 def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
-    gen_alpha = 50.
-    gen_beta = 50.
+    gen_alpha = 100.
+    gen_beta = 10000.
     num_rows = 256
     #
     dataset_spec = {}
