@@ -3,6 +3,7 @@ import argparse
 import os
 import re
 from multiprocessing import Pool, cpu_count
+from collections import Counter
 #
 import matplotlib
 matplotlib.use('Agg')
@@ -130,7 +131,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=True, do_legend=True):
     if do_legend:
         pylab.legend(legend_list,prop={"size":"medium"}) # ,loc='lower right')
 
-def plot_cluster_counts(summary):
+def plot_cluster_counts(summary, new_fig=True, log_x=False):
     cluster_counts = summary['cluster_counts']
     cluster_counter = Counter(cluster_counts)
     runsum = 0
@@ -144,12 +145,15 @@ def plot_cluster_counts(summary):
     #
     ys = numpy.array(ys, dtype=float)
     ys = ys / ys[-1]
-    pylab.figure()
+    if new_fig:
+        pylab.figure()
+    if log_x:
+        ax = pylab.subplot(111)
+        ax.set_xscale('log')
     pylab.plot(xs, ys, linestyle='steps-post')
     pylab.xlabel('cluster_size')
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
-    pylab.savefig('cluster_count_cdf')
     
 def main():
 
