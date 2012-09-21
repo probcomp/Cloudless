@@ -29,10 +29,8 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
 problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
-# problem_file = 'structured_problem.pkl.gz'
 #
-# resume_file = 'gibbs_init_baseline_10K_10K.pkl.gz'
-resume_file = None
+default_resume_file = None
 #
 push_to_s3 = True
 
@@ -68,6 +66,8 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-iters', type='int', default=8)
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
+        self.add_passthrough_option(
+            '--resume_file',type='str', default=default_resume_file)
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
@@ -76,6 +76,7 @@ class MRSeedInferer(MRJob):
         self.num_nodes = self.options.num_nodes
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
+        self.resume_file = self.options.resume_file
         if self.num_steps is None:
             if self.num_nodes == 1 and self.num_iters !=0:
                 self.num_steps = 1
@@ -89,6 +90,7 @@ class MRSeedInferer(MRJob):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
+        resume_file = self.resume_file
         problem_full_file = os.path.join(data_dir, problem_file)
         if not os.path.isfile(problem_full_file):
             s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
@@ -98,6 +100,10 @@ class MRSeedInferer(MRJob):
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
+                resume_full_file = os.path.join(data_dir, resume_file)
+                if not os.path.isfile(resume_full_file):
+                    s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
+                        resume_file)
                 summary = rf.unpickle(resume_file, dir=data_dir)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
