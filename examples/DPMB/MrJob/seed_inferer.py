@@ -34,7 +34,7 @@ problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 # resume_file = 'gibbs_init_baseline_10K_10K.pkl.gz'
 resume_file = None
 #
-push_to_s3 = False
+push_to_s3 = True
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
