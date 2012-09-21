@@ -28,7 +28,8 @@ summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
-problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
+# problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
+problem_file = 'structured_problem.pkl.gz'
 #
 default_resume_file = None
 #
@@ -77,14 +78,20 @@ class MRSeedInferer(MRJob):
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
         self.resume_file = self.options.resume_file
-        if self.num_steps is None:
-            if self.num_nodes == 1 and self.num_iters !=0:
-                self.num_steps = 1
-            else:
-                self.num_steps = self.num_iters/self.num_nodes
-        #
-        self.num_iters_per_step = self.num_iters/self.num_steps \
-            if self.num_steps != 0 else 0
+        # if self.num_steps is None:
+        #     if self.num_nodes == 1 and self.num_iters !=0:
+        #         self.num_steps = 1
+        #     else:
+        #         self.num_steps = self.num_iters/self.num_nodes
+        # #
+        # self.num_iters_per_step = self.num_iters/self.num_steps \
+        #     if self.num_steps != 0 else 0
+        if self.num_nodes == 1 and self.num_iters !=0:
+            self.num_steps = 1
+            self.num_iters_per_step = self.num_iters
+        else:
+            self.num_steps = self.num_iters
+            self.num_iters_per_step = 1
 
     def init(self, key, run_key):
         start_dt = datetime.datetime.now()
@@ -136,7 +143,8 @@ class MRSeedInferer(MRJob):
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
-            master_inf_seed, iter_num)
+            master_inf_seed, iter_num,
+            )
         yield run_key, master_state
 
     def distribute_data(self, run_key, master_state):
