@@ -29,10 +29,8 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 #
 # problem_file = settings.tiny_image_problem_file
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
-problem_file = 'structured_problem.pkl.gz'
-#
+default_problem_file = 'structured_problem.pkl.gz'
 default_resume_file = None
-#
 push_to_s3 = True
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
@@ -68,6 +66,8 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
         self.add_passthrough_option(
+            '--problem_file',type='str', default=default_problem_file)
+        self.add_passthrough_option(
             '--resume-file',type='str', default=default_resume_file)
 
     def load_options(self, args):
@@ -77,6 +77,7 @@ class MRSeedInferer(MRJob):
         self.num_nodes = self.options.num_nodes
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
+        self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
         # if self.num_steps is None:
         #     if self.num_nodes == 1 and self.num_iters !=0:
@@ -97,6 +98,7 @@ class MRSeedInferer(MRJob):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
+        problem_file = self.problem_file
         resume_file = self.resume_file
         problem_full_file = os.path.join(data_dir, problem_file)
         if not os.path.isfile(problem_full_file):
@@ -178,6 +180,7 @@ class MRSeedInferer(MRJob):
 
     def infer(self, run_key, child_state_in):
         num_nodes = self.num_nodes
+        problem_file = self.problem_file
         num_iters_per_step = self.num_iters_per_step
         x_indices = child_state_in.x_indices
         zs = child_state_in.zs
@@ -245,6 +248,7 @@ class MRSeedInferer(MRJob):
     def consolidate_data(self, run_key, child_infer_output_generator):
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
+        problem_file = self.problem_file
         zs_list = []
         x_indices_list = []
         list_of_x_indices = []
