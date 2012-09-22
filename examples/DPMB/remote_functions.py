@@ -4,6 +4,7 @@ import cPickle
 import datetime
 import gzip
 import os
+import sys
 import sets
 import time
 from threading import Thread
@@ -782,15 +783,17 @@ def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
 ####
 
 def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
-    gen_alpha = 100.
-    gen_beta = 10000.
     num_rows = 256
+    gen_alpha = None
+    gen_betas = None
+    random_state = hf.generate_random_state(infer_seed)
+    gen_seed = random_state.randint(sys.maxint)
     #
     dataset_spec = {}
     dataset_spec['pkl_file'] = problem_file
-    dataset_spec['gen_seed'] = 0
+    dataset_spec['gen_seed'] = gen_seed
     dataset_spec['gen_alpha'] = gen_alpha
-    dataset_spec['gen_betas'] = np.repeat(gen_beta, num_rows)
+    dataset_spec['gen_betas'] = gen_betas
     dataset_spec['N_test'] = None
     run_spec = {}
     run_spec['infer_seed'] = infer_seed
