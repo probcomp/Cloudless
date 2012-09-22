@@ -1,5 +1,6 @@
 import datetime
 import os
+import re 
 import sys
 import pdb
 from timeit import default_timer
@@ -387,3 +388,28 @@ class Timer(object):
         self.elapsed = self.elapsed_secs * 1000 # millisecs
         if self.verbose:
             print '%s took:\t% 7d ms' % (self.task, self.elapsed)
+
+def get_max_iternum_filenames(dir_str):
+    def get_max_iternum(file_tuples, basename):
+        is_same_basename = lambda in_tuple: in_tuple[0] == basename
+        basename_file_tuples = filter(is_same_basename, file_tuples)
+        iternums = map(lambda x: int(x[1]), basename_file_tuples)
+        return str(max(iternums))
+    base_re = re.compile('^(summary_.*iternum)(\d+).pkl.gz$')
+    base_re_func = lambda filename: base_re.match(filename)
+    get_base_match = lambda in_list: filter(None, map(base_re_func, in_list))
+    get_base_names = lambda in_list: \
+        list(set(map(lambda x: x.groups()[0], get_base_match(in_list))))
+    get_base_tuples = lambda in_list: \
+        list(set(map(lambda x: x.groups(), get_base_match(in_list))))
+    #
+    all_files = os.listdir(dir_str)
+    base_names = get_base_names(all_files)
+    base_tuples = get_base_tuples(all_files)
+    max_tuples = [
+        (base_name, get_max_iternum(base_tuples, base_name))
+        for base_name in base_names
+        ]
+    create_filename = lambda in_tuple: ''.join(in_tuple) + '.pkl.gz'
+    filenames = map(create_filename, max_tuples)
+    return filenames
