@@ -165,6 +165,36 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,num_splits
 
     return data,inverse_distribute_indices
 
+def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
+                    plot=False,image_save_str=None):
+    random_state = numpy.random.RandomState(gen_seed)
+    rows_per_cluster = num_rows/num_clusters
+    permutation_indices = random_state.permutation(range(num_rows))
+    inverse_permutation_indices = numpy.argsort(permutation_indices)
+    data = numpy.array(
+        gen_data(random_state.randint(sys.maxint),
+                 num_clusters,num_cols,num_rows,beta_d))
+    data = data[permutation_indices]
+    #
+    # this is just to visualize, data is already generated
+    if image_save_str is not None or plot:
+        state = ds.DPMB_State(
+            gen_seed=random_state.randint(sys.maxint),
+            num_cols=num_cols,
+            num_rows=num_rows,
+            init_z=('balanced',num_clusters),
+            init_x=data[inverse_permutation_indices]
+            )
+        save_str = None
+        if image_save_str is not None:
+            save_str = image_save_str
+        state.plot(save_str=save_str)
+        #
+        hf.plot_data(data=data[inverse_permutation_indices])
+        pylab.savefig('just_state')
+        pylab.close()
+    return data,inverse_permutation_indices
+
 def main():
     parser = argparse.ArgumentParser('Create a synthetic problem')
     parser.add_argument('gen_seed',type=int)
