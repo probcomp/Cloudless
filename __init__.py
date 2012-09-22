@@ -1,1 +1,1 @@
-__all__ = ['base.py', 'memo.py', 'examples']
+__all__ = ['stochastic.py', 'longjob.py']

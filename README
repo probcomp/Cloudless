@@ -1,135 +1,14 @@
 *** CLOUDLESS ***
 
-MIT Probabilistic Computing Project
-Cloudless --- Distributed computational science made easy, in Python
-
-Cloudless makes it easy to interactively develop and monitor
-computationally intensive pipelines using EC2, and maintain a
-persistent record of computational science work using EBS Volumes. It
-builds on IPython.parallel for remote execution and data transfer, and
-StarCluster for cluster provisioning and management.
-
-*** INSTALLATION ***
-
 To use Cloudless:
 
-1. Set up an AWS account: http://aws.amazon.com/
+1. Get a PiCloud account: http://www.picloud.com
 
-   Amazon will request for a valid banking card and phone number
-   (their robot calls and verifies it). Also Amazon checks your
-   banking card and sometimes it can take a few hours before
-   you are able to use your AWS account.
+2. Do its installation procedure.
 
-2. Install StarCluster and configure it to use your AWS credentials:
-   http://web.mit.edu/star/cluster/docs/latest/quickstart.html
+3. Run the Cloudless tests, which use a cloud simulator.
 
-   A few tips (for most of you are too obvious):
-   1) StarCluster is based on Python, do not forget to have it :).
-   2) It is easier to install StarCluster using easy_install,
-      not manually.
-   3) Config StarCluster as it is described in Quick-Start manual
-      up to starting a cluster. If you want, try to start it in order to
-      be sure that you have configured it successfully:
-
-        $ starcluster start mycluster
-
-      and terminate it in order to continue Cloudless installation:
-
-        $ starcluster terminate mycluster
-
-   4) You can find required AWS credentials in your AWS account.
-      Click "My Account / Console" on the top right corner,
-      click "Security Credentials" and find on this web-page:
-      "Access Key ID" => aws_access_key_id,
-      "Secret Access Key" => aws_secret_access_key,
-      "AWS Account ID" => aws_user_id.
-   5) If your operating system is Windows, you need to download and install
-      Cygwin firstly in order to "emulate" Linux:
-      http://cygwin.com/install.html
-      In this case also do not forget that you should run
-      the command "easy_install StarCluster" without the prefix "sudo":
-
-        $ easy_install StarCluster
-
-3. Install Cloudless such that local python processes can find it
-   (so that the StarCluster plugins can run correctly):
-
-     $ cd ~
-     $ git clone git://github.com/mit-probabilistic-computing-project/Cloudless.git
-     $ export PYTHONPATH=~
-
-   Here it is proposed to install Cloudless to your user directory.
-   Of course, you can download it wherever you want, but do not forget
-   in this case to change paths properly.
-
-   Do not forget to export the directory containing Cloudless to your
-   PYTHONPATH every time or add this command to the auto-script.
-
-4. Configure your cluster to use the ipcluster and Cloudless plugins:
-
-   1. Put the following lines in the "Configuring StarCluster Plugins"
-      section of your StarCluster config (by default,
-      ~/.starcluster/config):
-
-        [plugin Cloudless]
-        SETUP_CLASS = starcluster_plugin.CloudlessSetup
-
-        [plugin ipcluster]
-        SETUP_CLASS = starcluster.plugins.ipcluster.IPCluster
-        ENABLE_NOTEBOOK = True
-        NOTEBOOK_PASSWD = metropolis1953
-
-   2. Configure your cluster type to use these plugins by making sure your
-      cluster (by default, smallcluster) has the following line:
-
-        PLUGINS = ipcluster, Cloudless
-
-5. Start a cluster:
-
-     $ starcluster start mycluster
-
-6. When you have started the cluster, pay your attention to these two lines
-   because you will need them to open and work with cluster's IPython
-   notebook via your web-browser:
-
-     >>> IPython notebook URL: https://ec2-***.compute-1.amazonaws.com:8888
-     >>> The notebook password is: ***
-
-   Open the given https! address, enter your notebook password and, once you
-   have logged in, click "New Notebook".
-
-   (You can read about IPython plugin notebook more carefully:
-    http://web.mit.edu/star/cluster/docs/latest/plugins/ipython.html)
-
-7. Paste the example from Cloudless/examples/basic.py block-by-block into
-   the notebook and press Shift-Enter each time to watch Cloudless set up
-   and execute remote jobs and capture remote exceptions.
-
-8. IMPORTANT! Do not forget to terminate the cluster when you are finished
-   using it in order to STOP PAYING FOR AWS SERVICE:
-
-     $ starcluster terminate mycluster
-
-9. If you want to use persistence in the memoizer:
-
-   - Create an EBS volume for your persistent state (here, 10 refers to 10GB,
-     and -n myvol says the name is myvol, to make it easier to find using the
-     AWS tools)
-
-     starcluster createvolume -n myvol 10 us-east-1c
-
-   - Get the volume id of your volume, from the output of:
-
-     starcluster listvolumes
-
-   - Add the volume configuration to your starcluster config:
-
-     [volume myscratch]
-     volume_id = <your-id>
-     mount_path = /scratch
-
-   - Add the volume to your cluster config, under the plugins line:
-     volumes = myscratch
+4. Start doing stochastic inference.
 
 
    
