@@ -22,15 +22,15 @@ printf "0\n" > seed_list.txt
 printf "using seed_list.txt:\n`cat seed_list.txt`\n"
 # python "${inferer_script}" --jobconf mapred.map.tasks=4 \
 #     --num-iters "${num_iters}" --num-nodes 4 \
-#     --problem_file "${problem_file}" \
+#     --problem-file "${problem_file}" \
 #     < seed_list.txt >out 2>err
 python "${inferer_script}" --jobconf mapred.map.tasks=2 \
     --num-iters "${num_iters}" --num-nodes 2 \
-    --problem_file "${problem_file}" \
+    --problem-file "${problem_file}" \
     < seed_list.txt >out 2>err
 python "${inferer_script}" --jobconf mapred.map.tasks=1 \
     --num-iters "${num_iters}" --num-nodes 1 \
-    --problem_file "${problem_file}" \
+    --problem-file "${problem_file}" \
     < seed_list.txt >out 2>err
 #
 python -i "${consolidate_script}" "$data_dir"
