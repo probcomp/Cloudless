@@ -14,8 +14,8 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
-import Cloudless.examples.DPMB.settings as settings
-reload(settings)
+import Cloudless.examples.DPMB.settings as S
+reload(S)
 
 
 def gen_data(gen_seed,num_clusters,num_cols,num_rows,beta_d):
@@ -195,6 +195,46 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
         pylab.close()
     return data,inverse_permutation_indices
 
+def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
+                      pkl_filename=None):
+    if pkl_filename is None:
+        pkl_filename = '_'.join([
+                'clean_balanced_data',
+                'rows', str(num_rows), 
+                'cols', str(num_cols),
+                'pkl.gz'
+                ])
+    # create the data
+    data, inverse_permuatation_indices_list = make_clean_data(
+        gen_seed=gen_seed,
+        num_rows=num_rows,
+        num_cols=num_cols,
+        num_clusters=num_clusters,
+        beta_d=beta_d,
+        )
+    #
+    all_indices = xrange(num_rows)
+    random_state = numpy.random.RandomState(gen_seed)
+    test_fraction = .1
+    breakpoint = int(num_rows * test_fraction)
+    random_indices = random_state.permutation(all_indices)
+    test_indices = random_indices[:breakpoint]
+    train_indices = random_indices[breakpoint:]
+    test_xs = data[test_indices]
+    xs = data[train_indices]
+    # set up pickle variable and actually pickle
+    pkl_vals = {
+        'xs':xs,
+        'test_xs':test_xs,
+        'num_clusters':num_clusters,
+        'beta_d':beta_d,
+        'gen_seed':gen_seed,
+        'inverse_permuatation_indices_list':inverse_permuatation_indices_list,
+        }
+    rf.pickle(pkl_vals, pkl_filename, dir=S.data_dir)
+    #
+    return pkl_vals, pkl_filename
+ 
 def main():
     parser = argparse.ArgumentParser('Create a synthetic problem')
     parser.add_argument('gen_seed',type=int)
@@ -238,9 +278,7 @@ def main():
         'num_splits':args.num_splits
         }
 
-    rf.pickle(
-        pkl_vals,
-        os.path.join(settings.data_dir,args.pkl_file))
+    rf.pickle(pkl_vals, args.pkl_file, dir=S.data_dir)
 
 if __name__ == '__main__':
     main()
