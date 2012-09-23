@@ -13,8 +13,8 @@ import scipy
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
-import Cloudless.examples.DPMB.settings as settings
-reload(settings)
+import Cloudless.examples.DPMB.settings as S
+reload(S)
 import Cloudless.examples.DPMB.plot_utils as pu
 reload(pu)
 
@@ -155,14 +155,7 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
     
-def main():
-
-    # parse some args
-    parser = argparse.ArgumentParser('consolidate summaries')
-    parser.add_argument('data_dirs',nargs='+',type=str)
-    args = parser.parse_args()
-    data_dirs = args.data_dirs
-
+def process_dirs(data_dirs, plot_dir=S.data_dir):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
@@ -204,7 +197,8 @@ def main():
     #
     pylab.xlabel('time (seconds)')
     pylab.subplots_adjust(hspace=subplots_hspace)
-    pylab.savefig('test_lls_score_num_clusters')
+    fig_full_filename = os.path.join(plot_dir, 'test_lls_score_num_clusters')
+    pylab.savefig(fig_full_filename)
 
     gs_i = 0
     pylab.figure()
@@ -233,8 +227,19 @@ def main():
     #
     pylab.xlabel('time (seconds)')
     pylab.subplots_adjust(hspace=subplots_hspace)
-    pylab.savefig('alpha_beta_num_clusters')
+    fig_full_filename = os.path.join(plot_dir, 'alpha_beta_num_clusters')
+    pylab.savefig(fig_full_filename)
 
+    return summaries_dict, numnodes1_seed1
+
+def main():
+    # parse some args
+    parser = argparse.ArgumentParser('consolidate summaries')
+    parser.add_argument('data_dirs',nargs='+',type=str)
+    args = parser.parse_args()
+    data_dirs = args.data_dirs
+    #
+    summaries_dict, numnodes1_seed1 = process_dirs(data_dirs)
     return summaries_dict, numnodes1_seed1
 
 if __name__ == '__main__':
