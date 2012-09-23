@@ -34,7 +34,7 @@ class IterativeJob:
 
     Overridden by children.
     """
-    def do_initialize(self, params_dict):
+    def do_initialize(self, params):
         return {}
 
     """
@@ -42,7 +42,7 @@ class IterativeJob:
 
     Overriden by children.
     """
-    def do_state_update(self, state):
+    def do_state_update(self, state, params):
         pass
 
     """
@@ -50,7 +50,7 @@ class IterativeJob:
 
     Overridden by children.
     """
-    def do_render(self, state):
+    def do_render(self, state, params):
         return None
 
     """
