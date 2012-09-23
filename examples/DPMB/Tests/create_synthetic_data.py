@@ -114,17 +114,21 @@ def gen_factorial_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,beta_d
         
     return data,inverse_permutation_indices_list
 
-def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,num_splits=None,
+def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,
+                       num_splits=None,
                        plot=False,image_save_str=None):
 
     num_splits = 2 # only two splits for now
     numpy.random.seed(gen_seed)
     rows_per_cluster = num_rows/num_clusters
     if False:
-        distribute_indices = numpy.array((numpy.arange(rows_per_cluster)*num_clusters).tolist()*num_clusters) \
-            + numpy.repeat(range(num_clusters),rows_per_cluster)
+        base = (numpy.arange(rows_per_cluster)*num_clusters).tolist() * \
+            num_clusters
+        offset = numpy.repeat(range(num_clusters),rows_per_cluster)
+        distribute_indices = numpy.array() + offset
     else:
-        distribute_indices = (numpy.arange(num_rows) + rows_per_cluster/4) % num_rows
+        base = (numpy.arange(num_rows) + rows_per_cluster/4)
+        distribute_indices = base % num_rows
     inverse_distribute_indices = [
         range(num_rows),
         numpy.argsort(distribute_indices)
