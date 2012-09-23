@@ -66,9 +66,11 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
         self.add_passthrough_option(
-            '--problem_file',type='str', default=default_problem_file)
+            '--problem-file',type='str', default=default_problem_file)
         self.add_passthrough_option(
             '--resume-file',type='str', default=default_resume_file)
+        self.add_passthrough_option(
+            '--gibbs-init-file',type='str', default=None)
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
@@ -79,6 +81,7 @@ class MRSeedInferer(MRJob):
         self.time_seatbelt = self.options.time_seatbelt
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
+        self.gibbs_init_file = self.options.gibbs_init_file
         # if self.num_steps is None:
         #     if self.num_nodes == 1 and self.num_iters !=0:
         #         self.num_steps = 1
@@ -100,6 +103,7 @@ class MRSeedInferer(MRJob):
         num_nodes = self.num_nodes
         problem_file = self.problem_file
         resume_file = self.resume_file
+        gibbs_init_file = self.gibbs_init_file
         problem_full_file = os.path.join(data_dir, problem_file)
         if not os.path.isfile(problem_full_file):
             s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
@@ -131,10 +135,11 @@ class MRSeedInferer(MRJob):
             })
         #
         # FIXME : infer will pickle over this
-        pickle_file = create_pickle_file_str(num_nodes, run_key, str(-1))
-        rf.pickle(summary, pickle_file, dir=data_dir)
+        if gibbs_init_file is None:
+            gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1))
+        rf.pickle(summary, gibbs_init_file, dir=data_dir)
         if push_to_s3:
-            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pickle_file)
+            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(gibbs_init_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
