@@ -27,14 +27,6 @@ def transition_single_z(vector,random_state):
     score_vec,draw = pf.calculate_cluster_conditional(
         state,vector,random_state.uniform())
 
-    # FIXME : printing score_vec to be able to compare 
-    # optimized and non-optimized output for correctness
-    if False:
-        if type(score_vec) == list:
-            print score_vec
-        else:
-            print score_vec.tolist()
-
     cluster = None
     if draw == len(state.cluster_list):
         cluster = state.generate_cluster_assignment(force_new = True)
@@ -82,7 +74,8 @@ def cluster_vector_joint(vector,cluster,state):
     return retVal,alpha_term,data_term
 
 def create_alpha_lnPdf(state):
-    # FIXME : verify that this fixes the sampling issue
+    # Note : this is extraneous work for relative probabilities
+    #      : but necessary to determine true distribution probabilities
     lnProdGammas = sum([ss.gammaln(len(cluster.vector_list)) 
                         for cluster in state.cluster_list])
 
@@ -97,7 +90,6 @@ def create_beta_lnPdf(state,col_idx):
     S_list = [cluster.column_sums[col_idx] for cluster in state.cluster_list]
     R_list = [len(cluster.vector_list) - cluster.column_sums[col_idx] \
                   for cluster in state.cluster_list]
-    # beta_d = state.betas[col_idx]
     lnPdf = lambda beta_d: sum([ss.gammaln(2*beta_d) - 2*ss.gammaln(beta_d)
                                 + ss.gammaln(S+beta_d) + ss.gammaln(R+beta_d)
                                 - ss.gammaln(S+R+2*beta_d) 
@@ -152,11 +144,9 @@ def calc_alpha_conditional(state):
         state.setAlpha(lnPdf,test_alpha)
         logp_list.append(state.score)
         state.removeAlpha(lnPdf)
-    ##
-    # FIXME : testing uniform prior, rather than implicit log prior
-    #       : resulting from log gridding
-    #       : remove when done
-    logp_list += np.log(grid)
+    # Note: log gridding introduces (implicit) -log(x) prior
+    #     : to get uniform prior, need to add back np.log(x)
+    # logp_list += np.log(grid)
     
     state.setAlpha(lnPdf,original_alpha)
     return np.array(logp_list)-base_score,lnPdf,grid
@@ -169,9 +159,11 @@ def calc_beta_conditional(state,col_idx):
     logp_list = []
     state.removeBetaD(lnPdf,col_idx)
     base_score = state.score
-    # FIXME : Hardcoding prior on beta here
-    #       : determine proper way to do this
-    prior_func = lambda x : -np.log(x) # lambda x: -x # unormalized gamma func, k= 1, theta = 1
+    # Note: log gridding introduces (implicit) -log(x) prior
+    #     : to get uniform prior, need to add back np.log(x)
+    # prior_func = lambda x : +np.log(x) # uniform
+    # prior_func = lambda x: -x          # unormalized gamma_func(k=1, theta=1)
+    prior_func = None                    # retain implicit -log prior
     logp_arr = pf.calc_beta_conditional_helper(
         state,grid,col_idx,prior_func)
     logp_list = logp_arr.tolist()[0]
