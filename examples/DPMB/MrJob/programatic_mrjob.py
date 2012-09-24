@@ -1,6 +1,7 @@
 #!python
 import os
 from collections import namedtuple
+import hashlib
 #
 import matplotlib
 matplotlib.use('Agg')
@@ -15,12 +16,15 @@ import Cloudless.examples.DPMB.MrJob.consolidate_summaries as cs
 reload(cs)
 
 
+# data settings
+make_own_dir = True
+
 # problem settings
 gen_seed = 0
-num_rows = 1024
+num_rows = 8192
 num_cols = 256
 num_clusters = 4
-beta_d = 2.
+beta_d = 1.
 seed_filename = 'seed_list.txt'
 image_save_str = os.path.join(S.data_dir, 'mrjob_problem_gen_state')
 #
@@ -63,3 +67,30 @@ for num_nodes in num_nodes_list:
         runner.run()
 
 summaries_dict, numnodes1_seed1 = cs.process_dirs([S.data_dir])
+
+# create dir for results
+if make_own_dir:
+    get_hexdigest = lambda variable: \
+        hashlib.sha224(str(variable)).hexdigest()[:10]
+    settings_hash = {
+        'gen_seed':gen_seed,
+        'num_rows':num_rows,
+        'num_cols':num_cols,
+        'num_clusters':num_clusters,
+        'beta_d':beta_d,
+        'num_iters':num_iters,
+        'num_nodes_list':num_nodes_list,
+        }
+    hex_digest = get_hexdigest(settings_hash)
+    dest_dir = 'programmatic_mrjob_' + hex_digest
+    dest_dir = os.path.join(S.data_dir, dest_dir)
+    os.makedirs(dest_dir)
+    #
+    this_file = __file__
+    data_files = os.path.join(S.data_dir, '*{png,txt,pkl.gz}')
+    #
+    system_str = ' '.join(['cp', this_file, dest_dir])
+    os.system(system_str)
+    system_str = ' '.join(['mv', data_files, dest_dir])
+    system_str = ' '.join(['echo', system_str, '| bash'])
+    os.system(system_str)
