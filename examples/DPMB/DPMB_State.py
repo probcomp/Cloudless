@@ -15,12 +15,15 @@ reload(pf)
 ##
 import pdb
 
+is_power_2 = lambda num: int(np.log2(num)) == np.log2(num)
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
                  ,alpha_min=.01,alpha_max=1.E6,beta_min=.01,beta_max=1.E6
-                 ,grid_N=100):
+                 ,grid_N=100
+                 ,transitioner=None
+                 ):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
         self.alpha_min = alpha_min
@@ -44,11 +47,11 @@ class DPMB_State():
         # now deal with init_z and init_x specs:
         if (init_z is None) and (init_x is not None):
             # can no longer initialize to cluster prior with specified data
-            self.gibbs_type_init(num_rows,init_x)
+            self.gibbs_type_init(num_rows,init_x,transitioner)
         else:
             self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
 
-    def gibbs_type_init(self, num_rows, init_x):
+    def gibbs_type_init(self, num_rows, init_x, transitioner=None):
 
         # allocate each vector according to cluster_conditional
         # with the guts of hf.transition_single_z
@@ -69,9 +72,30 @@ class DPMB_State():
                 cluster = self.cluster_list[draw]
             cluster.assign_vector(vector)
 
+            # run inference on hypers
+            if (transitioner is not None) and (R > 1) and is_power_2(R-1):
+                save_str = 'state_' + str(R)
+                import os
+                save_str = os.path.join('/tmp', save_str)
+                print save_str
+                self.plot(save_str=save_str)
+                transitioner.state = self
+                transition_types = [
+                    transitioner.transition_beta, transitioner.transition_alpha]
+                for transition_type in \
+                        self.random_state.permutation(transition_types):
+                    transition_type()
+
             # FIXME : Remove when done analyzing gibbs-init timing
-            if R % 1000 == 0: # FIXME : Remove when done analyzing gibbs-init timing
-                print datetime.datetime.now(), R, len(self.cluster_list) # FIXME : Remove when done analyzing gibbs-init timing
+            if R % 1000 == 0:
+                print datetime.datetime.now(), R, len(self.cluster_list)
+        # plot final state
+        save_str = 'state_' + str(R)
+        import os
+        save_str = os.path.join('/tmp', save_str)
+        print save_str
+        self.plot(save_str=save_str)
+
 
     def non_gibbs_type_init(self, num_rows, init_z, init_x, decanon_indices):
         # init_z, cluster_ids = hf.canonicalize_list(init_z)
@@ -234,8 +258,8 @@ class DPMB_State():
         return grid
     
     def get_beta_grid(self):
-        # grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N)
-        grid = np.linspace(self.beta_min,self.beta_max,self.grid_N)
+        grid = 10.0**np.linspace(np.log10(self.beta_min),np.log10(self.beta_max),self.grid_N)
+        # grid = np.linspace(self.beta_min,self.beta_max,self.grid_N)
         return grid
 
     def get_all_vectors(self):
@@ -298,7 +322,7 @@ class DPMB_State():
     # def modifyScore(self,scoreDelta):
     #     self.score += scoreDelta
 
-    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=True,save_str=None,beta_idx=0,vector_idx=0,**kwargs):
+    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=False,save_str=None,beta_idx=0,vector_idx=0,**kwargs):
         if len(self.cluster_list) == 0:
             if save_str is not None:
                 pylab.figure()
@@ -403,8 +427,7 @@ class DPMB_State():
             try:
                 fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
             except Exception, e:
-                pdb.set_trace()
-                print 1
+                print e 
                 
 
         if save_str is not None:
