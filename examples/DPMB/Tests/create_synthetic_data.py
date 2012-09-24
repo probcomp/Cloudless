@@ -194,8 +194,10 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
             save_str = image_save_str
         state.plot(save_str=save_str, show=False)
         #
+        file_parts = os.path.split(save_str)
+        save_str = os.path.join(file_parts[0], 'just_state_' + file_parts[1])
         hf.plot_data(data=data[inverse_permutation_indices])
-        pylab.savefig('just_state')
+        pylab.savefig(save_str)
         pylab.close()
     return data,inverse_permutation_indices
 
