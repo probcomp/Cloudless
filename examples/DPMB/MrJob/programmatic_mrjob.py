@@ -84,7 +84,10 @@ if make_own_dir:
     hex_digest = get_hexdigest(settings_hash)
     dest_dir = 'programmatic_mrjob_' + hex_digest
     dest_dir = os.path.join(S.data_dir, dest_dir)
-    os.makedirs(dest_dir)
+    try:
+        os.makedirs(dest_dir)
+    except OSError, ose:
+        pass
     #
     this_file = __file__
     data_files = os.path.join(S.data_dir, '*{png,txt,pkl.gz}')
