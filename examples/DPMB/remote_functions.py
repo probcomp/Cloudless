@@ -153,7 +153,7 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
                               init_x=xs)
         xs = state.getXValues()
         if save_str is not None:
-            state.plot(save_str=save_str)
+            state.plot(save_str=save_str, show=False)
         
     if permute:
         # permute the data before passing out
@@ -184,7 +184,7 @@ def plot_helper(name, state):
     state.plot(show=False,save_str = name + "-" + "%3d" % count + ".png")
     counts[state] += 1
 
-def infer(run_spec, problem=None, send_zs=False):
+def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
     dataset_spec = run_spec["dataset_spec"]
     if problem is None:
         problem = gen_problem(dataset_spec)
@@ -217,6 +217,8 @@ def infer(run_spec, problem=None, send_zs=False):
         model_kwargs = {"hypers_every_N":hypers_every_N}
 
     init_start_ts = datetime.datetime.now()
+    # FIXME: how to do make this a passable argument?
+    init_transitioner = dm.DPMB(0,None,True,True) # FIXME
     inference_state = state_type(dataset_spec["gen_seed"],
                                  dataset_spec["num_cols"],
                                  dataset_spec["num_rows"],
@@ -225,9 +227,12 @@ def infer(run_spec, problem=None, send_zs=False):
                                  # init_z=run_spec["infer_init_z"],
                                  init_z=problem['zs'],
                                  init_x=np.array(problem["xs"],dtype=np.int32),
+                                 transitioner=init_transitioner, # FIXME
                                  **state_kwargs
                                  )
     init_delta_seconds = hf.delta_since(init_start_ts)
+    if init_save_str is not None:
+        inference_state.plot(save_str=init_save_str)
 
     print "...initialized"
     transitioner = model_type(
