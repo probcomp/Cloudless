@@ -31,7 +31,7 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = 'structured_problem.pkl.gz'
 default_resume_file = None
-push_to_s3 = True
+push_to_s3 = False
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -126,7 +126,10 @@ class MRSeedInferer(MRJob):
                    )
                 # FIXME: should I pass permute=False here?
                 problem = rf.gen_problem(run_spec['dataset_spec'])
-                summary = rf.infer(run_spec, problem)[-1]
+                init_save_str = 'gibbs_init_state'
+                init_save_str = os.path.join(settings.data_dir, init_save_str)
+                summary = rf.infer(
+                    run_spec, problem, init_save_str=init_save_str)[-1]
                 problem_hexdigest = get_hexdigest(problem)
         summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'].update({
