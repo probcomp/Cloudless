@@ -192,7 +192,7 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
         save_str = None
         if image_save_str is not None:
             save_str = image_save_str
-        state.plot(save_str=save_str)
+        state.plot(save_str=save_str, show=False)
         #
         hf.plot_data(data=data[inverse_permutation_indices])
         pylab.savefig('just_state')
@@ -200,7 +200,7 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
     return data,inverse_permutation_indices
 
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
-                      pkl_filename=None):
+                      pkl_filename=None, image_save_str=None):
     if pkl_filename is None:
         pkl_filename = '_'.join([
                 'clean_balanced_data',
@@ -215,6 +215,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         num_cols=num_cols,
         num_clusters=num_clusters,
         beta_d=beta_d,
+        image_save_str=image_save_str,
         )
     #
     all_indices = xrange(num_rows)
