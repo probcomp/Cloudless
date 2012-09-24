@@ -1,4 +1,7 @@
 #!python
+import os
+
+
 def have_display():
     return 'DISPLAY' in os.environ
 
