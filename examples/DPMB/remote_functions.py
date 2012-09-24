@@ -9,6 +9,8 @@ import sets
 import time
 from threading import Thread
 ##
+import Cloudless.examples.DPMB.optionally_use_agg as oua
+oua.optionally_use_agg()
 import numpy as np
 import pylab
 from numpy import array
