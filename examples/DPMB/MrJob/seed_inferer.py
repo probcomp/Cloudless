@@ -23,7 +23,7 @@ reload(settings)
 # importing csmp will create a structured problem
 # import Cloudless.examples.DPMB.MrJob.create_synthetic_mrjob_problem as csmp
 
-data_dir = settings.data_dir
+
 summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
 #
@@ -65,6 +65,7 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-iters', type='int', default=8)
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
+        self.add_passthrough_option('--data_dir', type='str', default=settings.data_dir)
         self.add_passthrough_option(
             '--problem-file',type='str', default=default_problem_file)
         self.add_passthrough_option(
@@ -79,6 +80,7 @@ class MRSeedInferer(MRJob):
         self.num_nodes = self.options.num_nodes
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
+        self.data_dir = self.options.data_dir
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
         self.gibbs_init_file = self.options.gibbs_init_file
@@ -101,6 +103,7 @@ class MRSeedInferer(MRJob):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
+        data_dir = self.data_dir
         problem_file = self.problem_file
         resume_file = self.resume_file
         gibbs_init_file = self.gibbs_init_file
@@ -188,6 +191,7 @@ class MRSeedInferer(MRJob):
 
     def infer(self, run_key, child_state_in):
         num_nodes = self.num_nodes
+        data_dir = self.data_dir
         problem_file = self.problem_file
         num_iters_per_step = self.num_iters_per_step
         x_indices = child_state_in.x_indices
@@ -256,6 +260,7 @@ class MRSeedInferer(MRJob):
     def consolidate_data(self, run_key, child_infer_output_generator):
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
+        data_dir = self.data_dir
         problem_file = self.problem_file
         zs_list = []
         x_indices_list = []

@@ -170,7 +170,7 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,
     return data,inverse_distribute_indices
 
 def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
-                    plot=False,image_save_str=None):
+                    plot=False,image_save_str=None, dir=''):
     random_state = numpy.random.RandomState(gen_seed)
     rows_per_cluster = num_rows/num_clusters
     permutation_indices = random_state.permutation(range(num_rows))
@@ -191,18 +191,17 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
             )
         save_str = None
         if image_save_str is not None:
-            save_str = image_save_str
+            save_str = os.path.join(dir, image_save_str)
         state.plot(save_str=save_str, show=False)
         #
-        file_parts = os.path.split(save_str)
-        save_str = os.path.join(file_parts[0], 'just_state_' + file_parts[1])
+        save_str = os.path.join(dir, 'just_state_' + image_save_str)
         hf.plot_data(data=data[inverse_permutation_indices])
         pylab.savefig(save_str)
         pylab.close()
     return data,inverse_permutation_indices
 
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
-                      pkl_filename=None, image_save_str=None):
+                      pkl_filename=None, image_save_str=None, dir=''):
     if pkl_filename is None:
         pkl_filename = '_'.join([
                 'clean_balanced_data',
@@ -218,6 +217,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         num_clusters=num_clusters,
         beta_d=beta_d,
         image_save_str=image_save_str,
+        dir=dir,
         )
     #
     all_indices = xrange(num_rows)
@@ -238,7 +238,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         'gen_seed':gen_seed,
         'inverse_permuatation_indices_list':inverse_permuatation_indices_list,
         }
-    rf.pickle(pkl_vals, pkl_filename, dir=S.data_dir)
+    rf.pickle(pkl_vals, pkl_filename, dir=dir)
     #
     return pkl_vals, pkl_filename
  
