@@ -128,9 +128,10 @@ class MRSeedInferer(MRJob):
                     num_iters=0 # no inference, just init
                    )
                 # FIXME: should I pass permute=False here?
+                run_spec['dataset_spec']['data_dir'] = data_dir
                 problem = rf.gen_problem(run_spec['dataset_spec'])
                 init_save_str = 'gibbs_init_state'
-                init_save_str = os.path.join(settings.data_dir, init_save_str)
+                init_save_str = os.path.join(data_dir, init_save_str)
                 summary = rf.infer(
                     run_spec, problem, init_save_str=init_save_str)[-1]
                 problem_hexdigest = get_hexdigest(problem)

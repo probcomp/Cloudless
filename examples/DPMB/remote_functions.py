@@ -113,14 +113,17 @@ def gen_problem(dataset_spec,permute=True,save_str=None):
     # containing all the training data only
 
     xs, zs, test_xs, test_lls, state = None, None, None, None, None
+    data_dir = dataset_spec.get('data_dir', settings.data_dir)
     if "pkl_file" in dataset_spec:
         # make sure the file is local
         pkl_file = dataset_spec['pkl_file']
-        pkl_full_file = os.path.join(settings.data_dir,pkl_file)
+        pkl_full_file = os.path.join(data_dir, pkl_file)
         permute = False # presume data is already permuted
                         # repermuting now makes tracking ground truth hard
         if not os.path.isfile(pkl_full_file):
-            have_file = s3h.S3_helper(bucket_dir=settings.s3.problem_bucket_dir).verify_file(pkl_file)
+            bucket_dir = settings.s3.problem_bucket_dir
+            s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=data_dir)
+            have_file = s3.verify_file(pkl_file)
             if not have_file:
                 exception_str = 'gen_problem couldn\'t get pkl_file: ' + pkl_file
                 raise Exception(exception_str)
@@ -188,6 +191,7 @@ def plot_helper(name, state):
 
 def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
     dataset_spec = run_spec["dataset_spec"]
+    data_dir = dataset_spec.get('data_dir', settings.data_dir)
     if problem is None:
         problem = gen_problem(dataset_spec)
     verbose_state = run_spec.get("verbose_state",False)
@@ -230,6 +234,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
                                  init_z=problem['zs'],
                                  init_x=np.array(problem["xs"],dtype=np.int32),
                                  transitioner=init_transitioner, # FIXME
+                                 data_dir=data_dir,
                                  **state_kwargs
                                  )
     init_delta_seconds = hf.delta_since(init_start_ts)

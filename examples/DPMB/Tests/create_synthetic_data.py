@@ -200,15 +200,16 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
         pylab.close()
     return data,inverse_permutation_indices
 
+make_filename = lambda num_rows, num_cols: '_'.join([
+        'clean_balanced_data',
+        'rows', str(num_rows), 
+        'cols', str(num_cols),
+        'pkl.gz'
+        ])
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
                       pkl_filename=None, image_save_str=None, dir=''):
     if pkl_filename is None:
-        pkl_filename = '_'.join([
-                'clean_balanced_data',
-                'rows', str(num_rows), 
-                'cols', str(num_cols),
-                'pkl.gz'
-                ])
+        pkl_filename = make_filename(num_rows, num_cols)
     # create the data
     data, inverse_permuatation_indices_list = make_clean_data(
         gen_seed=gen_seed,

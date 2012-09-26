@@ -1,5 +1,6 @@
 #!python
 import sys
+import os
 import datetime
 #
 import Cloudless.examples.DPMB.optionally_use_agg as oua
@@ -25,6 +26,7 @@ class DPMB_State():
                  ,alpha_min=.01,alpha_max=1.E6,beta_min=.01,beta_max=1.E6
                  ,grid_N=100
                  ,transitioner=None
+                 ,data_dir=''
                  ):
         self.random_state = hf.generate_random_state(gen_seed)
         self.num_cols = num_cols
@@ -49,11 +51,11 @@ class DPMB_State():
         # now deal with init_z and init_x specs:
         if (init_z is None) and (init_x is not None):
             # can no longer initialize to cluster prior with specified data
-            self.gibbs_type_init(num_rows,init_x,transitioner)
+            self.gibbs_type_init(num_rows, init_x, transitioner, data_dir)
         else:
             self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
 
-    def gibbs_type_init(self, num_rows, init_x, transitioner=None):
+    def gibbs_type_init(self, num_rows, init_x, transitioner=None, data_dir=''):
 
         # allocate each vector according to cluster_conditional
         # with the guts of hf.transition_single_z
@@ -61,7 +63,7 @@ class DPMB_State():
             
             # dummmy cluster necessary for generation, auto-popped when deassigned
             cluster = self.generate_cluster_assignment(force_new=True)
-            vector = self.generate_vector(data = init_x[R], cluster = cluster)
+            vector = self.generate_vector(data=init_x[R], cluster=cluster)
             cluster.deassign_vector(vector)
 
             unif = self.random_state.uniform()
@@ -69,7 +71,7 @@ class DPMB_State():
                 self,vector,unif)
             cluster = None
             if draw == len(self.cluster_list):
-                cluster = self.generate_cluster_assignment(force_new = True)
+                cluster = self.generate_cluster_assignment(force_new=True)
             else:
                 cluster = self.cluster_list[draw]
             cluster.assign_vector(vector)
@@ -77,8 +79,7 @@ class DPMB_State():
             # run inference on hypers
             if (transitioner is not None) and (R > 1) and is_power_2(R-1):
                 save_str = 'state_' + str(R)
-                import os
-                save_str = os.path.join('/tmp', save_str)
+                save_str = os.path.join(data_dir, save_str)
                 print save_str
                 self.plot(save_str=save_str)
                 transitioner.state = self
@@ -93,11 +94,9 @@ class DPMB_State():
                 print datetime.datetime.now(), R, len(self.cluster_list)
         # plot final state
         save_str = 'state_' + str(R)
-        import os
-        save_str = os.path.join('/tmp', save_str)
+        save_str = os.path.join(data_dir, save_str)
         print save_str
         self.plot(save_str=save_str)
-
 
     def non_gibbs_type_init(self, num_rows, init_z, init_x, decanon_indices):
         # init_z, cluster_ids = hf.canonicalize_list(init_z)
@@ -335,11 +334,6 @@ class DPMB_State():
         if which_handles is None:
             which_handles = np.repeat(None,len(which_plots))
         handle_lookup = dict(zip(which_plots,which_handles))
-        ## try orientation argument to histogram
-        if show:
-            pylab.ion()
-        else:
-            pylab.ioff()
 
         fh1 = None
         fh = pylab.figure()
@@ -434,7 +428,6 @@ class DPMB_State():
 
         if save_str is not None:
             pylab.savefig(save_str)
-            pylab.close()
 
         return fh,fh1,fh2,fh3,fh4
 
