@@ -106,9 +106,9 @@ summaries_dict, numnodes1_seed1 = cs.read_summaries([data_dir])
 cs.plot_summaries(summaries_dict, plot_dir=data_dir)
 reduced_summaries_dict = cs.extract_reduced_summaries(
     summaries_dict, cs.reduced_summary_extract_func_tuples)
-
-# save some consolidated info
 rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
+
+# save the initial parameters
 parameters_full_filename = os.path.join(data_dir, parameters_filename)
 with open(parameters_full_filename, 'w') as fh:
     for key, value in vars(args).iteritems():
