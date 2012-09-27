@@ -53,6 +53,8 @@ def get_summaries_dict(summary_names,data_dir):
         sorted_results = sorted(result.get(), cmp=sort_by_second_el)
         sorted_results = map(lambda x: x[0], sorted_results)
         summaries_dict[summary_name] = sorted_results
+    p.close()
+    p.join()
     return summaries_dict
 
 def process_timing(summaries):
