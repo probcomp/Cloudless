@@ -49,6 +49,7 @@ seed_filename = 'seed_list.txt'
 image_save_str = 'mrjob_problem_gen_state'
 gibbs_init_filename = 'gibbs_init.pkl.gz'
 data_dir_prefix = 'programmatic_mrjob_'
+parameters_filename = 'run_parameters.txt'
 
 # determine data dir
 get_hexdigest = lambda variable: \
@@ -97,7 +98,8 @@ for num_nodes in num_nodes_list:
     with mr_job.make_runner() as runner:
         runner.run()
 
-summaries_dict, numnodes1_seed1 = cs.process_dirs([data_dir], plot_dir=data_dir)
+summaries_dict, numnodes1_seed1 = cs.read_summaries([data_dir])
+cs.plot_summaries(summaries_dict, plot_dir=data_dir)
 
 # create dir for results
 this_file = __file__
@@ -105,6 +107,7 @@ data_files = os.path.join(data_dir, '*{png,txt,pkl.gz}')
 #
 system_str = ' '.join(['cp', this_file, data_dir])
 os.system(system_str)
+
 # system_str = ' '.join(['mv', data_files, data_dir])
 # system_str = ' '.join(['echo', system_str, '| bash'])
 # os.system(system_str)

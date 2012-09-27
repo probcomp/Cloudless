@@ -154,8 +154,9 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
     pylab.xlabel('cluster_size')
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
-    
-def process_dirs(data_dirs, plot_dir=S.data_dir):
+
+
+def read_summaries(data_dirs):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
@@ -169,7 +170,10 @@ def process_dirs(data_dirs, plot_dir=S.data_dir):
     numnodes1_seed1 = None
     if one_node_children_key in summaries_dict:
         numnodes1_seed1 = summaries_dict.pop(one_node_children_key)
-        
+
+    return summaries_dict, numnodes1_seed1
+
+def plot_summaries(summaries_dict, plot_dir=''):
     gs = pu.get_gridspec(3)
     subplots_hspace = .25
 
@@ -199,7 +203,7 @@ def process_dirs(data_dirs, plot_dir=S.data_dir):
     pylab.subplots_adjust(hspace=subplots_hspace)
     fig_full_filename = os.path.join(plot_dir, 'test_lls_score_num_clusters')
     pylab.savefig(fig_full_filename)
-
+    
     gs_i = 0
     pylab.figure()
     # create alpha plot
@@ -230,8 +234,6 @@ def process_dirs(data_dirs, plot_dir=S.data_dir):
     fig_full_filename = os.path.join(plot_dir, 'alpha_beta_num_clusters')
     pylab.savefig(fig_full_filename)
 
-    return summaries_dict, numnodes1_seed1
-
 def main():
     # parse some args
     parser = argparse.ArgumentParser('consolidate summaries')
@@ -239,7 +241,8 @@ def main():
     args = parser.parse_args()
     data_dirs = args.data_dirs
     #
-    summaries_dict, numnodes1_seed1 = process_dirs(data_dirs)
+    summaries_dict, numnodes1_seed1 = read_summaries(data_dirs)
+    plot_summaries(summaries_dict)
     return summaries_dict, numnodes1_seed1
 
 if __name__ == '__main__':
