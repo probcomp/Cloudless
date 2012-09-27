@@ -234,6 +234,22 @@ def plot_summaries(summaries_dict, plot_dir=''):
     fig_full_filename = os.path.join(plot_dir, 'alpha_beta_num_clusters')
     pylab.savefig(fig_full_filename)
 
+reduced_summary_extract_func_tuples = [
+    ('score', extract_score),
+    ('test_lls', extract_test_lls),
+    ('delta_t', extract_delta_t),
+    ('log10_alpha', extract_log10_alpha),
+    ('num_clusters', extract_num_clusters),
+    ]
+def extract_reduced_summaries(summaries_dict, extract_func_tuples):
+    reduced_summaries_dict = dict()
+    for summaries_name, summaries in summaries_dict.iteritems():
+        reduced_summaries_dict.setdefault(summaries_name, dict())
+        for extract_name, extract_func in extract_func_tuples:
+            extract_vals = numpy.array(extract_func(summaries),dtype=float)
+            reduced_summaries_dict[summaries_name][extract_name] = extract_vals
+    return reduced_summaries_dict
+
 def main():
     # parse some args
     parser = argparse.ArgumentParser('consolidate summaries')
