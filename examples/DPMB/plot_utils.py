@@ -16,7 +16,7 @@ def get_gridspec(height_ratios_or_int):
         height_ratios = numpy.repeat(1./height_ratios, height_ratios)
     return gridspec.GridSpec(len(height_ratios), 1, height_ratios=height_ratios)
 
-def legend_outside(ax=None, bbox_to_anchor=(0.5, -0.1), loc='upper center'):
+def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center'):
     # labels must be set in original plot call: plot(..., label=label)
     if ax is None:
         ax = pylab.gca()
