@@ -31,6 +31,26 @@ def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
         ax = pylab.gca()
     lgd = ax.get_legend()
     pylab.savefig(namestr, bbox_extra_artists=(lgd,), bbox_inches=bbox_inches)
+
+def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
+              subplots_hspace=.25):
+    num_tuples = len(plot_tuples)
+    gs = get_gridspec(num_tuples)
+    fh = pylab.figure()
+    #
+    for gs_i, extract_tuple in enumerate(plot_tuples):
+        plot_func, ylabel = extract_tuple
+        last_axes = pylab.subplot(gs[gs_i])
+        plot_func(data)
+        pylab.ylabel(ylabel)
+    pylab.subplots_adjust(hspace=subplots_hspace)
+    legend_outside(last_axes)
+    first_axes = fh.get_axes()[0]
+    first_axes.set_title(title)
+    last_axes.set_xlabel(xlabel)
+    if save_str is not None:
+        savefig_legend_outside(save_str, last_axes)
+    return fh
     
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab

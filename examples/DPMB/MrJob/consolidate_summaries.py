@@ -189,26 +189,6 @@ def read_summaries(data_dirs, do_print=False):
     #
     return summaries_dict, numnodes1_parent_list
 
-def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
-              subplots_hspace=.25):
-    num_tuples = len(plot_tuples)
-    gs = pu.get_gridspec(num_tuples)
-    fh = pylab.figure()
-    #
-    for gs_i, extract_tuple in enumerate(plot_tuples):
-        plot_func, ylabel = extract_tuple
-        last_axes = pylab.subplot(gs[gs_i])
-        plot_func(data)
-        pylab.ylabel(ylabel)
-    pylab.subplots_adjust(hspace=subplots_hspace)
-    pu.legend_outside(last_axes)
-    first_axes = fh.get_axes()[0]
-    first_axes.set_title(title)
-    last_axes.set_xlabel(xlabel)
-    if save_str is not None:
-        pu.savefig_legend_outside(save_str, last_axes)
-    return fh
-
 def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
     get_time_plotter = lambda extract_func: \
         (lambda summaries_dict: 
@@ -228,7 +208,7 @@ def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
     figname = 'test_lls_score_num_clusters'
     fig_full_filename = os.path.join(plot_dir, figname)
     #
-    fh = multiplot(summaries_dict, plot_tuples,
+    fh = pu.multiplot(summaries_dict, plot_tuples,
                    title=title, xlabel=xlabel,
                    save_str=fig_full_filename)
     fh_list.append(fh)
@@ -241,7 +221,7 @@ def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
     figname = 'alpha_beta_num_clusters'
     fig_full_filename = os.path.join(plot_dir, figname)
     #
-    fh = multiplot(summaries_dict, plot_tuples,
+    fh = pu.multiplot(summaries_dict, plot_tuples,
                    title=title, xlabel=xlabel,
                    save_str=fig_full_filename)
     fh_list.append(fh)
