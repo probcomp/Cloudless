@@ -189,7 +189,8 @@ def read_summaries(data_dirs, do_print=False):
     #
     return summaries_dict, numnodes1_parent_list
 
-def multiplot(data, plot_tuples, subplots_hspace=.25):
+def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
+              subplots_hspace=.25):
     num_tuples = len(plot_tuples)
     gs = pu.get_gridspec(num_tuples)
     fh = pylab.figure()
@@ -201,9 +202,14 @@ def multiplot(data, plot_tuples, subplots_hspace=.25):
         pylab.ylabel(ylabel)
     pylab.subplots_adjust(hspace=subplots_hspace)
     pu.legend_outside(last_axes)
+    first_axes = fh.get_axes()[0]
+    first_axes.set_title(title)
+    last_axes.set_xlabel(xlabel)
+    if save_str is not None:
+        pu.savefig_legend_outside(save_str, last_axes)
     return fh
 
-def plot_summaries(summaries_dict, plot_dir=''):
+def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
     get_time_plotter = lambda extract_func: \
         (lambda summaries_dict: 
          plot_vs_time(summaries_dict, extract_func, label_func=shorten_name))
@@ -220,12 +226,12 @@ def plot_summaries(summaries_dict, plot_dir=''):
         (get_time_plotter(extract_num_clusters), 'num clusters'),
         ]
     figname = 'test_lls_score_num_clusters'
-    #
-    fh = multiplot(summaries_dict, plot_tuples)
-    fh_list.append(fh)
-    pylab.xlabel('time (seconds)')
     fig_full_filename = os.path.join(plot_dir, figname)
-    pu.savefig_legend_outside(fig_full_filename, pylab.gca())
+    #
+    fh = multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
     
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha), 'log10 alpha'),
@@ -233,12 +239,12 @@ def plot_summaries(summaries_dict, plot_dir=''):
         (get_time_plotter(extract_num_clusters), 'num clusters'),
         ]
     figname = 'alpha_beta_num_clusters'
-    #
-    fh = multiplot(summaries_dict, plot_tuples)
-    fh_list.append(fh)
-    pylab.xlabel('time (seconds)')
     fig_full_filename = os.path.join(plot_dir, figname)
-    pu.savefig_legend_outside(fig_full_filename, pylab.gca())
+    #
+    fh = multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
 
     return fh_list
 
