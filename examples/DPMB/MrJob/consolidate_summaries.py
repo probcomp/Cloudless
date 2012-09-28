@@ -66,7 +66,6 @@ def process_timing(summaries):
         for summary in summaries[1:]:
             delta_ts.append('%.2f' % get_total_seconds(summary))
     else:
-    #if 'run_sum' in summaries[0]['timing']:
         for summary in summaries[1:]:
             delta_ts.append('%.2f' % summary['timing']['run_sum'])
     return delta_ts
@@ -92,14 +91,14 @@ extract_test_lls = lambda summaries : [
     for summary in summaries
     ]
 extract_delta_t = process_timing
-#
-extract_funcs = [
-    ('score', extract_score),
-    ('test_lls', extract_test_lls),
-    ('delta_t', extract_delta_t),
-    ]
 
 def print_info(summaries_dict):
+    extract_funcs = [
+        ('score', extract_score),
+        ('test_lls', extract_test_lls),
+        ('delta_t', extract_delta_t),
+        ]
+    #
     for extract_label, extract_func in extract_funcs:
         print extract_label
         for filename in sorted(summaries_dict.keys()):
@@ -128,7 +127,7 @@ def get_color(summaries_key):
     color = numnodes_to_color[numnodes_str]
     return color
     
-def plot_vs_time(summaries_dict, extract_func, new_fig=True, label_func=None, 
+def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
                  do_legend=False):
     if new_fig:
         pylab.figure()
@@ -140,9 +139,9 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=True, label_func=None,
         color = get_color(summaries_name)
         label = label_func(summaries_name)
         pylab.plot(timing,extract_vals, label=label, color=color)
-    legend_list = map(label_func,summaries_dict.keys())
     if do_legend:
-        pylab.legend(legend_list,prop={"size":"medium"}) # ,loc='lower right')
+        legend_list = map(label_func, summaries_dict.keys())
+        pylab.legend(legend_list, prop={"size":"medium"}) # ,loc='lower right')
 
 def plot_cluster_counts(summary, new_fig=True, log_x=False):
     cluster_counts = summary['cluster_counts']
@@ -177,66 +176,72 @@ def read_summaries(data_dirs, do_print=False):
         if do_print:
             print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
-
-    # pop off the one_node parent key
+    # pop off the one_node parent keys
     numnodes1_prefix = 'summary_numnodes1_'
     is_numnode1_parent = lambda filename: \
         filename.startswith(numnodes1_prefix) and filename.find('child') == -1
-    parent_keys = filter(is_numnode1_parent, summaries_dict.keys())
+    all_keys = summaries_dict.keys()
+    parent_keys = filter(is_numnode1_parent, all_keys)
     numnodes1_parent_list = []
     for parent_key in parent_keys:
-        numnodes1_parent_list.append(summaries_dict.pop(parent_key))
-
+        parent_summaries = summaries_dict.pop(parent_key)
+        numnodes1_parent_list.append(parent_summaries)
+    #
     return summaries_dict, numnodes1_parent_list
 
+def multiplot(data, plot_tuples, subplots_hspace=.25):
+    num_tuples = len(plot_tuples)
+    gs = pu.get_gridspec(num_tuples)
+    fh = pylab.figure()
+    #
+    for gs_i, extract_tuple in enumerate(plot_tuples):
+        plot_func, ylabel = extract_tuple
+        last_axes = pylab.subplot(gs[gs_i])
+        plot_func(data)
+        pylab.ylabel(ylabel)
+    pylab.subplots_adjust(hspace=subplots_hspace)
+    pu.legend_outside(last_axes)
+    return fh
+
 def plot_summaries(summaries_dict, plot_dir=''):
-    gs = pu.get_gridspec(3)
-    subplots_hspace = .25
     get_time_plotter = lambda extract_func: \
-        plot_vs_time(summaries_dict, extract_func, label_func=shorten_name)
+        (lambda summaries_dict: 
+         plot_vs_time(summaries_dict, extract_func, label_func=shorten_name))
+    def boxplotter(summaries_dict):
+        for values in summaries_dict.values():
+            betas = extract_beta(values)
+            betas = numpy.array(betas).T
+            pylab.boxplot(numpy.log10(betas))
+    fh_list = []
 
     plot_tuples = [
         (get_time_plotter(extract_test_lls), 'test set\nmean log likelihood'),
         (get_time_plotter(extract_score), 'model score'),
         (get_time_plotter(extract_num_clusters), 'num clusters'),
         ]
+    figname = 'test_lls_score_num_clusters'
     #
-    pylab.figure()
-    for gs_i, extract_tuple in enumerate(plot_tuples):
-        plot_func, ylabel = extract_tuple
-        pylab.subplot(gs[gs_i])
-        plot_func(summaries_dict)
-        pylab.ylabel(ylabel)
+    fh = multiplot(summaries_dict, plot_tuples)
+    fh_list.append(fh)
     pylab.xlabel('time (seconds)')
-    pylab.subplots_adjust(hspace=subplots_hspace)
-    fig_full_filename = os.path.join(plot_dir, 'test_lls_score_num_clusters')
-    pu.legend_outside(pylab.gca())
+    fig_full_filename = os.path.join(plot_dir, figname)
     pu.savefig_legend_outside(fig_full_filename, pylab.gca())
-
-    def boxplotter(summaries_dict):
-        for values in summaries_dict.values():
-            betas = extract_beta(values)
-            betas = numpy.array(betas).T
-            pylab.boxplot(numpy.log10(betas))
-        
+    
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha), 'log10 alpha'),
         (boxplotter, 'log10 beta boxplot'),
         (get_time_plotter(extract_num_clusters), 'num clusters'),
         ]
+    figname = 'alpha_beta_num_clusters'
     #
-    pylab.figure()
-    for gs_i, extract_tuple in enumerate(plot_tuples):
-        plot_func, ylabel = extract_tuple
-        pylab.subplot(gs[gs_i])
-        plot_func(summaries_dict)
-        pylab.ylabel(ylabel)
+    fh = multiplot(summaries_dict, plot_tuples)
+    fh_list.append(fh)
     pylab.xlabel('time (seconds)')
-    pylab.subplots_adjust(hspace=subplots_hspace)
-    fig_full_filename = os.path.join(plot_dir, 'alpha_beta_num_clusters')
-    pu.legend_outside(pylab.gca())
+    fig_full_filename = os.path.join(plot_dir, figname)
     pu.savefig_legend_outside(fig_full_filename, pylab.gca())
-        
+
+    return fh_list
+
 reduced_summary_extract_func_tuples = [
     ('score', extract_score),
     ('test_lls', extract_test_lls),
