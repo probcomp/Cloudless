@@ -108,7 +108,14 @@ def print_info(summaries_dict):
             print extract_func(summaries)
         print
 
-shorten_name = lambda x: x[8:-8]
+shorten_re = re.compile('.*numnodes(\d+)_')
+def shorten_name(instr):
+    match = shorten_re.match(instr)
+    shortened_name = instr
+    if match is not None:
+        shortened_name = 'nodes=' + match.groups()[0]
+    return shortened_name
+
 numnodes_to_color = {'1':'red', '2':'yellow', '4':'green', 'other':'black'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
@@ -121,15 +128,19 @@ def get_color(summaries_key):
     color = numnodes_to_color[numnodes_str]
     return color
     
-def plot_vs_time(summaries_dict, extract_func, new_fig=True, do_legend=True):
+def plot_vs_time(summaries_dict, extract_func, new_fig=True, label_func=None, 
+                 do_legend=False):
     if new_fig:
         pylab.figure()
+    if label_func is None:
+        label_func = lambda x: x
     for summaries_name, summaries in summaries_dict.iteritems():
-        timing = numpy.array(extract_delta_t(summaries),dtype=float)
-        extract_vals = numpy.array(extract_func(summaries),dtype=float)
+        timing = numpy.array(extract_delta_t(summaries), dtype=float)
+        extract_vals = numpy.array(extract_func(summaries), dtype=float)
         color = get_color(summaries_name)
-        pylab.plot(timing,extract_vals,color=color)
-    legend_list = map(shorten_name,summaries_dict.keys())
+        label = label_func(summaries_name)
+        pylab.plot(timing,extract_vals, label=label, color=color)
+    legend_list = map(label_func,summaries_dict.keys())
     if do_legend:
         pylab.legend(legend_list,prop={"size":"medium"}) # ,loc='lower right')
 
@@ -157,85 +168,75 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
 
-
-def read_summaries(data_dirs):
+def read_summaries(data_dirs, do_print=False):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
         summary_tuples = get_summary_tuples(data_dir)
         working_summaries_dict = get_summaries_dict(summary_tuples,data_dir)
-        print_info(working_summaries_dict)
+        if do_print:
+            print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
 
     # pop off the one_node parent key
-    one_node_children_key = 'summary_numnodes1_seed1_iternum'
-    numnodes1_seed1 = None
-    if one_node_children_key in summaries_dict:
-        numnodes1_seed1 = summaries_dict.pop(one_node_children_key)
+    numnodes1_prefix = 'summary_numnodes1_'
+    is_numnode1_parent = lambda filename: \
+        filename.startswith(numnodes1_prefix) and filename.find('child') == -1
+    parent_keys = filter(is_numnode1_parent, summaries_dict.keys())
+    numnodes1_parent_list = []
+    for parent_key in parent_keys:
+        numnodes1_parent_list.append(summaries_dict.pop(parent_key))
 
-    return summaries_dict, numnodes1_seed1
+    return summaries_dict, numnodes1_parent_list
 
 def plot_summaries(summaries_dict, plot_dir=''):
     gs = pu.get_gridspec(3)
     subplots_hspace = .25
+    get_time_plotter = lambda extract_func: \
+        plot_vs_time(summaries_dict, extract_func, label_func=shorten_name)
 
-    gs_i = 0
+    plot_tuples = [
+        (get_time_plotter(extract_test_lls), 'test set\nmean log likelihood'),
+        (get_time_plotter(extract_score), 'model score'),
+        (get_time_plotter(extract_num_clusters), 'num clusters'),
+        ]
+    #
     pylab.figure()
-    #
-    # create test_lls plot
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    plot_vs_time(
-        summaries_dict, extract_test_lls, new_fig=False, do_legend=False)
-    pylab.ylabel('test set\nmean log likelihood')
-    #
-    # create score plot
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    plot_vs_time(summaries_dict, extract_score, new_fig=False, do_legend=False)
-    pylab.ylabel('model score')
-    #
-    # create num_clusters plot
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
-    pylab.ylabel('num clusters')
-    #
+    for gs_i, extract_tuple in enumerate(plot_tuples):
+        plot_func, ylabel = extract_tuple
+        pylab.subplot(gs[gs_i])
+        plot_func(summaries_dict)
+        pylab.ylabel(ylabel)
     pylab.xlabel('time (seconds)')
     pylab.subplots_adjust(hspace=subplots_hspace)
     fig_full_filename = os.path.join(plot_dir, 'test_lls_score_num_clusters')
-    pylab.savefig(fig_full_filename)
-    
-    gs_i = 0
+    pu.legend_outside(pylab.gca())
+    pu.savefig_legend_outside(fig_full_filename, pylab.gca())
+
+    def boxplotter(summaries_dict):
+        for values in summaries_dict.values():
+            betas = extract_beta(values)
+            betas = numpy.array(betas).T
+            pylab.boxplot(numpy.log10(betas))
+        
+    plot_tuples = [
+        (get_time_plotter(extract_log10_alpha), 'log10 alpha'),
+        (boxplotter, 'log10 beta boxplot'),
+        (get_time_plotter(extract_num_clusters), 'num clusters'),
+        ]
+    #
     pylab.figure()
-    # create alpha plot
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    plot_vs_time(
-        summaries_dict, extract_log10_alpha, new_fig=False, do_legend=False)
-    pylab.ylabel('log10 alpha')
-    #
-    # betas distribution
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    for values in summaries_dict.values():
-        betas = extract_beta(values)
-        betas = numpy.array(betas).T
-        pylab.boxplot(numpy.log10(betas))
-    pylab.title('beta boxplot')
-    pylab.ylabel('log10 beta')
-    #
-    # create num_clusters plot
-    pylab.subplot(gs[gs_i])
-    gs_i += 1
-    plot_vs_time(summaries_dict, extract_num_clusters, new_fig=False)
-    pylab.ylabel('num clusters')
-    #
+    for gs_i, extract_tuple in enumerate(plot_tuples):
+        plot_func, ylabel = extract_tuple
+        pylab.subplot(gs[gs_i])
+        plot_func(summaries_dict)
+        pylab.ylabel(ylabel)
     pylab.xlabel('time (seconds)')
     pylab.subplots_adjust(hspace=subplots_hspace)
     fig_full_filename = os.path.join(plot_dir, 'alpha_beta_num_clusters')
-    pylab.savefig(fig_full_filename)
-
+    pu.legend_outside(pylab.gca())
+    pu.savefig_legend_outside(fig_full_filename, pylab.gca())
+        
 reduced_summary_extract_func_tuples = [
     ('score', extract_score),
     ('test_lls', extract_test_lls),
@@ -259,9 +260,9 @@ def main():
     args = parser.parse_args()
     data_dirs = args.data_dirs
     #
-    summaries_dict, numnodes1_seed1 = read_summaries(data_dirs)
+    summaries_dict, numnodes1_parent_list = read_summaries(data_dirs)
     plot_summaries(summaries_dict)
-    return summaries_dict, numnodes1_seed1
+    return summaries_dict, numnodes1_parent_list
 
 if __name__ == '__main__':
-    summaries_dict, numnodes1_seed1 = main()
+    summaries_dict, numnodes1_parent_list = main()
