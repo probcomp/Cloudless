@@ -101,16 +101,20 @@ for num_nodes in num_nodes_list:
     with mr_job.make_runner() as runner:
         runner.run()
 
+# save the initial parameters
+parameters = vars(args)
+parameters_full_filename = os.path.join(data_dir, parameters_filename)
+with open(parameters_full_filename, 'w') as fh:
+    for key, value in parameters.iteritems():
+        line = str(key) + ' = ' + str(value) + '\n'
+        fh.write(line)
+
 # summarize the data
-summaries_dict, numnodes1_seed1 = cs.read_summaries([data_dir])
-cs.plot_summaries(summaries_dict, plot_dir=data_dir)
+summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir])
+title = cs.title_from_parameters(parameters)
+xlabel = 'time (seconds)'
+cs.plot_summaries(summaries_dict, title=title, xlabel=xlabel, plot_dir=data_dir)
 reduced_summaries_dict = cs.extract_reduced_summaries(
     summaries_dict, cs.reduced_summary_extract_func_tuples)
 rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
 
-# save the initial parameters
-parameters_full_filename = os.path.join(data_dir, parameters_filename)
-with open(parameters_full_filename, 'w') as fh:
-    for key, value in vars(args).iteritems():
-        line = str(key) + ' = ' + str(value) + '\n'
-        fh.write(line)
