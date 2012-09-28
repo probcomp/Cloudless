@@ -1,4 +1,5 @@
 import numpy
+import pylab
 import scipy.special as ss
 import matplotlib.gridspec as gridspec
 #
@@ -14,6 +15,22 @@ def get_gridspec(height_ratios_or_int):
     if isinstance(height_ratios, int):
         height_ratios = numpy.repeat(1./height_ratios, height_ratios)
     return gridspec.GridSpec(len(height_ratios), 1, height_ratios=height_ratios)
+
+def legend_outside(ax=None, bbox_to_anchor=(0.5, -0.1), loc='upper center'):
+    # labels must be set in original plot call: plot(..., label=label)
+    if ax is None:
+        ax = pylab.gca()
+    handles, labels = ax.get_legend_handles_labels()
+    ncol = len(labels)
+    lgd = ax.legend(handles, labels, loc=loc, ncol=ncol,
+    	            bbox_to_anchor=bbox_to_anchor)
+
+def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
+    # issue with subplot: which axis to take?  this assumes use the last axis
+    if ax is None:
+        ax = pylab.gca()
+    lgd = ax.get_legend()
+    pylab.savefig(namestr, bbox_extra_artists=(lgd,), bbox_inches=bbox_inches)
     
 def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
     import pylab
