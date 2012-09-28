@@ -9,7 +9,6 @@ import DPMB_State as ds
 reload(ds)
 
 
-
 def get_gridspec(height_ratios_or_int):
     height_ratios = height_ratios_or_int
     if isinstance(height_ratios, int):
@@ -26,7 +25,6 @@ def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center'):
     	            bbox_to_anchor=bbox_to_anchor)
 
 def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
-    # issue with subplot: which axis to take?  this assumes use the last axis
     if ax is None:
         ax = pylab.gca()
     lgd = ax.get_legend()
