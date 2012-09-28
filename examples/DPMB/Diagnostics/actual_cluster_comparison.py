@@ -61,43 +61,60 @@ for key in results_by_numnodes:
     series = frame['end_clusters']
     series_dict[key] = series
 
-color_lookup = dict(zip([1, 2, 4], ['red', 'blue', 'green']))
-marker_lookup = dict(zip([1, 2, 4], ['+', 'x', 'v']))
-h_jitter_add_lookup = dict(zip([1, 2, 4], [.9, 1., 1.1]))
-ax = None
-random_state = numpy.random.RandomState(0)
+num_nodes_list = [1, 2, 4]
+colors_list = ['red', 'blue', 'green']
+markers_list = ['+', 'x', 'v']
+h_jitter_fixed_list = [.9, 1., 1.1]
 v_jitter_delta = .1
 v_low = 1 - v_jitter_delta
 v_high = 1 + v_jitter_delta
+h_jitter_delta = .1
+h_low = 1 - h_jitter_delta
+h_high = 1 + h_jitter_delta
+#
+color_lookup = dict(zip(num_nodes_list, colors_list))
+marker_lookup = dict(zip(num_nodes_list, markers_list))
+h_jitter_fixed_lookup = dict(zip(num_nodes_list, h_jitter_fixed_list))
+#
+ax = None
+random_state = numpy.random.RandomState(0)
 for numnodes, series in series_dict.iteritems():
+    n_series = len(series)
     color = color_lookup[numnodes]
     marker = marker_lookup[numnodes]
-    h_jitter_add = h_jitter_add_lookup[numnodes]
-    h_jitter_mult = random_state.uniform(
-        low=v_low, high=v_high, size=len(series))
-    v_jitter = random_state.uniform(low=v_low, high=v_high, size=len(series))
-    xs = series.index * h_jitter_add * h_jitter_mult
+    h_jitter_fixed = h_jitter_fixed_lookup[numnodes]
+    h_jitter_rand = random_state.uniform(low=h_low, high=h_high, size=n_series)
+    v_jitter = random_state.uniform(low=v_low, high=v_high, size=n_series)
+    xs = series.index * h_jitter_fixed * h_jitter_rand
     ys = series.values * v_jitter
     label = 'numnodes=' + str(numnodes)
     ax = log_log_plot(xs, ys, ax=ax, color=color, marker=marker, label=label)
 
+# show the actual number of clusters
 uniq_true_num_clusters = numpy.unique([el for el in series.index])
-for true_num_clusters in uniq_true_num_clusters:
-    ax.axvline(true_num_clusters, color='red')
+# line_colors = ['orange', 'yellow', 'brown']
+line_colors = ['cyan', 'magenta', 'yellow']
+for uniq_idx, true_num_clusters in enumerate(uniq_true_num_clusters):
+    color_idx = uniq_idx % len(line_colors)
+    color = line_colors[color_idx]
+    ax.axvline(true_num_clusters, color=color)
+    ax.axhline(true_num_clusters, color=color)
 
-xlim = ax.get_xlim()
-ylim = ax.get_ylim()
-pylab.plot(xlim, ylim, color='red')
-ax.set_xlim(xlim)
-ax.set_ylim(ylim)
+# # add a diagonal line to show where true is
+# xlim = ax.get_xlim()
+# ylim = ax.get_ylim()
+# pylab.plot(xlim, ylim, color='red')
+# ax.set_xlim(xlim)
+# ax.set_ylim(ylim)
 
+# add notations
 handles, labels = ax.get_legend_handles_labels()
 lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
                 bbox_to_anchor=(0.5,-0.1))
 pylab.xlabel('true num clusters')
 pylab.ylabel('last sample num clusters')
 pylab.title('Final num clusters comparison for comparable problems, #iters\n'
-            'Vertical and Horizontal jitter added\n'
-            'true num clusters denoted by proximate red line')
+            'Vertical and horizontal jitter added\n'
+            'True num clusters denoted by proximate vertical line')
 pylab.savefig('true_vs_sampled_num_clusters',
               bbox_extra_artists=(lgd,), bbox_inches='tight')
