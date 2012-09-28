@@ -189,6 +189,17 @@ def read_summaries(data_dirs, do_print=False):
     #
     return summaries_dict, numnodes1_parent_list
 
+parameters_of_interest = ['beta_d', 'num_clusters', 'num_rows']
+def title_from_parameters(parameters,
+                          parameters_of_interest=parameters_of_interest):
+    title_els = []
+    for parameter_name in parameters_of_interest:
+        parameter_value = str(parameters[parameter_name])
+        title_el = parameter_name + '=' + str(parameter_value)
+        title_els.append(title_el)
+    title = '; '.join(title_els)
+    return title
+
 def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
     get_time_plotter = lambda extract_func: \
         (lambda summaries_dict: 
