@@ -100,13 +100,6 @@ for uniq_idx, true_num_clusters in enumerate(uniq_true_num_clusters):
     ax.axvline(true_num_clusters, color=color)
     ax.axhline(true_num_clusters, color=color)
 
-# # add a diagonal line to show where true is
-# xlim = ax.get_xlim()
-# ylim = ax.get_ylim()
-# pylab.plot(xlim, ylim, color='red')
-# ax.set_xlim(xlim)
-# ax.set_ylim(ylim)
-
 # add notations
 handles, labels = ax.get_legend_handles_labels()
 lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
