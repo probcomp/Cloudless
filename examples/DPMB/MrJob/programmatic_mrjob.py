@@ -32,8 +32,8 @@ parser.add_argument('beta_d', type=float)
 parser.add_argument('num_iters', type=int)
 parser.add_argument('num_nodes_list', nargs='+', type=int)
 #
-args = parser.parse_args()
 # args = parser.parse_args(['0', '2048', '256', '32', '1.0', '3', '1', '4'])
+args = parser.parse_args()
 
 # problem settings
 gen_seed = args.gen_seed
@@ -58,6 +58,7 @@ reduced_summaries_name = 'reduced_summaries.pkl.gz'
 # determine data dir
 get_hexdigest = lambda variable: \
     hashlib.sha224(str(variable)).hexdigest()[:10]
+# FIXME: should omit num_iters, num_nodes_list from hexdigest
 hex_digest = get_hexdigest(vars(args))
 data_dir = data_dir_prefix + hex_digest
 data_dir = os.path.join(base_dir, data_dir)
@@ -76,7 +77,7 @@ os.system('printf "0\n" > ' + seed_full_filename)
 
 # helper functions
 create_args = lambda num_iters, num_nodes: [
-    '--jobconf', 'mapred.map.tasks=' + str(num_nodes),
+    '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
     # may need to specify mapred.map.tasks greater than num_nodes
     '--num-iters', str(num_iters),
     '--num-nodes', str(num_nodes),
@@ -87,6 +88,8 @@ create_args = lambda num_iters, num_nodes: [
 
 # gibbs init to be used by all subsequent inference
 # iters=0, nodes=1
+
+# comment the region below to resume from prior gibbs init
 gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
 gibbs_init_args.extend(create_args(0, 1))
 mr_job = si.MRSeedInferer(args=gibbs_init_args)
