@@ -33,6 +33,7 @@ parser.add_argument('num_iters', type=int)
 parser.add_argument('num_nodes_list', nargs='+', type=int)
 #
 args = parser.parse_args()
+# args = parser.parse_args(['0', '2048', '256', '32', '1.0', '3', '1', '4'])
 
 # problem settings
 gen_seed = args.gen_seed
@@ -60,6 +61,7 @@ get_hexdigest = lambda variable: \
 hex_digest = get_hexdigest(vars(args))
 data_dir = data_dir_prefix + hex_digest
 data_dir = os.path.join(base_dir, data_dir)
+print data_dir
 try:
     os.makedirs(data_dir)
 except OSError, ose:
@@ -109,12 +111,12 @@ with open(parameters_full_filename, 'w') as fh:
         line = str(key) + ' = ' + str(value) + '\n'
         fh.write(line)
 
+xlabel = 'time (seconds)'
 # summarize the data
 summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir])
 title = cs.title_from_parameters(parameters)
-xlabel = 'time (seconds)'
-cs.plot_summaries(summaries_dict, title=title, xlabel=xlabel, plot_dir=data_dir)
+cs.plot_summaries(summaries_dict, problem=problem,
+                  title=title, xlabel=xlabel, plot_dir=data_dir)
 reduced_summaries_dict = cs.extract_reduced_summaries(
     summaries_dict, cs.reduced_summary_extract_func_tuples)
 rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
-

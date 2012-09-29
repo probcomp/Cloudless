@@ -128,7 +128,7 @@ def get_color(summaries_key):
     return color
     
 def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
-                 do_legend=False):
+                 hline=None, do_legend=False):
     if new_fig:
         pylab.figure()
     if label_func is None:
@@ -139,6 +139,8 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         color = get_color(summaries_name)
         label = label_func(summaries_name)
         pylab.plot(timing,extract_vals, label=label, color=color)
+    if hline is not None:
+        pylab.axhline(hline, color='black')
     if do_legend:
         legend_list = map(label_func, summaries_dict.keys())
         pylab.legend(legend_list, prop={"size":"medium"}) # ,loc='lower right')
@@ -200,21 +202,33 @@ def title_from_parameters(parameters,
     title = '; '.join(title_els)
     return title
 
-def plot_summaries(summaries_dict, title='', xlabel='', plot_dir=''):
-    get_time_plotter = lambda extract_func: \
-        (lambda summaries_dict: 
-         plot_vs_time(summaries_dict, extract_func, label_func=shorten_name))
+def plot_summaries(summaries_dict, problem=None,
+                   title='', xlabel='', plot_dir=''):
+    def get_time_plotter(extract_func, hline=None):
+        return (
+            lambda summaries_dict: 
+            plot_vs_time(summaries_dict, extract_func, label_func=shorten_name,
+                         hline=hline)
+            )
     def boxplotter(summaries_dict):
         for values in summaries_dict.values():
             betas = extract_beta(values)
             betas = numpy.array(betas).T
             pylab.boxplot(numpy.log10(betas))
     fh_list = []
-
+    title = title
+    gen_test_lls, gen_score, true_num_clusters = None, None, None
+    if problem is not None:
+        gen_test_lls = numpy.mean(problem['test_lls'])
+        gen_score = problem['gen_score']
+        true_num_clusters = problem['num_clusters']
     plot_tuples = [
-        (get_time_plotter(extract_test_lls), 'test set\nmean log likelihood'),
-        (get_time_plotter(extract_score), 'model score'),
-        (get_time_plotter(extract_num_clusters), 'num clusters'),
+        (get_time_plotter(extract_test_lls, gen_test_lls),
+         'test set\nmean log likelihood'),
+        (get_time_plotter(extract_score, gen_score),
+         'model score'),
+        (get_time_plotter(extract_num_clusters, true_num_clusters),
+         'num clusters'),
         ]
     figname = 'test_lls_score_num_clusters'
     fig_full_filename = os.path.join(plot_dir, figname)
