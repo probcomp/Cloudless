@@ -18,7 +18,7 @@ import Cloudless.examples.DPMB.settings as S
 reload(S)
 
 
-def gen_data(gen_seed,num_clusters,num_cols,num_rows,beta_d):
+def gen_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test=None):
     state = ds.DPMB_State(
         gen_seed=gen_seed,
         num_cols=num_cols,
@@ -26,7 +26,12 @@ def gen_data(gen_seed,num_clusters,num_cols,num_rows,beta_d):
         init_z=('balanced',num_clusters),
         init_betas = numpy.repeat(beta_d,num_cols)
     )
-    return state.getXValues()
+    xs = state.getXValues()
+    if N_test is None:
+        return xs
+    test_xs, test_lls = state.generate_and_score_test_set(N_test)
+    gen_score = state.score
+    return xs, test_xs, test_lls, gen_score
 
 def gen_hierarchical_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,
                           beta_d,
@@ -169,15 +174,15 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,
 
     return data,inverse_distribute_indices
 
-def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
-                    plot=False,image_save_str=None, dir=''):
+def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test,
+                    plot=False, image_save_str=None, dir=''):
     random_state = numpy.random.RandomState(gen_seed)
-    rows_per_cluster = num_rows/num_clusters
     permutation_indices = random_state.permutation(range(num_rows))
     inverse_permutation_indices = numpy.argsort(permutation_indices)
-    data = numpy.array(
-        gen_data(random_state.randint(sys.maxint),
-                 num_clusters,num_cols,num_rows,beta_d))
+    state_gen_seed = random_state.randint(sys.maxint)
+    data, test_xs, test_lls, gen_score = gen_data(
+        state_gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test)
+    data = numpy.array(data)
     data = data[permutation_indices]
     #
     # this is just to visualize, data is already generated
@@ -198,8 +203,9 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d,
         hf.plot_data(data=data[inverse_permutation_indices])
         pylab.savefig(save_str)
         pylab.close()
-    return data,inverse_permutation_indices
+    return data, test_xs, test_lls, gen_score, inverse_permutation_indices
 
+# FIXME: should I remove this now that each problem has its own dir?
 make_filename = lambda num_rows, num_cols: '_'.join([
         'clean_balanced_data',
         'rows', str(num_rows), 
@@ -209,35 +215,31 @@ make_filename = lambda num_rows, num_cols: '_'.join([
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
                       pkl_filename=None, image_save_str=None, dir=''):
     if pkl_filename is None:
-        pkl_filename = make_filename(num_rows, num_cols)
+        pkl_filename = 'problem.pkl.gz'
+    test_fraction = .1
+    N_test = int(num_rows * test_fraction)
     # create the data
-    data, inverse_permuatation_indices_list = make_clean_data(
+    xs, test_xs, test_lls, gen_score, inverse_permuatation_indices = \
+        make_clean_data(
         gen_seed=gen_seed,
         num_rows=num_rows,
         num_cols=num_cols,
         num_clusters=num_clusters,
         beta_d=beta_d,
+        N_test=N_test,
         image_save_str=image_save_str,
         dir=dir,
         )
     #
-    all_indices = xrange(num_rows)
-    random_state = numpy.random.RandomState(gen_seed)
-    test_fraction = .1
-    breakpoint = int(num_rows * test_fraction)
-    random_indices = random_state.permutation(all_indices)
-    test_indices = random_indices[:breakpoint]
-    train_indices = random_indices[breakpoint:]
-    test_xs = data[test_indices]
-    xs = data[train_indices]
-    # set up pickle variable and actually pickle
     pkl_vals = {
-        'xs':xs,
-        'test_xs':test_xs,
+        'gen_seed':gen_seed,
         'num_clusters':num_clusters,
         'beta_d':beta_d,
-        'gen_seed':gen_seed,
-        'inverse_permuatation_indices_list':inverse_permuatation_indices_list,
+        'xs':xs,
+        'test_xs':test_xs,
+        'test_lls':test_lls,
+        'gen_score':gen_score,
+        'inverse_permuatation_indices':inverse_permuatation_indices,
         }
     rf.pickle(pkl_vals, pkl_filename, dir=dir)
     #
