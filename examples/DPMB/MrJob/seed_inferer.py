@@ -20,8 +20,6 @@ import Cloudless.examples.DPMB.s3_helper as s3h
 reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
-# importing csmp will create a structured problem
-# import Cloudless.examples.DPMB.MrJob.create_synthetic_mrjob_problem as csmp
 
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
@@ -267,17 +265,18 @@ class MRSeedInferer(MRJob):
         x_indices_list = []
         list_of_x_indices = []
         #
+        # consolidate data from child states
         for child_state_out in child_infer_output_generator:
              zs_list.append(child_state_out.zs)
              x_indices_list.append(child_state_out.x_indices)
              list_of_x_indices.extend(child_state_out.list_of_x_indices)
-        # all master_alpha, betas, master_inf_seed fall are the same
+        # all master_alpha, betas, master_inf_seed are all the same, use last
         master_alpha = child_state_out.master_alpha
         betas = child_state_out.betas
         master_inf_seed = child_state_out.master_inf_seed
         iter_num = child_state_out.iter_num
 
-        # 
+        # format for use in singular state generation 
         jumbled_zs = rf.consolidate_zs(zs_list)
         x_indices = [y for x in x_indices_list for y in x]
         zs = [
@@ -288,12 +287,14 @@ class MRSeedInferer(MRJob):
         problem = rf.unpickle(problem_file, dir=data_dir)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
         true_zs, cluster_idx = None, None
-        if 'zs' in  problem:
-            true_zs, cluster_idx = hf.canonicalize_list(problem['zs'])
+        if 'true_zs' in  problem:
+            true_zs = problem['true_zs']
+            true_zs, cluster_idx = hf.canonicalize_list(true_zs)
 
-        # this is very necessary!
+        # this is very necessary! Maybe not anymore: done in DPMB_State init
         zs, cluster_idx = hf.canonicalize_list(zs)
 
+        # create singleton state
         test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
             gen_seed=0, # FIXME : random variate from master_inf_seed?
@@ -305,6 +306,8 @@ class MRSeedInferer(MRJob):
             init_x=init_x
             )
         consolidate_delta = hf.delta_since(start_dt)
+        #
+        # run hyper inference
         transitioner = dm.DPMB(master_inf_seed, consolidated_state,
                                infer_alpha=True, infer_beta=True)
         # FIXME: is this right?
@@ -313,6 +316,8 @@ class MRSeedInferer(MRJob):
             transitioner.transition_beta, transitioner.transition_alpha]
         for transition_type in random_state.permutation(transition_types):
             transition_type()
+        #
+        # extract summary
         with hf.Timer('score_delta') as score_delta_timer:
             summary = transitioner.extract_state_summary(
                 true_zs=true_zs,
@@ -326,11 +331,24 @@ class MRSeedInferer(MRJob):
             })
         summary['iter_num'] = iter_num
         #
+        # save intermediate state plots
+        save_str_base = '_'.join([
+                'infer_state',
+                'numnodes', str(num_nodes),
+                'iter', str(iter_num)
+                ])
+        save_str = os.path.join(data_dir, save_str_base)
+        consolidated_state.plot(save_str=save_str)
+        save_str = os.path.join(data_dir, 'just_state_' + save_str_base)
+        consolidated_state.plot(save_str=save_str, which_plots=['just_data'])
+        #
+        # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
         if push_to_s3:
             s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         #
+        # format summary to pass out 
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
         betas = summary['betas']
