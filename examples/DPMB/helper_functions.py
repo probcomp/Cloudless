@@ -230,6 +230,11 @@ def bar_helper(x, y, fh=None, v_line=None, title_str='', which_id=0):
     pylab.ylabel(title_str)
     return fh
 
+def zs_to_hlines(zs):
+    is_different = pylab.diff(zs) != 0
+    which_different = matplotlib.mlab.find(is_different) + 1
+    return which_different
+
 def printTS(printStr):
     print datetime.datetime.now().strftime("%H:%M:%S") + " :: " + printStr
     sys.stdout.flush()
