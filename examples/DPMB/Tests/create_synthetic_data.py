@@ -27,11 +27,12 @@ def gen_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test=None):
         init_betas = numpy.repeat(beta_d,num_cols)
     )
     xs = state.getXValues()
+    zs = state.getZIndices()
     if N_test is None:
         return xs
     test_xs, test_lls = state.generate_and_score_test_set(N_test)
     gen_score = state.score
-    return xs, test_xs, test_lls, gen_score
+    return xs, test_xs, test_lls, gen_score, zs
 
 def gen_hierarchical_data(gen_seed,num_clusters,num_cols,num_rows,num_splits,
                           beta_d,
@@ -175,35 +176,35 @@ def make_balanced_data(gen_seed,num_clusters,num_cols,num_rows,beta_d,
     return data,inverse_distribute_indices
 
 def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test,
-                    plot=False, image_save_str=None, dir=''):
+                    save_str=None, dir=''):
     random_state = numpy.random.RandomState(gen_seed)
     permutation_indices = random_state.permutation(range(num_rows))
     inverse_permutation_indices = numpy.argsort(permutation_indices)
     state_gen_seed = random_state.randint(sys.maxint)
-    data, test_xs, test_lls, gen_score = gen_data(
+    data, test_xs, test_lls, gen_score, zs = gen_data(
         state_gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test)
     data = numpy.array(data)
+    zs = numpy.array(zs)
     data = data[permutation_indices]
+    zs = zs[permutation_indices]
     #
     # this is just to visualize, data is already generated
-    if image_save_str is not None or plot:
+    if save_str is not None:
         state = ds.DPMB_State(
             gen_seed=random_state.randint(sys.maxint),
             num_cols=num_cols,
             num_rows=num_rows,
-            init_z=('balanced',num_clusters),
-            init_x=data[inverse_permutation_indices]
+            init_z=zs[inverse_permutation_indices],
+            init_x=data[inverse_permutation_indices],
             )
-        save_str = None
-        if image_save_str is not None:
-            save_str = os.path.join(dir, image_save_str)
-        state.plot(save_str=save_str, show=False)
+        full_save_str = os.path.join(dir, save_str)
+        state.plot(save_str=full_save_str)
         #
-        save_str = os.path.join(dir, 'just_state_' + image_save_str)
-        hf.plot_data(data=data[inverse_permutation_indices])
-        pylab.savefig(save_str)
-        pylab.close()
-    return data, test_xs, test_lls, gen_score, inverse_permutation_indices
+        full_save_str = os.path.join(dir, 'just_state_' + save_str)
+        h_lines = hf.zs_to_hlines(zs[inverse_permutation_indices])
+        hf.plot_data(data=data[inverse_permutation_indices], h_lines=h_lines)
+        pylab.savefig(full_save_str)
+    return data, test_xs, test_lls, gen_score, inverse_permutation_indices, zs
 
 # FIXME: should I remove this now that each problem has its own dir?
 make_filename = lambda num_rows, num_cols: '_'.join([
@@ -219,7 +220,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
     test_fraction = .1
     N_test = int(num_rows * test_fraction)
     # create the data
-    xs, test_xs, test_lls, gen_score, inverse_permuatation_indices = \
+    xs, test_xs, test_lls, gen_score, inverse_permutation_indices, zs = \
         make_clean_data(
         gen_seed=gen_seed,
         num_rows=num_rows,
@@ -227,7 +228,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         num_clusters=num_clusters,
         beta_d=beta_d,
         N_test=N_test,
-        image_save_str=image_save_str,
+        save_str=image_save_str,
         dir=dir,
         )
     #
@@ -236,10 +237,11 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         'num_clusters':num_clusters,
         'beta_d':beta_d,
         'xs':xs,
+        'true_zs':zs,
         'test_xs':test_xs,
         'test_lls':test_lls,
         'gen_score':gen_score,
-        'inverse_permuatation_indices':inverse_permuatation_indices,
+        'inverse_permutation_indices':inverse_permutation_indices,
         }
     rf.pickle(pkl_vals, pkl_filename, dir=dir)
     #
