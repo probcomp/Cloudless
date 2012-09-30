@@ -207,28 +207,27 @@ def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
 
 ####################
 # UTILITY FUNCTIONS
-def plot_data(data,fh=None,h_lines=None,title_str=None
-              ,interpolation="nearest",**kwargs):
+def plot_data(data, fh=None, h_lines=None, title_str='',
+              interpolation='nearest', linewidth=1, **kwargs):
     if fh is None:
         fh = pylab.figure()
-    pylab.imshow(data,interpolation=interpolation
-                 ,cmap=matplotlib.cm.binary,**kwargs)
+    pylab.imshow(data, interpolation=interpolation,
+                 cmap=matplotlib.cm.binary, **kwargs)
     if h_lines is not None:
-        xlim = fh.get_axes()[0].get_xlim()
-        pylab.hlines(h_lines-.5,*xlim,color="red",linewidth=3)
-    if title_str is not None:
-        pylab.title(title_str)
+        for h_line in h_lines:
+            pylab.axhline(h_line-.5, color='red', linewidth=linewidth)
+    pylab.title(title_str)
     return fh
 
-def bar_helper(x,y,fh=None,v_line=None,title_str=None,which_id=0):
+def bar_helper(x, y, fh=None, v_line=None, title_str='', which_id=0):
     if fh is None:
         fh = pylab.figure()
-    pylab.bar(x,y,width=min(np.diff(x)))
+    min_delta = min(np.diff(x))
+    pylab.bar(x, y, width=min_delta)
     if v_line is not None:
         pylab.vlines(v_line,*fh.get_axes()[which_id].get_ylim()
                      ,color="red",linewidth=3)
-    if title_str is not None:
-        pylab.ylabel(title_str)
+    pylab.ylabel(title_str)
     return fh
 
 def printTS(printStr):
