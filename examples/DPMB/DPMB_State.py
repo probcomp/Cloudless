@@ -339,7 +339,20 @@ class DPMB_State():
         if title_append is not None:
             create_title = lambda title_str: ': '.join([title_str, title_append])
         fh = pylab.figure()
-            
+
+        if 'just_data' in which_plots:
+            sort_by = self.getZIndices()
+            argsort_indices = np.argsort(sort_by)
+            data = np.array(self.getXValues())[argsort_indices]
+            zs = np.array(self.getZIndices())[argsort_indices]
+            h_lines = hf.zs_to_hlines(zs)
+            title_str = create_title('Data')
+            fh1 = hf.plot_data(
+                data=data, fh=fh, h_lines=h_lines, title_str=title_str)
+            if save_str is not None:
+                pylab.savefig(save_str)
+            return fh, fh1, None, None, None
+
         fh1 = None
         pylab.subplot(411)
         if "data" in which_plots:
