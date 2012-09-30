@@ -53,7 +53,9 @@ class DPMB_State():
             # can no longer initialize to cluster prior with specified data
             self.gibbs_type_init(num_rows, init_x, transitioner, data_dir)
         else:
-            self.non_gibbs_type_init(num_rows,init_z,init_x,decanon_indices)
+            if isinstance(init_z, list) or isinstance(init_z,np.ndarray):
+                init_z, canon_other = hf.canonicalize_list(init_z)
+            self.non_gibbs_type_init(num_rows, init_z, init_x, decanon_indices)
 
     def gibbs_type_init(self, num_rows, init_x, transitioner=None, data_dir=''):
 
@@ -323,7 +325,9 @@ class DPMB_State():
     # def modifyScore(self,scoreDelta):
     #     self.score += scoreDelta
 
-    def plot(self,which_plots=None,which_handles=None,title_append=None,gen_state=None,show=False,save_str=None,beta_idx=0,vector_idx=0,**kwargs):
+    def plot(self, which_plots=None, title_append=None,
+             save_str=None, beta_idx=0, vector_idx=0,
+             **kwargs):
         if len(self.cluster_list) == 0:
             if save_str is not None:
                 pylab.figure()
@@ -331,71 +335,65 @@ class DPMB_State():
             return
         if which_plots is None:
             which_plots = ["data","alpha","beta","cluster"]
-        if which_handles is None:
-            which_handles = np.repeat(None,len(which_plots))
-        handle_lookup = dict(zip(which_plots,which_handles))
-
-        fh1 = None
+        create_title = lambda title_str: title_str
+        if title_append is not None:
+            create_title = lambda title_str: ': '.join([title_str, title_append])
         fh = pylab.figure()
+            
+        fh1 = None
         pylab.subplot(411)
         if "data" in which_plots:
-            ##sort by attributed state and then gen_state if available
-            if gen_state is not None:
-                mult_factor = np.round(np.log10(len(gen_state["phis"])))
-                sort_by = np.array(mult_factor * self.getZIndices() + gen_state["zs"],dtype=int)
-            else:
-                sort_by = self.getZIndices()
-            ##plot the data
-                ##FIXME : Am I canonicalizing properly
-            data = np.array(self.getXValues())[np.argsort(sort_by)]
-            h_lines = []
-            z_indices = self.getZIndices()
-            for z_index in np.unique(z_indices):
-                h_lines.append(sum(z_indices==z_index))
-            h_lines = np.array(h_lines).cumsum()
-            title_str = "Data" if title_append is None else "Data" + ": " + title_append
-            ##fh = handle_lookup["data"]
-            fh1 = hf.plot_data(data=data,fh=fh,h_lines=h_lines,title_str=title_str)
+            sort_by = self.getZIndices()
+            argsort_indices = np.argsort(sort_by)
+            data = np.array(self.getXValues())[argsort_indices]
+            zs = np.array(self.getZIndices())[argsort_indices]
+            h_lines = hf.zs_to_hlines(zs)
+            title_str = create_title('Data')
+            fh1 = hf.plot_data(
+                data=data, fh=fh, h_lines=h_lines, title_str=title_str)
 
         fh2 = None
         pylab.subplot(412)
         if "alpha" in which_plots or True:
-            logp_list,lnPdf,grid = hf.calc_alpha_conditional(self)
+            logp_list, lnPdf, grid = hf.calc_alpha_conditional(self)
             norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
-            title_str = "alpha" if title_append is None else "alpha" + ": " + title_append
-            ##fh = handle_lookup["alpha"]
-            fh2 = hf.bar_helper(x=np.log10(grid),fh=fh,y=norm_prob,v_line=np.log10(self.alpha),title_str=title_str,which_id=1)
+            title_str = create_title('Alpha')
+            log10_grid = np.log10(grid)
+            v_line = np.log10(self.alpha)
+            fh2 = hf.bar_helper(x=log10_grid, fh=fh, y=norm_prob, v_line=v_line,
+                                title_str=title_str, which_id=1)
 
         fh3 = None
         pylab.subplot(413)
         if "beta" in which_plots:
-            logp_list,lnPdf,grid = hf.calc_beta_conditional(self,beta_idx)
+            logp_list, lnPdf, grid = hf.calc_beta_conditional(self, beta_idx)
             norm_prob = hf.log_conditional_to_norm_prob(np.array(logp_list))
-            title_str  = "Beta" if title_append is None else "Beta" + ": " + title_append
-            ##fh = handle_lookup["beta"]
-            fh3 = hf.bar_helper(x=np.log10(grid),y=norm_prob,fh=fh,v_line=np.log10(self.betas[beta_idx]),title_str=title_str,which_id=2)
+            title_str = create_title('Beta')
+            log10_grid = np.log10(grid)
+            v_line = np.log10(self.betas[beta_idx])
+            fh3 = hf.bar_helper(x=log10_grid, y=norm_prob, fh=fh, v_line=v_line,
+                                title_str=title_str, which_id=2)
             
         fh4 = None
         pylab.subplot(414)
         if ("cluster" in which_plots) and len(self.vector_list)>1:
             vector = list(self.vector_list)[vector_idx]
             cluster = vector.cluster
-            cluster_idx = self.getZIndices()[list(self.vector_list).index(vector)] ##ALWAYS GO THROUGH getZIndices
-            ##
+            ##ALWAYS GO THROUGH getZIndices
+            vector_idx_in_global = list(self.vector_list).index(vector)
+            cluster_idx = self.getZIndices()[vector_idx_in_global]
+
             # calculate the conditional
             cluster.deassign_vector(vector)
-
-            score_vec = pf.calculate_cluster_conditional(self,vector,None)
+            score_vec = pf.calculate_cluster_conditional(self, vector, None)
             # score_vec is a list of scores, in the order of cluster_list.
-            
             if cluster.state is None: ##handle singleton
-                cluster = self.generate_cluster_assignment(self,force_new=True)
+                cluster = self.generate_cluster_assignment(self, force_new=True)
                 cluster.assign_vector(vector)
             else:
                 cluster.assign_vector(vector)                
-            ##
-            # sort score vec according to the order of the clusters from zindices
 
+            # sort score vec according to the order of the clusters from zindices
             next_id = 0
             cluster_ids = {}
             for v in self.get_all_vectors():
@@ -411,20 +409,19 @@ class DPMB_State():
             sorted_scores = [0 for x in xrange(len(score_vec))]
             for (i, cluster) in enumerate(self.cluster_list):
                 sorted_scores[cluster_ids[cluster]] = score_vec[i]
-                
             if len(vector.cluster.vector_list) > 1:
                 # we need to put the singleton cluster's score at the end
                 sorted_scores[-1] = score_vec[-1]
-
             norm_prob = hf.log_conditional_to_norm_prob(np.array(sorted_scores))
             
-            title_str  = "Cluster cond" if title_append is None else "Cluster cond" + ": " + title_append
-            ##fh = handle_lookup["cluster"]
+            title_str = create_title('Cluster\nconditional')
             try:
-                fh4 = hf.bar_helper(x=np.arange(len(norm_prob))-.5,y=norm_prob,fh=fh,v_line=cluster_idx,title_str=title_str,which_id=3)
+                x_vals = np.arange(len(norm_prob))-.5
+                fh4 = hf.bar_helper(x=x_vals, y=norm_prob, fh=fh,
+                                    v_line=cluster_idx, title_str=title_str,
+                                    which_id=3)
             except Exception, e:
                 print e 
-                
 
         if save_str is not None:
             pylab.savefig(save_str)
