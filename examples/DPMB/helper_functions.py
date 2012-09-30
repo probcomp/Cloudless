@@ -282,6 +282,13 @@ def canonicalize_list(in_list):
         z_indices.append(cluster_ids[el])
     return z_indices,cluster_ids
 
+def list_of_x_indices_to_zs(list_of_x_indices):
+    cluster_counts = [len(sub_list) for sub_list in list_of_x_indices]
+    zs = []
+    for cluster_idx, cluster_count in enumerate(cluster_counts):
+        zs.extend(numpy.repeat(cluster_idx, cluster_count))
+    return zs
+
 def ensure_pandas():
     try:
         import pandas
