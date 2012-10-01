@@ -220,22 +220,45 @@ class MRSeedInferer(MRJob):
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
         child_summaries = None
         if num_nodes == 1:
-            # FIXME : keep time seatbelt for single node version?
-            run_spec['time_seatbelt'] = self.time_seatbelt # FIXME
-            #
+            true_zs = orig_problem.get('true_zs', None)
+            if true_zs is not None:
+                true_zs = [true_zs[x_index] for x_index in x_indices]
+            sub_problem['true_zs'] = true_zs
             sub_problem['test_xs'] = \
                 numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
-            # FIXME : nice if intermediate results are pickled ON THE FLY
-            # FIXME : else, no way to tell how much progress has been made
-            child_summaries = rf.infer(run_spec, sub_problem, send_zs=True)
-            # FIXME: for now, pickle after the fact
-            for child_iter_num, child_summary in enumerate(child_summaries):
-                pkl_file = get_child_pkl_file(child_iter_num)
-                rf.pickle(child_summary, pkl_file, dir=data_dir)
+            #
+            # set up for intermediate results to be pickled on the fly
+            def single_node_post_infer_func(iter_idx, state, last_summary,
+                                            data_dir=data_dir):
+                iter_num = iter_idx + 1
+                pkl_file = get_child_pkl_file(iter_num)
+                rf.pickle(last_summary, pkl_file, dir=data_dir)
                 if push_to_s3:
                     s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+                state.plot()
+                save_str_base = '_'.join([
+                        'infer_state',
+                        'numnodes', str(num_nodes),
+                        'child0',
+                        'iter', str(iter_num)
+                        ])
+                save_str = os.path.join(data_dir, save_str_base)
+                state.plot(save_str=save_str)
+                save_str = os.path.join(data_dir, 'just_state_' + save_str_base)
+                state.plot(save_str=save_str,
+                                        which_plots=['just_data'])
+            #
+            child_summaries = rf.infer(
+                run_spec, sub_problem, send_zs=True,
+                post_infer_func=single_node_post_infer_func)
+            # # FIXME: for now, pickle after the fact
+            # for child_iter_num, child_summary in enumerate(child_summaries):
+            #     pkl_file = get_child_pkl_file(child_iter_num)
+            #     rf.pickle(child_summary, pkl_file, dir=data_dir)
+            #     if push_to_s3:
+            #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
             # FIXME : to robustify, should be checking for failure conditions
             child_summaries = rf.infer(run_spec, sub_problem)
