@@ -70,31 +70,20 @@ def process_timing(summaries):
             delta_ts.append('%.2f' % summary['timing']['run_sum'])
     return delta_ts
 
-extract_score = lambda summaries : [
-    ('%.2f' % summary['score'])
-    for summary in summaries
-    ]
-extract_log10_alpha = lambda summaries : [
-    ('%.2f' % numpy.log10(summary['alpha']))
-    for summary in summaries
-    ]
-extract_beta = lambda summaries : [
-    summary['betas']
-    for summary in summaries
-    ]
-extract_num_clusters = lambda summaries : [
-    summary['num_clusters']
-    for summary in summaries
-    ]
-extract_test_lls = lambda summaries : [
-    ('%.6f' % numpy.mean(summary['test_lls']))
-    for summary in summaries
-    ]
+get_format_extract = lambda field, formatter: \
+    (lambda summaries: map(formatter, [summary[field] for summary in summaries]))
+extract_score = get_format_extract('score', None)
+extract_ari = get_format_extract('ari', None)
+extract_log10_alpha = get_format_extract('alpha', numpy.log10)
+extract_beta = get_format_extract('betas', None)
+extract_num_clusters = get_format_extract('num_clusters', None)
+extract_test_lls = get_format_extract('test_lls', numpy.mean)
 extract_delta_t = process_timing
 
 def print_info(summaries_dict):
     extract_funcs = [
         ('score', extract_score),
+        ('ari', extract_ari),
         ('test_lls', extract_test_lls),
         ('delta_t', extract_delta_t),
         ]
@@ -227,10 +216,10 @@ def plot_summaries(summaries_dict, problem=None,
          'test set\nmean log likelihood'),
         (get_time_plotter(extract_score, gen_score),
          'model score'),
-        (get_time_plotter(extract_num_clusters, true_num_clusters),
-         'num clusters'),
+        (get_time_plotter(extract_ari),
+         'ari'),
         ]
-    figname = 'test_lls_score_num_clusters'
+    figname = 'test_lls_score_ari'
     fig_full_filename = os.path.join(plot_dir, figname)
     #
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -255,6 +244,7 @@ def plot_summaries(summaries_dict, problem=None,
 
 reduced_summary_extract_func_tuples = [
     ('score', extract_score),
+    ('ari', extract_ari),
     ('test_lls', extract_test_lls),
     ('delta_t', extract_delta_t),
     ('log10_alpha', extract_log10_alpha),
