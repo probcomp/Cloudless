@@ -86,16 +86,18 @@ create_args = lambda num_iters, num_nodes: [
     seed_full_filename,
     ]
 
-# gibbs init to be used by all subsequent inference
-# iters=0, nodes=1
-
-# comment the region below to resume from prior gibbs init
-gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
-gibbs_init_args.extend(create_args(0, 1))
-mr_job = si.MRSeedInferer(args=gibbs_init_args)
-# mr_job.init(0,0).next()
-with mr_job.make_runner() as runner:
-    runner.run()
+gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
+if not os.path.isfile(gibbs_init_full_filename):
+    # gibbs init to be used by all subsequent inference
+    gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
+    init_num_iters = 0
+    init_num_nodes = 1
+    gibbs_init_args.extend(create_args(init_num_iters, init_num_iters))
+    mr_job = si.MRSeedInferer(args=gibbs_init_args)
+    with mr_job.make_runner() as runner:
+        runner.run()
+else:
+    print '!!!using prior gibbs_init!!!'
 
 # now run for each num_nodes
 for num_nodes in num_nodes_list:
