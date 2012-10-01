@@ -107,7 +107,7 @@ def run_spec_from_child_state_info(
     run_spec["verbose_state"] = False
     return run_spec
         
-def gen_problem(dataset_spec,permute=True,save_str=None):
+def gen_problem(dataset_spec,permute=False,save_str=None):
     # generate a state
     # initialize according to the generation parameters from dataset spec
     # containing all the training data only
@@ -189,7 +189,8 @@ def plot_helper(name, state):
     state.plot(show=False,save_str = name + "-" + "%3d" % count + ".png")
     counts[state] += 1
 
-def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
+def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
+          post_infer_func=None):
     dataset_spec = run_spec["dataset_spec"]
     data_dir = dataset_spec.get('data_dir', settings.data_dir)
     if problem is None:
@@ -200,6 +201,9 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
     hypers_every_N = run_spec.get("hypers_every_N",1)
     time_seatbelt = run_spec.get("time_seatbelt",None)
     ari_seatbelt = run_spec.get("ari_seatbelt",None)
+    true_zs = problem.get('true_zs', None)
+    if true_zs is not None:
+        true_zs, cluster_idx = hf.canonicalize_list(true_zs)
     #
     if verbose_state:
         print "doing run: "
@@ -252,7 +256,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
     #
     summaries = []
     init_summary = transitioner.extract_state_summary(
-        # true_zs=problem["zs"],
+        true_zs=true_zs,
         verbose_state=verbose_state,
         test_xs=problem["test_xs"],
         send_zs=send_zs,
@@ -270,11 +274,11 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
         transition_return = transitioner.transition(
             time_seatbelt=time_seatbelt,
             ari_seatbelt=ari_seatbelt,
-            # true_zs=problem["zs"]) # true_zs necessary for seatbelt 
+            # true_zs=true_zs # necessary for seatbelt 
             )
         hf.printTS("finished doing iteration " + str(i))
         next_summary = transitioner.extract_state_summary(
-            # true_zs=problem["zs"],
+            true_zs=true_zs,
             verbose_state=verbose_state,
             test_xs=problem["test_xs"],
             send_zs=send_zs,
@@ -293,6 +297,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None):
                 transitioner.state.get_list_of_x_indices()
             last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
+        if post_infer_func is not None:
+            post_infer_func(i, transitioner.state, next_summary)
     summaries[-1]["last_valid_zs"] = last_valid_zs
     summaries[-1]["last_valid_list_of_x_indices"] = last_valid_list_of_x_indices
     summaries[-1]["last_valid_seed"] = last_valid_seed
