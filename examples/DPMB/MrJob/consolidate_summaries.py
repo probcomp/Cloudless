@@ -180,6 +180,17 @@ def read_summaries(data_dirs, do_print=False):
     #
     return summaries_dict, numnodes1_parent_list
 
+parameters_filename = 'run_parameters.txt'
+def read_run_parameters(data_dir, parameters_filename=parameters_filename):
+    parameters_full_filename = os.path.join(data_dir, parameters_filename) 
+    parameters = dict()
+    if not os.path.isfile(parameters_full_filename):
+        print parameters_full_filename, ' doesn\' exist!'
+        return None
+    with open(parameters_full_filename) as fh:
+        exec fh in parameters
+    return parameters
+
 parameters_of_interest = ['beta_d', 'num_clusters', 'num_rows']
 def title_from_parameters(parameters,
                           parameters_of_interest=parameters_of_interest):
