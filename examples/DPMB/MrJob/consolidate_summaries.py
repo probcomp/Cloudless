@@ -129,7 +129,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         label = label_func(summaries_name)
         pylab.plot(timing,extract_vals, label=label, color=color)
     if hline is not None:
-        pylab.axhline(hline, color='black')
+        pylab.axhline(hline, color='magenta')
     if do_legend:
         legend_list = map(label_func, summaries_dict.keys())
         pylab.legend(legend_list, prop={"size":"medium"}) # ,loc='lower right')
