@@ -15,12 +15,14 @@ def get_gridspec(height_ratios_or_int):
         height_ratios = numpy.repeat(1./height_ratios, height_ratios)
     return gridspec.GridSpec(len(height_ratios), 1, height_ratios=height_ratios)
 
-def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center'):
+def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center',
+                   ncol=None):
     # labels must be set in original plot call: plot(..., label=label)
     if ax is None:
         ax = pylab.gca()
     handles, labels = ax.get_legend_handles_labels()
-    ncol = len(labels)
+    if ncol is None:
+        ncol = len(labels)
     lgd = ax.legend(handles, labels, loc=loc, ncol=ncol,
     	            bbox_to_anchor=bbox_to_anchor)
 
