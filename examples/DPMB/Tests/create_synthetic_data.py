@@ -26,6 +26,13 @@ def gen_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test=None):
         init_z=('balanced',num_clusters),
         init_betas = numpy.repeat(beta_d,num_cols)
     )
+    # set alpha to MLE
+    logp_list,lnPdf,grid = hf.calc_alpha_conditional(state)
+    max_logp_alpha_idx = numpy.argmax(logp_list)
+    max_logp_alpha = grid[max_logp_alpha_idx]
+    state.removeAlpha(lnPdf)
+    state.setAlpha(lnPdf, max_logp_alpha)
+
     xs = state.getXValues()
     zs = state.getZIndices()
     if N_test is None:
