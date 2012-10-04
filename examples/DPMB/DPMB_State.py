@@ -24,7 +24,7 @@ class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
                  ,init_z=None,init_x=None,decanon_indices=None
                  ,alpha_min=.01,alpha_max=1.E6,beta_min=.01,beta_max=1.E6
-                 ,grid_N=100
+                 ,grid_N=99
                  ,transitioner=None
                  ,data_dir=''
                  ):
