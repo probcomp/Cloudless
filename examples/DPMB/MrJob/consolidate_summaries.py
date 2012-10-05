@@ -3,7 +3,7 @@ import argparse
 import os
 import re
 from multiprocessing import Pool, cpu_count
-from collections import Counter
+from collections import Counter, defaultdict
 #
 import matplotlib
 matplotlib.use('Agg')
@@ -26,14 +26,20 @@ split_summary = lambda x : split_summary_re.match(x).groups()
 def get_summary_tuples(data_dir):
     data_files = os.listdir(data_dir)
     summary_files = filter(is_summary,data_files)
-    summary_names = {}
+    #
+    gibbs_init_filename = S.files.gibbs_init_filename
+    gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
+    defaultfactory = list
+    # if os.path.isfile(gibbs_init_full_filename):
+    #     defaultfactory = lambda: list(((gibbs_init_full_filename, -1),))
+    summary_names_dict = defaultdict(defaultfactory)
     for summary_file in sorted(summary_files):
         summary_name, iter_num_str = split_summary(summary_file)
         iter_num = int(iter_num_str)
         full_filename = os.path.join(data_dir, summary_file)
         summary_tuple = (full_filename, iter_num)
-        summary_names.setdefault(summary_name,[]).append(summary_tuple)
-    return summary_names
+        summary_names_dict[summary_name].append(summary_tuple)
+    return summary_names_dict
 
 num_workers = cpu_count()
 #
@@ -41,7 +47,7 @@ def read_tuple(in_tuple):
     full_filename, iter_num = in_tuple
     return rf.unpickle(full_filename), iter_num
 #
-def get_summaries_dict(summary_names,data_dir):
+def get_summaries_dict(summary_names, data_dir):
     summaries_dict = {}
     p = Pool(num_workers)
     for summary_name, tuple_list in summary_names.iteritems():
@@ -58,15 +64,16 @@ def get_summaries_dict(summary_names,data_dir):
     return summaries_dict
 
 def process_timing(summaries):
-    delta_ts = [0]
+    delta_ts = []
     if 'start_time' in summaries[0].get('timing',{}):
         start_time = summaries[0]['timing']['start_time']
+        delta_ts.append(summaries[0]['timing']['run_sum'])
         get_total_seconds = lambda summary : \
             (summary['timing']['timestamp'] - start_time).total_seconds()
         for summary in summaries[1:]:
             delta_ts.append('%.2f' % get_total_seconds(summary))
     else:
-        for summary in summaries[1:]:
+        for summary in summaries:
             delta_ts.append('%.2f' % summary['timing']['run_sum'])
     return delta_ts
 
@@ -165,7 +172,7 @@ def read_summaries(data_dirs, do_print=False):
     summaries_dict = {}
     for data_dir in data_dirs:
         summary_tuples = get_summary_tuples(data_dir)
-        working_summaries_dict = get_summaries_dict(summary_tuples,data_dir)
+        working_summaries_dict = get_summaries_dict(summary_tuples, data_dir)
         if do_print:
             print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
