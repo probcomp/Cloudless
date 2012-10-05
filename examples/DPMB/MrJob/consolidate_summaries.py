@@ -76,6 +76,7 @@ extract_score = get_format_extract('score', None)
 extract_ari = get_format_extract('ari', None)
 extract_log10_alpha = get_format_extract('alpha', numpy.log10)
 extract_beta = get_format_extract('betas', None)
+extract_log10_beta = get_format_extract('betas', numpy.log10)
 extract_num_clusters = get_format_extract('num_clusters', None)
 extract_test_lls = get_format_extract('test_lls', numpy.mean)
 extract_delta_t = process_timing
@@ -117,7 +118,7 @@ def get_color(summaries_key):
     return color
     
 def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
-                 hline=None, do_legend=False):
+                 hline=None, do_legend=False, alpha=0.8):
     if new_fig:
         pylab.figure()
     if label_func is None:
@@ -127,12 +128,13 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         extract_vals = numpy.array(extract_func(summaries), dtype=float)
         color = get_color(summaries_name)
         label = label_func(summaries_name)
-        pylab.plot(timing,extract_vals, label=label, color=color)
+        pylab.plot(timing,extract_vals, label=label, color=color, alpha=alpha)
     if hline is not None:
-        pylab.axhline(hline, color='magenta')
+        pylab.axhline(hline, color='magenta', label='gen')
     if do_legend:
         legend_list = map(label_func, summaries_dict.keys())
         pylab.legend(legend_list, prop={"size":"medium"}) # ,loc='lower right')
+    
 
 def plot_cluster_counts(summary, new_fig=True, log_x=False):
     cluster_counts = summary['cluster_counts']
@@ -202,50 +204,46 @@ def title_from_parameters(parameters,
     title = '; '.join(title_els)
     return title
 
+def get_time_plotter(extract_func, **kwargs):
+    plot_func = lambda summaries_dict: \
+        (plot_vs_time(summaries_dict, extract_func, label_func=shorten_name,
+                      **kwargs))
+    return plot_func
 def plot_summaries(summaries_dict, problem=None,
                    title='', xlabel='', plot_dir=''):
-    def get_time_plotter(extract_func, hline=None):
-        return (
-            lambda summaries_dict: 
-            plot_vs_time(summaries_dict, extract_func, label_func=shorten_name,
-                         hline=hline)
-            )
-    def boxplotter(summaries_dict):
-        for values in summaries_dict.values():
-            betas = extract_beta(values)
-            betas = numpy.array(betas).T
-            pylab.boxplot(numpy.log10(betas))
     fh_list = []
-    title = title
-    gen_test_lls, gen_score, true_num_clusters = None, None, None
+    gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
         gen_test_lls = numpy.mean(problem['test_lls'])
         gen_score = problem['gen_score']
+        gen_beta = problem['beta_d']
         true_num_clusters = problem['num_clusters']
+
+    figname = 'test_lls_score_ari'
     plot_tuples = [
-        (get_time_plotter(extract_test_lls, gen_test_lls),
+        (get_time_plotter(extract_test_lls, hline=gen_test_lls),
          'test set\nmean log likelihood'),
-        (get_time_plotter(extract_score, gen_score),
+        (get_time_plotter(extract_score, hline=gen_score),
          'model score'),
-        (get_time_plotter(extract_ari),
+        (get_time_plotter(extract_ari, hline=1.0),
          'ari'),
         ]
-    figname = 'test_lls_score_ari'
     fig_full_filename = os.path.join(plot_dir, figname)
-    #
     fh = pu.multiplot(summaries_dict, plot_tuples,
                    title=title, xlabel=xlabel,
                    save_str=fig_full_filename)
     fh_list.append(fh)
     
-    plot_tuples = [
-        (get_time_plotter(extract_log10_alpha), 'log10 alpha'),
-        (boxplotter, 'log10 beta boxplot'),
-        (get_time_plotter(extract_num_clusters), 'num clusters'),
-        ]
     figname = 'alpha_beta_num_clusters'
+    plot_tuples = [
+        (get_time_plotter(extract_log10_alpha),
+         'log10 alpha'),
+        (get_time_plotter(extract_log10_beta, hline=gen_beta, alpha=0.2),
+         'log10 beta'),
+        (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
+         'num clusters'),
+        ]
     fig_full_filename = os.path.join(plot_dir, figname)
-    #
     fh = pu.multiplot(summaries_dict, plot_tuples,
                    title=title, xlabel=xlabel,
                    save_str=fig_full_filename)
@@ -277,8 +275,14 @@ def main():
     args = parser.parse_args()
     data_dirs = args.data_dirs
     #
-    summaries_dict, numnodes1_parent_list = read_summaries(data_dirs)
-    plot_summaries(summaries_dict)
+    problem_file = 'problem.pkl.gz'
+    for data_dir in data_dirs:
+        problem_full_file = os.path.join(data_dir, problem_file)
+        problem = None
+        if os.path.isfile(problem_full_file):
+            problem = rf.unpickle(problem_file, dir=data_dir)
+        summaries_dict, numnodes1_parent_list = read_summaries([data_dir])
+        plot_summaries(summaries_dict, problem=problem)
     return summaries_dict, numnodes1_parent_list
 
 if __name__ == '__main__':
