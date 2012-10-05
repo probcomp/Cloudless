@@ -298,13 +298,21 @@ def main():
     data_dirs = args.data_dirs
     #
     problem_file = 'problem.pkl.gz'
+    parameters_file = 'run_parameters.txt'
     for data_dir in data_dirs:
         problem_full_file = os.path.join(data_dir, problem_file)
         problem = None
         if os.path.isfile(problem_full_file):
             problem = rf.unpickle(problem_file, dir=data_dir)
+        parameters_full_file = os.path.join(data_dir, parameters_file)
+        title = ''
+        if os.path.isfile(parameters_full_file):
+            parameters = dict()
+            with open(parameters_full_file) as fh:
+                exec fh in parameters
+            title = title_from_parameters(parameters)
         summaries_dict, numnodes1_parent_list = read_summaries([data_dir])
-        plot_summaries(summaries_dict, problem=problem)
+        plot_summaries(summaries_dict, problem=problem, title=title)
     return summaries_dict, numnodes1_parent_list
 
 if __name__ == '__main__':
