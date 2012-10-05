@@ -142,6 +142,7 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         if gibbs_init_file is None:
             gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1))
+        # FIXME: should only pickle if it wasn't read
         rf.pickle(summary, gibbs_init_file, dir=data_dir)
         if push_to_s3:
             s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(gibbs_init_file)
