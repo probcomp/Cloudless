@@ -208,14 +208,15 @@ def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
 ####################
 # UTILITY FUNCTIONS
 def plot_data(data, fh=None, h_lines=None, title_str='',
-              interpolation='nearest', linewidth=1, **kwargs):
+              interpolation='nearest', linewidth=1, h_line_alpha=0.7, **kwargs):
     if fh is None:
         fh = pylab.figure()
     pylab.imshow(data, interpolation=interpolation,
                  cmap=matplotlib.cm.binary, **kwargs)
     if h_lines is not None:
         for h_line in h_lines:
-            pylab.axhline(h_line-.5, color='red', linewidth=linewidth)
+            pylab.axhline(h_line-.5, color='red', linewidth=linewidth,
+                          alpha=h_line_alpha)
     pylab.title(title_str)
     return fh
 
