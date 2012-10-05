@@ -1,6 +1,7 @@
 # generate synthetic data
 import os
 import re
+import argparse
 from collections import defaultdict
 #
 import numpy
@@ -10,10 +11,14 @@ import pandas
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
+default_base_dir = '/usr/local/Cloudless/examples/DPMB/Data/20120928_programmatic_mrjob'
+parser = argparse.ArgumentParser()
+parser.add_argument('--dir', default=default_base_dir, type=str)
+args = parser.parse_args()
 
 # some settings
-# base_dir = '/usr/local/Cloudless/examples/DPMB/Data'
-base_dir = '/tmp'
+base_dir = args.dir
+# base_dir = '/tmp'
 data_dir_prefix = 'programmatic_mrjob_'
 parameters_filename = 'run_parameters.txt'
 reduced_summaries_name = 'reduced_summaries.pkl.gz'
@@ -37,6 +42,8 @@ defaultdict_result = lambda: dict(true_clusters=[], end_clusters=[])
 all_dirs = os.listdir(base_dir)
 programmatic_dirs = filter(programmatic_filter, all_dirs)
 #
+fieldnames = ['num_rows', 'num_clusters', 'beta_d']
+parameters_list = []
 results_by_numnodes = defaultdict(defaultdict_result)
 for programmatic_dir in programmatic_dirs:
     data_dir = os.path.join(base_dir, programmatic_dir)
@@ -45,6 +52,7 @@ for programmatic_dir in programmatic_dirs:
     parameters = dict()
     exec open(parameters_full_filename) in parameters
     if parameters['beta_d'] > 1.0: continue
+    parameters_list.append([parameters[field] for field in fieldnames])
     #
     reduced_summaries = rf.unpickle(reduced_summaries_name, dir=data_dir)
     #
@@ -54,6 +62,18 @@ for programmatic_dir in programmatic_dirs:
         end_clusters = summary['num_clusters'][-1]
         results_by_numnodes[numnodes]['end_clusters'].append(end_clusters)
         results_by_numnodes[numnodes]['true_clusters'].append(true_clusters)
+
+uniq_rows = numpy.unique([parameters[0] for parameters in parameters_list])
+uniq_clusters = numpy.unique([parameters[1] for parameters in parameters_list])
+uniq_betas = numpy.unique([parameters[2] for parameters in parameters_list])
+strify = lambda num_list: ','.join([str(el) for el in num_list])
+intify = lambda num_list: [int(el) for el in num_list]
+problem_size_list = [
+    'rows=2**{' + strify(intify(numpy.log2(uniq_rows))) + '}',
+    'clusters=2**{' + strify(intify(numpy.log2(uniq_clusters))) + '}',
+    'beta_d={' + strify(uniq_betas) + '}',
+    ]
+problem_size = ' x '.join(problem_size_list)
 
 series_dict = dict()
 for key in results_by_numnodes:
@@ -106,8 +126,14 @@ lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
                 bbox_to_anchor=(0.5,-0.1))
 pylab.xlabel('true num clusters')
 pylab.ylabel('last sample num clusters')
-pylab.title('Final num clusters comparison for comparable problems, #iters\n'
-            'Vertical and horizontal jitter added\n'
-            'True num clusters denoted by proximate vertical line')
+title_list = [
+    'Final num clusters comparison for comparable problems, #iters',
+    'Vertical and horizontal jitter added',
+    'True num clusters denoted by proximate vertical line',
+    'problems are subset of',
+    problem_size,
+    ]
+title = '\n'.join(title_list)
+pylab.title(title)
 pylab.savefig('true_vs_sampled_num_clusters',
               bbox_extra_artists=(lgd,), bbox_inches='tight')
