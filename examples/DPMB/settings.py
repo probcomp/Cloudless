@@ -27,6 +27,14 @@ class path():
     data_dir = '/tmp/'
     output_dir = os.path.join(base_dir,"Output")
 
+class files():
+    seed_filename = 'seed_list.txt'
+    gen_state_image_save_str = 'mrjob_problem_gen_state'
+    gibbs_init_filename = 'gibbs_init.pkl.gz'
+    data_dir_prefix = 'programmatic_mrjob_'
+    parameters_filename = 'run_parameters.txt'
+    reduced_summaries_name = 'reduced_summaries.pkl.gz'
+    
 data_dir = path.data_dir # FIXME: remove this when dependent code finally changed
 
 # ensure data_dir exists
