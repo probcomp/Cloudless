@@ -219,14 +219,25 @@ def plot_summaries(summaries_dict, problem=None,
         gen_beta = problem['beta_d']
         true_num_clusters = problem['num_clusters']
 
-    figname = 'test_lls_score_ari'
+    figname = 'test_lls_score'
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
          'test set\nmean log likelihood'),
         (get_time_plotter(extract_score, hline=gen_score),
          'model score'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'ari_score'
+    plot_tuples = [
         (get_time_plotter(extract_ari, hline=1.0),
          'ari'),
+        (get_time_plotter(extract_score, hline=gen_score),
+         'model score'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -234,10 +245,21 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
     
-    figname = 'alpha_beta_num_clusters'
+    figname = 'alpha_num_clusters'
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha),
          'log10 alpha'),
+        (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
+         'num clusters'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'beta_num_clusters'
+    plot_tuples = [
         (get_time_plotter(extract_log10_beta, hline=gen_beta, alpha=0.2),
          'log10 beta'),
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
