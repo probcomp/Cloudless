@@ -53,7 +53,7 @@ image_save_str = S.files.gen_state_image_save_str
 gibbs_init_filename = S.files.gibbs_init_filename
 data_dir_prefix = S.files.data_dir_prefix
 parameters_filename = S.files.parameters_filename
-reduced_summaries_name = s.files.reduced_summaries_name
+reduced_summaries_name = S.files.reduced_summaries_name
 
 # determine data dir
 get_hexdigest = lambda variable: \
