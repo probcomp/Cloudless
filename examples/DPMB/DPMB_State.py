@@ -79,13 +79,16 @@ class DPMB_State():
             cluster.assign_vector(vector)
 
             # run inference on hypers
-            if (transitioner is not None) and (R > 1) and is_power_2(R-1):
-                transitioner.state = self
-                transition_types = [
-                    transitioner.transition_beta, transitioner.transition_alpha]
-                for transition_type in \
-                        self.random_state.permutation(transition_types):
-                    transition_type()
+            if (R > 1) and is_power_2(R-1):
+                if (transitioner is not None):
+                    transitioner.state = self
+                    transition_types = [
+                        transitioner.transition_beta,
+                        transitioner.transition_alpha
+                        ]
+                    for transition_type in \
+                            self.random_state.permutation(transition_types):
+                        transition_type()
                 save_str = 'gibbs_init_after_numrows_' + str(R)
                 save_str = os.path.join(data_dir, save_str)
                 print save_str
