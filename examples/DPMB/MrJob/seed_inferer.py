@@ -145,7 +145,8 @@ class MRSeedInferer(MRJob):
         # FIXME: should only pickle if it wasn't read
         rf.pickle(summary, gibbs_init_file, dir=data_dir)
         if push_to_s3:
-            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(gibbs_init_file)
+            s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
+            s3.put_s3(gibbs_init_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
@@ -237,7 +238,10 @@ class MRSeedInferer(MRJob):
                 pkl_file = get_child_pkl_file(iter_num)
                 rf.pickle(last_summary, pkl_file, dir=data_dir)
                 if push_to_s3:
-                    s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+                    s3 = s3h.S3_helper(
+                        bucket_dir=summary_bucket_dir, local_dir=data_dir)
+                    s3.put_s3(pkl_file)
+                    # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
                 state.plot()
                 save_str_base = '_'.join([
                         'infer_state',
@@ -370,7 +374,9 @@ class MRSeedInferer(MRJob):
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
         rf.pickle(summary, pkl_file, dir=data_dir)
         if push_to_s3:
-            s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+            s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
+            s3.put_s3(pkl_file)
+            # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         #
         # format summary to pass out 
         last_valid_zs = summary['last_valid_zs']
