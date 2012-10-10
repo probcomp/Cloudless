@@ -228,7 +228,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
 
     init_start_ts = datetime.datetime.now()
     # FIXME: how to do make this a passable argument?
-    init_transitioner = dm.DPMB(0,None,True,True) # FIXME
+    # init_transitioner = dm.DPMB(0, None, True, True) # FIXME
+    init_transitioner = None
     inference_state = state_type(dataset_spec["gen_seed"],
                                  dataset_spec["num_cols"],
                                  dataset_spec["num_rows"],
