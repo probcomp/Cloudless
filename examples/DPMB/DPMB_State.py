@@ -19,6 +19,8 @@ reload(pf)
 import pdb
 
 is_power_2 = lambda num: int(np.log2(num)) == np.log2(num)
+is_crp_init_z = lambda init_z: \
+    isinstance(init_z, str) and init_z.lower()=='crp'
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
@@ -52,10 +54,24 @@ class DPMB_State():
         if (init_z is None) and (init_x is not None):
             # can no longer initialize to cluster prior with specified data
             self.gibbs_type_init(num_rows, init_x, transitioner, data_dir)
+        elif is_crp_init_z(init_z) and (init_x is not None):
+            self.crp_type_init(init_x, data_dir)
         else:
             if isinstance(init_z, list) or isinstance(init_z,np.ndarray):
                 init_z, canon_other = hf.canonicalize_list(init_z)
             self.non_gibbs_type_init(num_rows, init_z, init_x, decanon_indices)
+
+    def crp_type_init(self, init_x, data_dir=''):
+        num_rows = len(init_x)
+        # create init_z from CRP
+        crp_gen_seed = self.random_state.randinit(sys.maxint)
+        crp_state = ds.DPMB_State(crp_gen_seed,
+                                  num_cols=0, num_rows=num_rows,
+                                  init_alpha=self.init_alpha)
+        init_z = crp_state.getZIndices()
+        init_z, canon_other = hf.canonicalize_list(init_z)
+        # pass on to non_gibbs_type_init
+        self.non_gibbs_type_init(num_rows, init_z, init_x)
 
     def gibbs_type_init(self, num_rows, init_x, transitioner=None, data_dir=''):
 
