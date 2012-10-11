@@ -133,7 +133,9 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
         if 'zs' in pkl_data:
             zs,ids = hf.canonicalize_list(pkl_data["zs"])
         else:
-            zs = None
+            # zs = None
+            # FIXME: default is CRP type init
+            zs = 'crp'
         test_xs = pkl_data['test_xs']
         if 'N_test' in dataset_spec:
             test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=np.int32)
@@ -819,6 +821,7 @@ def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
     run_spec['dataset_spec'] = dataset_spec ## settings.cifar_100_problem_file}
     run_spec["num_iters"] = num_iters
     run_spec["time_seatbelt"] = None
+    # FIXME: is infer_init_z even used?
     run_spec["infer_init_z"] = None
     run_spec['infer_init_alpha'] = dataset_spec['gen_alpha']
     run_spec['infer_init_betas'] = dataset_spec['gen_betas']
