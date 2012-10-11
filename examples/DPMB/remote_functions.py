@@ -247,6 +247,11 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     init_delta_seconds = hf.delta_since(init_start_ts)
     if init_save_str is not None:
         inference_state.plot(save_str=init_save_str)
+        path_parts = os.path.split(init_save_str)
+        just_state_save_str = os.path.join(path_parts[0],
+                                           'just_' + path_parts[1])
+        inference_state.plot(which_plots=['just_state'],
+                             save_str=just_state_save_str)
 
     print "...initialized"
     transitioner = model_type(
