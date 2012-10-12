@@ -29,7 +29,7 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = 'structured_problem.pkl.gz'
 default_resume_file = None
-push_to_s3 = True
+push_to_s3 = False
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
