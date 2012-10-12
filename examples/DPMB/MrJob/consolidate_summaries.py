@@ -30,12 +30,13 @@ def get_summary_tuples(data_dir):
     gibbs_init_filename = S.files.gibbs_init_filename
     gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
     defaultfactory = list
-    # if os.path.isfile(gibbs_init_full_filename):
-    #     defaultfactory = lambda: list(((gibbs_init_full_filename, -1),))
+    if os.path.isfile(gibbs_init_full_filename):
+        defaultfactory = lambda: list(((gibbs_init_full_filename, -1),))
     summary_names_dict = defaultdict(defaultfactory)
     for summary_file in sorted(summary_files):
         summary_name, iter_num_str = split_summary(summary_file)
         iter_num = int(iter_num_str)
+        if iter_num < 0: continue
         full_filename = os.path.join(data_dir, summary_file)
         summary_tuple = (full_filename, iter_num)
         summary_names_dict[summary_name].append(summary_tuple)
@@ -64,8 +65,30 @@ def get_summaries_dict(summary_names, data_dir):
     return summaries_dict
 
 def process_timing(summaries):
+    # perhaps I can always sum alpha, beta, zs to get delta?
+    sum_parts = lambda summary: \
+        sum([summary['timing'][field] for field in ['alpha', 'betas', 'zs']])
+    print
+    print 'sum_parts:', [sum_parts(summary) for summary in summaries]
+    print 'diff(run_sum):', \
+        numpy.diff([summary['timing']['run_sum'] for summary in summaries])
+    print 'run_sum:', [summary['timing']['run_sum'] for summary in summaries]
     delta_ts = []
-    if 'start_time' in summaries[0].get('timing',{}):
+    if 'iter_start_dt' in summaries[0].get('timing', {}):
+        start_dts = [
+            summary['timing']['iter_start_dt']
+            for summary in summaries
+            ]
+        end_dts = [
+            summary['timing']['iter_end_dt']
+            for summary in summaries
+            ]
+        delta_ts = [
+            (end - start).total_seconds()
+            for end, start in zip(end_dts, start_dts)
+            ]
+        delta_ts = numpy.cumsum(delta_ts)
+    elif 'start_time' in summaries[0].get('timing',{}):
         start_time = summaries[0]['timing']['start_time']
         delta_ts.append(summaries[0]['timing']['run_sum'])
         get_total_seconds = lambda summary : \
@@ -135,7 +158,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         extract_vals = numpy.array(extract_func(summaries), dtype=float)
         color = get_color(summaries_name)
         label = label_func(summaries_name)
-        pylab.plot(timing,extract_vals, label=label, color=color, alpha=alpha)
+        pylab.plot(timing, extract_vals, label=label, color=color, alpha=alpha)
     if hline is not None:
         pylab.axhline(hline, color='magenta', label='gen')
     if do_legend:
