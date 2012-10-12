@@ -367,8 +367,10 @@ class DPMB_State():
         if title_append is not None:
             create_title = lambda title_str: ': '.join([title_str, title_append])
         fh = pylab.figure()
+        num_rows = len(self.vector_list)
 
         if 'just_data' in which_plots:
+            if num_rows > 100000: return [None] * 5
             sort_by = self.getZIndices()
             argsort_indices = np.argsort(sort_by)
             data = np.array(self.getXValues())[argsort_indices]
@@ -383,7 +385,7 @@ class DPMB_State():
 
         fh1 = None
         pylab.subplot(411)
-        if "data" in which_plots:
+        if "data" in which_plots and num_rows < 10000:
             sort_by = self.getZIndices()
             argsort_indices = np.argsort(sort_by)
             data = np.array(self.getXValues())[argsort_indices]
