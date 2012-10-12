@@ -43,6 +43,7 @@ def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
         last_axes = pylab.subplot(gs[gs_i])
         plot_func(data)
         pylab.ylabel(ylabel)
+        last_axes.set_xlim((0, last_axes.get_xlim()[-1]))
     pylab.subplots_adjust(hspace=subplots_hspace)
     legend_outside(last_axes)
     first_axes = fh.get_axes()[0]
