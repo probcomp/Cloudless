@@ -58,8 +58,15 @@ reduced_summaries_name = S.files.reduced_summaries_name
 # determine data dir
 get_hexdigest = lambda variable: \
     hashlib.sha224(str(variable)).hexdigest()[:10]
+def pop_runspec_args(in_dict):
+    out_dict = in_dict.copy()
+    out_dict.pop('num_iters')
+    out_dict.pop('num_nodes_list')
+    return out_dict
+args_to_hexdigest = lambda args: get_hexdigest(pop_runspec_args(vars(args)))
+
 # FIXME: should omit num_iters, num_nodes_list from hexdigest
-hex_digest = get_hexdigest(vars(args))
+hex_digest = args_to_hexdigest(args)
 data_dir = data_dir_prefix + hex_digest
 data_dir = os.path.join(base_dir, data_dir)
 print data_dir
