@@ -49,6 +49,7 @@ child_state_tuple = namedtuple(
     'list_of_x_indices x_indices zs '
     ' master_alpha betas master_inf_seed iter_num '
     ' child_inf_seed child_gen_seed child_counter '
+    ' iter_start_dt '
     )
 
 class MRSeedInferer(MRJob):
@@ -162,6 +163,7 @@ class MRSeedInferer(MRJob):
         yield run_key, master_state
 
     def distribute_data(self, run_key, master_state):
+        iter_start_dt = datetime.datetime.now()
         child_counter = 0
         num_nodes = self.num_nodes
         # pull variables out of master_state
@@ -187,7 +189,8 @@ class MRSeedInferer(MRJob):
             child_state = child_state_tuple(
                 child_list_of_x_indices, xs, zs,
                 master_alpha, betas, master_inf_seed, iter_num,
-                child_inf_seed, child_gen_seed, child_counter)
+                child_inf_seed, child_gen_seed, child_counter,
+                iter_start_dt)
             yield run_key, child_state
 
     def infer(self, run_key, child_state_in):
@@ -204,6 +207,7 @@ class MRSeedInferer(MRJob):
         child_inf_seed = child_state_in.child_inf_seed
         child_gen_seed = child_state_in.child_gen_seed
         child_counter = child_state_in.child_counter
+        iter_start_dt = child_state_in.iter_start_dt
         #
         run_spec = rf.run_spec_from_child_state_info(
             zs, master_alpha, betas, child_inf_seed, child_gen_seed,
@@ -280,7 +284,7 @@ class MRSeedInferer(MRJob):
         child_state_out = child_state_tuple(
             list_of_x_indices, x_indices, last_valid_zs,
             master_alpha, betas, master_inf_seed, new_iter_num,
-            None, None, None
+            None, None, None, iter_start_dt
             )
         yield run_key, child_state_out
 
@@ -303,6 +307,7 @@ class MRSeedInferer(MRJob):
         betas = child_state_out.betas
         master_inf_seed = child_state_out.master_inf_seed
         iter_num = child_state_out.iter_num
+        iter_start_dt = child_state_out.iter_start_dt
 
         # format for use in singular state generation 
         jumbled_zs = rf.consolidate_zs(zs_list)
@@ -358,6 +363,9 @@ class MRSeedInferer(MRJob):
             'score_delta':score_delta_timer.elapsed_secs,
             })
         summary['iter_num'] = iter_num
+        iter_end_dt = datetime.datetime.now()
+        summary['timing']['iter_start_dt'] = iter_start_dt
+        summary['timing']['iter_end_dt'] = iter_end_dt
         #
         # save intermediate state plots
         save_str_base = '_'.join([

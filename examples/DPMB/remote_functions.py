@@ -232,6 +232,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     # FIXME: how to do make this a passable argument?
     # init_transitioner = dm.DPMB(0, None, True, True) # FIXME
     init_transitioner = None
+    iter_start_dt = datetime.datetime.now()
     inference_state = state_type(dataset_spec["gen_seed"],
                                  dataset_spec["num_cols"],
                                  dataset_spec["num_rows"],
@@ -249,8 +250,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         inference_state.plot(save_str=init_save_str)
         path_parts = os.path.split(init_save_str)
         just_state_save_str = os.path.join(path_parts[0],
-                                           'just_' + path_parts[1])
-        inference_state.plot(which_plots=['just_state'],
+                                           'just_data_' + path_parts[1])
+        inference_state.plot(which_plots=['just_data'],
                              save_str=just_state_save_str)
 
     print "...initialized"
@@ -271,6 +272,9 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         )
     summaries.append(init_summary)
     summaries[-1]["timing"]["init"] = init_delta_seconds
+    iter_end_dt = datetime.datetime.now()
+    summaries[-1]['timing']['iter_start_dt'] = iter_start_dt
+    summaries[-1]['timing']['iter_end_dt'] = iter_end_dt
     #
     print "saved initialization"
     #
@@ -279,6 +283,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     last_valid_seed = transitioner.random_state.get_state()
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
     for i in range(run_spec["num_iters"]):
+        iter_start_dt = datetime.datetime.now()
         transition_return = transitioner.transition(
             time_seatbelt=time_seatbelt,
             ari_seatbelt=ari_seatbelt,
@@ -305,6 +310,9 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
                 transitioner.state.get_list_of_x_indices()
             last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
+        iter_end_dt = datetime.datetime.now()
+        next_summary['timing']['iter_start_dt'] = iter_start_dt
+        next_summary['timing']['iter_end_dt'] = iter_end_dt
         if post_infer_func is not None:
             post_infer_func(i, transitioner.state, next_summary)
     summaries[-1]["last_valid_zs"] = last_valid_zs
