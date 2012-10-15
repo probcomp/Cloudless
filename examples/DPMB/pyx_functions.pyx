@@ -51,6 +51,49 @@ cpdef int renormalize_and_sample(
             draw += 1
 
 @cython.boundscheck(False)
+def sample_unnormalized_with_partition(
+    np.ndarray[np.float64_t,ndim=1] counts,
+    np.float64_t partition,
+    np.float64_t randv,
+    ):
+    #
+    draw = 0
+    while True:
+        randv -= counts[draw] / partition
+        if randv < 0:
+            return draw
+        else:
+            draw += 1
+
+@cython.boundscheck(False)
+def sample_from_crp(
+    np.float64_t alpha,
+    np.int_t random_seed,
+    np.int_t num_draws,
+    ):
+    #
+    random_state = np.random.RandomState(random_seed)
+    counts = [1]
+    cdef np.int_t sum_counts_int = 1
+    draws = []
+    #
+    for draw_idx in xrange(num_draws):
+        random_draw = random_state.uniform()
+        draw = sample_unnormalized_with_partition(
+            np.append(counts, alpha),
+            sum_counts_int + alpha,
+            random_draw,
+            )
+        draws.append(draw)
+        #
+        if draw == len(counts):
+            counts.append(1)
+        else:
+            counts[draw] += 1
+        sum_counts_int += 1
+    return draws, counts
+
+@cython.boundscheck(False)
 def calculate_cluster_conditional(state,vector,randv):
     ##vector should be unassigned
 
