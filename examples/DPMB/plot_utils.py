@@ -30,7 +30,12 @@ def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
     if ax is None:
         ax = pylab.gca()
     lgd = ax.get_legend()
-    pylab.savefig(namestr, bbox_extra_artists=(lgd,), bbox_inches=bbox_inches)
+    try:
+        pylab.savefig(
+            namestr, bbox_extra_artists=(lgd,), bbox_inches=bbox_inches)
+    except Exception, e:
+        print e
+        pylab.savefig(namestr)
 
 def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
               subplots_hspace=.25):
