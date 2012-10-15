@@ -65,10 +65,10 @@ class DPMB_State():
         num_rows = len(init_x)
         # create init_z from CRP
         crp_gen_seed = self.random_state.randint(sys.maxint)
-        crp_state = DPMB_State(crp_gen_seed,
-                                  num_cols=0, num_rows=num_rows,
-                                  init_alpha=self.alpha)
-        init_z = crp_state.getZIndices()
+        init_z, crp_counts = pf.sample_from_crp(
+            alpha=self.alpha,
+            random_seed=crp_gen_seed,
+            num_draws=num_rows)
         init_z, canon_other = hf.canonicalize_list(init_z)
         # pass on to non_gibbs_type_init
         self.non_gibbs_type_init(num_rows, init_z, init_x)
