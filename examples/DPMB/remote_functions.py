@@ -246,6 +246,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
                                      **state_kwargs
                                      )
 
+    plot_timer = None
     if init_save_str is not None:
         with hf.Timer('plot') as plot_timer:
             inference_state.plot(save_str=init_save_str)
@@ -273,7 +274,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
             send_zs=send_zs,
             )
     summaries.append(init_summary)
-    summaries[-1]["timing"]["plot"] = plot_timer.elapsed_secs
+    summaries[-1]["timing"]["plot"] = plot_timer.elapsed_secs \
+        if plot_timer is not None else None
     summaries[-1]["timing"]["init"] = build_inference_state_timer.elapsed_secs
     summaries[-1]["timing"]["extract_state_summary"] = \
         extract_state_summary_timer.elapsed_secs
