@@ -196,7 +196,8 @@ def make_clean_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test,
     zs = zs[permutation_indices]
     #
     # this is just to visualize, data is already generated
-    if save_str is not None:
+    max_num_rows_to_plot = 10000
+    if save_str is not None and num_rows < max_num_rows_to_plot:
         state = ds.DPMB_State(
             gen_seed=random_state.randint(sys.maxint),
             num_cols=num_cols,
