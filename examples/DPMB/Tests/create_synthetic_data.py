@@ -225,7 +225,8 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
     if pkl_filename is None:
         pkl_filename = 'problem.pkl.gz'
     test_fraction = .1
-    N_test = int(num_rows * test_fraction)
+    max_num_test = 1000
+    N_test = min(max_num_test, int(num_rows * test_fraction))
     # create the data
     xs, test_xs, test_lls, gen_score, inverse_permutation_indices, zs = \
         make_clean_data(
