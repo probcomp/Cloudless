@@ -369,8 +369,9 @@ class DPMB_State():
         fh = pylab.figure()
         num_rows = len(self.vector_list)
 
+        no_data_plot_cutoff = 10000
         if 'just_data' in which_plots:
-            if num_rows > 100000: return [None] * 5
+            if num_rows > no_data_plot_cutoff: return [None] * 5
             sort_by = self.getZIndices()
             argsort_indices = np.argsort(sort_by)
             data = np.array(self.getXValues())[argsort_indices]
@@ -385,7 +386,7 @@ class DPMB_State():
 
         fh1 = None
         pylab.subplot(411)
-        if "data" in which_plots and num_rows < 10000:
+        if "data" in which_plots and num_rows < no_data_plot_cutoff:
             sort_by = self.getZIndices()
             argsort_indices = np.argsort(sort_by)
             data = np.array(self.getXValues())[argsort_indices]
