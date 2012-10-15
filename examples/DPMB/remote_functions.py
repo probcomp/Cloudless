@@ -228,31 +228,32 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         state_kwargs = {"num_nodes":num_nodes}
         model_kwargs = {"hypers_every_N":hypers_every_N}
 
-    init_start_ts = datetime.datetime.now()
     # FIXME: how to do make this a passable argument?
     # init_transitioner = dm.DPMB(0, None, True, True) # FIXME
     init_transitioner = None
     iter_start_dt = datetime.datetime.now()
-    inference_state = state_type(dataset_spec["gen_seed"],
-                                 dataset_spec["num_cols"],
-                                 dataset_spec["num_rows"],
-                                 init_alpha=run_spec["infer_init_alpha"],
-                                 init_betas=run_spec["infer_init_betas"],
-                                 # init_z=run_spec["infer_init_z"],
-                                 init_z=problem['zs'],
-                                 init_x=np.array(problem["xs"],dtype=np.int32),
-                                 transitioner=init_transitioner, # FIXME
-                                 data_dir=data_dir,
-                                 **state_kwargs
-                                 )
-    init_delta_seconds = hf.delta_since(init_start_ts)
+    with hf.Timer('build inference_state') as build_inference_state_timer:
+        inference_state = state_type(dataset_spec["gen_seed"],
+                                     dataset_spec["num_cols"],
+                                     dataset_spec["num_rows"],
+                                     init_alpha=run_spec["infer_init_alpha"],
+                                     init_betas=run_spec["infer_init_betas"],
+                                     # init_z=run_spec["infer_init_z"],
+                                     init_z=problem['zs'],
+                                     init_x=np.array(problem["xs"],dtype=np.int32),
+                                     transitioner=init_transitioner, # FIXME
+                                     data_dir=data_dir,
+                                     **state_kwargs
+                                     )
+
     if init_save_str is not None:
-        inference_state.plot(save_str=init_save_str)
-        path_parts = os.path.split(init_save_str)
-        just_state_save_str = os.path.join(path_parts[0],
-                                           'just_data_' + path_parts[1])
-        inference_state.plot(which_plots=['just_data'],
-                             save_str=just_state_save_str)
+        with hf.Timer('plot') as plot_timer:
+            inference_state.plot(save_str=init_save_str)
+            path_parts = os.path.split(init_save_str)
+            just_state_save_str = os.path.join(path_parts[0],
+                                               'just_data_' + path_parts[1])
+            inference_state.plot(which_plots=['just_data'],
+                                 save_str=just_state_save_str)
 
     print "...initialized"
     transitioner = model_type(
@@ -264,14 +265,18 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         )
     #
     summaries = []
-    init_summary = transitioner.extract_state_summary(
-        true_zs=true_zs,
-        verbose_state=verbose_state,
-        test_xs=problem["test_xs"],
-        send_zs=send_zs,
-        )
+    with hf.Timer('extact_state_summary') as extract_state_summary_timer:
+        init_summary = transitioner.extract_state_summary(
+            true_zs=true_zs,
+            verbose_state=verbose_state,
+            test_xs=problem["test_xs"],
+            send_zs=send_zs,
+            )
     summaries.append(init_summary)
-    summaries[-1]["timing"]["init"] = init_delta_seconds
+    summaries[-1]["timing"]["plot"] = plot_timer.elapsed_secs
+    summaries[-1]["timing"]["init"] = build_inference_state_timer.elapsed_secs
+    summaries[-1]["timing"]["extract_state_summary"] = \
+        extract_state_summary_timer.elapsed_secs
     iter_end_dt = datetime.datetime.now()
     summaries[-1]['timing']['iter_start_dt'] = iter_start_dt
     summaries[-1]['timing']['iter_end_dt'] = iter_end_dt
