@@ -23,11 +23,12 @@ is_summary = lambda x : x[:8] == 'summary_'
 split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
 
-def get_summary_tuples(data_dir):
+def get_summary_tuples(data_dir, gibbs_init_filename=None):
     data_files = os.listdir(data_dir)
     summary_files = filter(is_summary,data_files)
     #
-    gibbs_init_filename = S.files.gibbs_init_filename
+    if gibbs_init_filename is None:
+        gibbs_init_filename = S.files.gibbs_init_filename
     gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
     defaultfactory = list
     if os.path.isfile(gibbs_init_full_filename):
@@ -68,11 +69,6 @@ def process_timing(summaries):
     # perhaps I can always sum alpha, beta, zs to get delta?
     sum_parts = lambda summary: \
         sum([summary['timing'][field] for field in ['alpha', 'betas', 'zs']])
-    print
-    print 'sum_parts:', [sum_parts(summary) for summary in summaries]
-    print 'diff(run_sum):', \
-        numpy.diff([summary['timing']['run_sum'] for summary in summaries])
-    print 'run_sum:', [summary['timing']['run_sum'] for summary in summaries]
     delta_ts = []
     if 'iter_start_dt' in summaries[0].get('timing', {}):
         start_dts = [
