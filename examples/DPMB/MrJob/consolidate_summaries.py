@@ -23,16 +23,15 @@ is_summary = lambda x : x[:8] == 'summary_'
 split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
 
-def get_summary_tuples(data_dir, gibbs_init_filename=None):
+default_init_filename = S.files.gibbs_init_filename
+def get_summary_tuples(data_dir, init_filename=default_init_filename):
     data_files = os.listdir(data_dir)
     summary_files = filter(is_summary,data_files)
     #
-    if gibbs_init_filename is None:
-        gibbs_init_filename = S.files.gibbs_init_filename
-    gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
+    init_full_filename = os.path.join(data_dir, init_filename)
     defaultfactory = list
-    if os.path.isfile(gibbs_init_full_filename):
-        defaultfactory = lambda: list(((gibbs_init_full_filename, -1),))
+    if os.path.isfile(init_full_filename):
+        defaultfactory = lambda: list(((init_full_filename, -1),))
     summary_names_dict = defaultdict(defaultfactory)
     for summary_file in sorted(summary_files):
         summary_name, iter_num_str = split_summary(summary_file)
@@ -186,11 +185,14 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
 
-def read_summaries(data_dirs, do_print=False):
+def read_summaries(data_dirs, init_filename=None, do_print=False):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
-        summary_tuples = get_summary_tuples(data_dir)
+        summary_tuples = get_summary_tuples(
+            data_dir,
+            init_filename=init_filename,
+            )
         working_summaries_dict = get_summaries_dict(summary_tuples, data_dir)
         if do_print:
             print_info(working_summaries_dict)
@@ -320,8 +322,10 @@ def main():
     # parse some args
     parser = argparse.ArgumentParser('consolidate summaries')
     parser.add_argument('data_dirs',nargs='+',type=str)
+    parser.add_argument('--init_filename',default=default_init_filename,type=str)
     args = parser.parse_args()
     data_dirs = args.data_dirs
+    init_filename = args.init_filename
     #
     problem_file = 'problem.pkl.gz'
     parameters_file = 'run_parameters.txt'
@@ -337,7 +341,10 @@ def main():
             with open(parameters_full_file) as fh:
                 exec fh in parameters
             title = title_from_parameters(parameters)
-        summaries_dict, numnodes1_parent_list = read_summaries([data_dir])
+        summaries_dict, numnodes1_parent_list = read_summaries(
+            [data_dir],
+            init_filename=init_filename,
+            )
         plot_summaries(summaries_dict, problem=problem, title=title)
     return summaries_dict, numnodes1_parent_list
 
