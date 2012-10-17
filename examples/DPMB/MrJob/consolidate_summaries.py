@@ -238,7 +238,7 @@ def get_time_plotter(extract_func, **kwargs):
                       **kwargs))
     return plot_func
 def plot_summaries(summaries_dict, problem=None,
-                   title='', xlabel='', plot_dir=''):
+                   title='', xlabel='time (seconds)', plot_dir=''):
     fh_list = []
     gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
@@ -247,7 +247,7 @@ def plot_summaries(summaries_dict, problem=None,
         gen_beta = problem['beta_d']
         true_num_clusters = problem['num_clusters']
 
-    figname = 'test_lls_score'
+    figname = 'test_lls_score.pdf'
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
          'test set\nmean log likelihood'),
@@ -260,7 +260,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'ari_score'
+    figname = 'ari_score.pdf'
     plot_tuples = [
         (get_time_plotter(extract_ari, hline=1.0),
          'ari'),
@@ -273,7 +273,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
     
-    figname = 'alpha_num_clusters'
+    figname = 'alpha_num_clusters.pdf'
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha),
          'log10 alpha'),
@@ -286,7 +286,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'beta_num_clusters'
+    figname = 'beta_num_clusters.pdf'
     plot_tuples = [
         (get_time_plotter(extract_log10_beta, hline=gen_beta, alpha=0.2),
          'log10 beta'),

@@ -184,8 +184,9 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         ax.set_ylim(*ylim)
     title = '\n'.join(title_list)
     pylab.title(title)
-    pylab.savefig('true_vs_sampled_' + series_name,
-                  bbox_extra_artists=(lgd,), bbox_inches='tight')
+    pylab.savefig('true_vs_sampled_' + series_name + '.pdf',
+                  bbox_extra_artists=(lgd,), bbox_inches='tight',
+                  )
 
 series_tuples = [
     (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
