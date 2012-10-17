@@ -139,12 +139,8 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
     #
     return xs, ys
 
-series_tuples = [
-    (cluster_series_dict, 'num_clusters', True, .1, operator.mul),
-    (testlls_series_dict, 'test_lls', False, 1, operator.add),
-    ]
-for series_dict, series_name, do_log_log, jitter_range, jitter_op in \
-        series_tuples:
+def plot_series_dict(series_dict, series_name, do_log_log,
+                     jitter_range, jitter_op, do_lines=True):
     ax = None
     random_state = numpy.random.RandomState(0)
     for numnodes, series in series_dict.iteritems():
@@ -156,17 +152,18 @@ for series_dict, series_name, do_log_log, jitter_range, jitter_op in \
                            jitter_op)
         label = 'numnodes=' + str(numnodes)
         ax = my_plot(xs, ys, ax=ax, color=color, marker=marker, label=label,
-                     do_log_log=do_log_log)
+                     do_log_log=do_log_log, alpha=0.5)
 
-    # show the actual number of clusters
-    uniq_true_values = numpy.unique([el for el in series.index])
-    # line_colors = ['orange', 'yellow', 'brown']
-    line_colors = ['cyan', 'magenta', 'yellow']
-    for uniq_idx, true_values in enumerate(uniq_true_values):
-        color_idx = uniq_idx % len(line_colors)
-        color = line_colors[color_idx]
-        ax.axvline(true_values, color=color)
-        ax.axhline(true_values, color=color)
+    if do_lines:
+        # show the actual number of clusters
+        uniq_true_values = numpy.unique([el for el in series.index])
+        # line_colors = ['orange', 'yellow', 'brown']
+        line_colors = ['cyan', 'magenta', 'yellow']
+        for uniq_idx, true_values in enumerate(uniq_true_values):
+            color_idx = uniq_idx % len(line_colors)
+            color = line_colors[color_idx]
+            ax.axvline(true_values, color=color)
+            ax.axhline(true_values, color=color)
 
     # add notations
     handles, labels = ax.get_legend_handles_labels()
@@ -177,11 +174,26 @@ for series_dict, series_name, do_log_log, jitter_range, jitter_op in \
     title_list = [
         'Final ' + series_name + ' comparison for comparable problems, #iters',
         'Vertical and horizontal jitter added',
-        'True values denoted by proximate vertical line',
         'problems are subset of',
         problem_size,
         ]
+    if do_lines:
+        title_list.append('True values denoted by proximate vertical line')
+    else:
+        xlim = ax.get_xlim()
+        ylim = ax.get_ylim()
+        ax.plot(xlim, ylim)
+        ax.set_xlim(*xlim)
+        ax.set_ylim(*ylim)
     title = '\n'.join(title_list)
     pylab.title(title)
     pylab.savefig('true_vs_sampled_' + series_name,
                   bbox_extra_artists=(lgd,), bbox_inches='tight')
+
+series_tuples = [
+    (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
+    (testlls_series_dict, 'test_lls', False, 2, operator.add, False),
+    ]
+#
+for series_tuple in series_tuples:
+    plot_series_dict(*series_tuple)
