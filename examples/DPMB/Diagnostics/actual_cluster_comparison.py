@@ -172,7 +172,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     pylab.xlabel('true ' + series_name)
     pylab.ylabel('last sample ' + series_name)
     title_list = [
-        'Vertical and horizontal jitter added to datapoints',
+        # 'Vertical and horizontal jitter added to datapoints',
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
