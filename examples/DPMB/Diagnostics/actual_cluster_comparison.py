@@ -115,35 +115,45 @@ testlls_series_dict = extract_series_dict(testlls_by_numnodes)
 num_nodes_list = [1, 2, 4]
 colors_list = ['red', 'blue', 'green']
 markers_list = ['+', 'x', 'v']
-h_jitter_fixed_list = [.9, 1., 1.1]
-v_jitter_delta = .1
-v_low = 1 - v_jitter_delta
-v_high = 1 + v_jitter_delta
-h_jitter_delta = .1
-h_low = 1 - h_jitter_delta
-h_high = 1 + h_jitter_delta
-#
+h_index_list = [-1, 0, 1]
 color_lookup = dict(zip(num_nodes_list, colors_list))
 marker_lookup = dict(zip(num_nodes_list, markers_list))
-h_jitter_fixed_lookup = dict(zip(num_nodes_list, h_jitter_fixed_list))
+h_index_lookup = dict(zip(num_nodes_list, h_index_list))
+
+import operator
+# operator.mul, operator.add
+def jitterify(xs, ys, jitter_range, h_index, random_state,
+              jitter_op=operator.mul):
+    low = 1 - jitter_range
+    high = 1 + jitter_range
+    h_jitter_fixed = jitter_range * h_index
+    if jitter_op == operator.mul:
+        h_jitter_fixed = 1.0 + jitter_range * h_index
+    size = len(xs)
+    h_jitter_rand = random_state.uniform(low=low, high=high, size=size)
+    v_jitter_rand = random_state.uniform(low=low, high=high, size=size)
+    #
+    xs = jitter_op(xs, h_jitter_fixed)
+    xs = jitter_op(xs, h_jitter_rand)
+    yx = jitter_op(ys, v_jitter_rand)
+    #
+    return xs, ys
 
 series_tuples = [
-    (cluster_series_dict, 'num_clusters', True),
-    (testlls_series_dict, 'test_lls', False),
+    (cluster_series_dict, 'num_clusters', True, .1, operator.mul),
+    (testlls_series_dict, 'test_lls', False, 1, operator.add),
     ]
-for series_dict, series_name, do_log_log in series_tuples:
+for series_dict, series_name, do_log_log, jitter_range, jitter_op in \
+        series_tuples:
     ax = None
     random_state = numpy.random.RandomState(0)
     for numnodes, series in series_dict.iteritems():
-        n_series = len(series)
         color = color_lookup[numnodes]
         marker = marker_lookup[numnodes]
-        h_jitter_fixed = h_jitter_fixed_lookup[numnodes]
-        h_jitter_rand = random_state.uniform(
-            low=h_low, high=h_high, size=n_series)
-        v_jitter = random_state.uniform(low=v_low, high=v_high, size=n_series)
-        xs = series.index * h_jitter_fixed * h_jitter_rand
-        ys = series.values * v_jitter
+        h_index = h_index_lookup[numnodes]
+        xs, ys = series.index, series.values
+        xs, ys = jitterify(xs, ys, jitter_range, h_index, random_state,
+                           jitter_op)
         label = 'numnodes=' + str(numnodes)
         ax = my_plot(xs, ys, ax=ax, color=color, marker=marker, label=label,
                      do_log_log=do_log_log)
