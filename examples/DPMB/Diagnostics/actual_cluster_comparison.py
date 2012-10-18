@@ -140,7 +140,8 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
     return xs, ys
 
 def plot_series_dict(series_dict, series_name, do_log_log,
-                     jitter_range, jitter_op, do_lines=True):
+                     jitter_range, jitter_op, do_lines=True,
+                     xlabel=None, ylabel=None):
     ax = None
     random_state = numpy.random.RandomState(0)
     for numnodes, series in series_dict.iteritems():
@@ -169,8 +170,12 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     handles, labels = ax.get_legend_handles_labels()
     lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
                     bbox_to_anchor=(0.5,-0.1))
-    pylab.xlabel('true ' + series_name)
-    pylab.ylabel('last sample ' + series_name)
+    if xlabel is None:
+        xlabel = 'true ' + series_name
+    if ylabel is None:
+        ylabel = 'last sample ' + series_name
+    pylab.xlabel(xlabel)
+    pylab.ylabel(ylabel)
     title_list = [
         # 'Vertical and horizontal jitter added to datapoints',
         ]
@@ -188,8 +193,11 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                   bbox_extra_artists=(lgd,), bbox_inches='tight',
                   )
 
+testlls_xlabel = 'Ground truth test log-likelihoods assigned from hard-wired models'
+testlls_ylabel = 'Average predictive log-likelihoods of learned models'
+
 series_tuples = [
-    (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
+    (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True, testlls_xlabel, testlls_xlabel),
     (testlls_series_dict, 'test_lls', False, 2, operator.add, False),
     ]
 #
