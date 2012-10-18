@@ -197,8 +197,8 @@ testlls_xlabel = 'Ground truth test log-likelihoods assigned from hard-wired mod
 testlls_ylabel = 'Average predictive log-likelihoods of learned models'
 
 series_tuples = [
-    (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True, testlls_xlabel, testlls_xlabel),
-    (testlls_series_dict, 'test_lls', False, 2, operator.add, False),
+    (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
+    (testlls_series_dict, 'test_lls', False, 2, operator.add, False, testlls_xlabel, testlls_xlabel),
     ]
 #
 for series_tuple in series_tuples:
