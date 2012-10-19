@@ -115,7 +115,8 @@ testlls_series_dict = extract_series_dict(testlls_by_numnodes)
 num_nodes_list = [1, 2, 4]
 colors_list = ['red', 'blue', 'green']
 markers_list = ['+', 'x', 'v']
-h_index_list = [-1, 0, 1]
+# h_index_list = [-1, 0, 1]
+h_index_list = [0, 0, 0]
 color_lookup = dict(zip(num_nodes_list, colors_list))
 marker_lookup = dict(zip(num_nodes_list, markers_list))
 h_index_lookup = dict(zip(num_nodes_list, h_index_list))
@@ -193,8 +194,8 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                   bbox_extra_artists=(lgd,), bbox_inches='tight',
                   )
 
-testlls_xlabel = 'Ground truth test log-likelihoods assigned from hard-wired models'
-testlls_ylabel = 'Average predictive log-likelihoods of learned models'
+testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
+testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
 series_tuples = [
     (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
