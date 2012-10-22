@@ -150,7 +150,9 @@ class MRSeedInferer(MRJob):
             s3.put_s3(gibbs_init_file)
         #
         # pull out the values to pass on
-        list_of_x_indices = summary.get('last_valid_list_of_x_indices', None)
+        list_of_x_indices = summary.get('list_of_x_indices', None)
+        list_of_x_indices = summary.get('last_valid_list_of_x_indices',
+                                        list_of_x_indices)
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
         master_alpha = summary['alpha']
         betas = summary['betas']
