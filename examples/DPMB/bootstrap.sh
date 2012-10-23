@@ -3,61 +3,70 @@
 #configuration here
 ####################
 bucketname="mitpcp-dpmb"
-##########################
 install_dir=/home/hadoop/
 cloudless_dir=/home/hadoop/Cloudless/
-cd install_dir
-git clone git@github.com:mit-probabilistic-computing-project/Cloudless.git
+python_binary="Python-2.7.3"
+python_dir="${install_dir}/${python_binary}/"
+python_include="${python_dir}/Include/"
 PYTHONPATH=$install_dir
+aws_access_key_id=AWS_ACCESS_KEY_ID
+aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+##########################
 #first we set two vars...I had errors without this
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 export LD_RUN_PATH=/usr/local/lib:$LD_RUN_PATH
 
-# install a few things to satisfy dependencies
-sudo apt-get install -y libssl-dev # for httplib.HTTPSConnection?
-sudo apt-get install -y libatlas-base-dev
-# to get ALL its dependencies
-sudo apt-get install -y python-matplotlib
-# for matplotlib when compiling from source?
-sudo apt-get install -y libfreetype6-dev
-
+# install a recent python 
+cd $install_dir
+#
 hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
-python_binary="Python-2.7.3"
 filename="${python_binary}.tar.gz"
 hadoop fs -get "${hadoop_full_path}$filename" "$filename"
 tar xvfz $filename
 cd $python_binary
-echo "sudo make install"
+sudo ./configure
+sudo make install
 cd ..
 # special case for python binary
 sudo rm /usr/bin/python
 sudo ln -s /usr/bin/python2.7 /usr/bin/python
 
+# install a few things to satisfy dependencies
+ubuntu_package_names=(
+    libssl-dev        # for httplib.HTTPSConnection?
+    libatlas-base-dev
+    python-matplotlib # to get ALL its dependencies
+    libfreetype6-dev  # for matplotlib when compiling from source?
+    python-dateutil   # for pandas
+    git-core
+    git=1:1.7.2.5-3   # must upgrade, else can't get branch
+    python-boto
+    python-setuptools
+)
+for package_name in ${ubuntu_package_names[*]} ; do
+    sudo apt-get install -y $package_name
+done
+
+# install from source to get particular versions
 hadoop_full_path="s3://${bucketname}/emr_resources/python_packages/"
-package_names=(Cython-0.17.tar.gz mrjob-0.3.5.tar.gz matplotlib-1.1.1.tar.gz scipy-0.11.0rc2.tar.gz numpy-1.6.2.tar.gz pandas-0.7.0rc1.tar.gz)
-for package_name in ${package_names[*]} ; do
+python_package_names=(Cython-0.17 mrjob-0.3.5 matplotlib-1.1.1 numpy-1.6.2 scipy-0.11.0rc2 pandas-0.7.0rc1)
+for package_name in ${python_package_names[*]} ; do
     filename="${package_name}.tar.gz"
     hadoop fs -get "${hadoop_full_path}$filename" "$filename"
     tar xvfz $filename
     cd $package_name
-    sudo make install
+    sudo python setup.py install
     cd ..
 done
 
-# install setup tools
-wget http://peak.telecommunity.com/dist/ez_setup.py
-sudo python ez_setup.py
-# boto
-sudo easy_install -y boto
+# get Cloudless code
+cd $install_dir
+git clone -b mrjobify git://github.com/mit-probabilistic-computing-project/Cloudless.git
+cd Cloudless
 
 # compile cython code
-python_dir="${install_dir}/${python_binary}/"
-python_include="${python_dir}/Include/"
 cd "${cloudless_dir}/examples/DPMB/"
 cython -a -I "${python_include}" pyx_functions.pyx
-gcc -fPIC -o pyx_functions.so -shared -pthread -I/home/hadoop/Python-2.7.2/ -I/home/hadoop/Python-2.7.2/Include pyx_functions.c
-
-# import gdata
-# import h5py
+gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} pyx_functions.c
 
 exit
