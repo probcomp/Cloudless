@@ -7,17 +7,19 @@ bucketname="mitpcp-dpmb"
 install_dir=/home/hadoop/
 cloudless_dir=/home/hadoop/Cloudless/
 cd install_dir
+git clone git@github.com:mit-probabilistic-computing-project/Cloudless.git
+PYTHONPATH=$install_dir
 #first we set two vars...I had errors without this
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 export LD_RUN_PATH=/usr/local/lib:$LD_RUN_PATH
 
 # install a few things to satisfy dependencies
-sudo apt-get install libssl-dev # for httplib.HTTPSConnection?
+sudo apt-get install -y libssl-dev # for httplib.HTTPSConnection?
 sudo apt-get install -y libatlas-base-dev
 # to get ALL its dependencies
-sudo apt-get install python-matplotlib
+sudo apt-get install -y python-matplotlib
 # for matplotlib when compiling from source?
-sudo apt-get install libfreetype6-dev
+sudo apt-get install -y libfreetype6-dev
 
 hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
 python_binary="Python-2.7.3"
@@ -46,7 +48,7 @@ done
 wget http://peak.telecommunity.com/dist/ez_setup.py
 sudo python ez_setup.py
 # boto
-sudo easy_install boto
+sudo easy_install -y boto
 
 # compile cython code
 python_dir="${install_dir}/${python_binary}/"
