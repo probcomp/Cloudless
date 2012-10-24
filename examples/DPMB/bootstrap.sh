@@ -84,6 +84,8 @@ reinstall_package_names=(
     numpy
     matplotlib
     scipy
+    boto
+    # dateutil
     # pandas
 )
 for package_name in ${reinstall_package_names[*]} ; do
