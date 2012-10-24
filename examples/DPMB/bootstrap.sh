@@ -19,12 +19,11 @@ export LD_RUN_PATH=/usr/local/lib:$LD_RUN_PATH
 
 # install a few things to satisfy dependencies
 ubuntu_package_names=(
+    htop              # not a dependency, just for monitoring
     libssl-dev        # for httplib.HTTPSConnection?
     libatlas-base-dev
-    python-matplotlib # to get ALL its dependencies
-    libfreetype6-dev  # for matplotlib when compiling from source?
-    git-core
     git=1:1.7.2.5-3   # must upgrade, else can't get branch
+    python-matplotlib # to get ALL its dependencies
 )
 for package_name in ${ubuntu_package_names[*]} ; do
     sudo apt-get install -y $package_name
@@ -34,11 +33,11 @@ done
 cd $install_dir
 #
 hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
-filename="${python_binary}.tar.gz"
+filename="${python_binary}.installed.tar.gz"
 hadoop fs -get "${hadoop_full_path}$filename" "$filename"
 tar xvfz $filename
 cd $python_binary
-sudo ./configure
+# sudo ./configure # configure required if installing for first time
 sudo make install
 cd ..
 # special case for python binary
@@ -47,9 +46,9 @@ sudo ln -s /usr/bin/python2.7 /usr/bin/python
 
 # some things must be installed post python install
 ubuntu_package_names=(
-    python-dateutil   # for pandas
-    python-boto
-    python-setuptools
+    # python-dateutil   # for pandas
+    # python-boto # don't do this, fails here
+    # python-setuptools # doesn't get registered?
 )
 for package_name in ${ubuntu_package_names[*]} ; do
     sudo apt-get install -y $package_name
@@ -66,7 +65,7 @@ python_package_names=(
     # pandas-0.7.0rc1
 )
 for package_name in ${python_package_names[*]} ; do
-    filename="${package_name}.tar.gz"
+    filename="${package_name}.installed.tar.gz"
     hadoop fs -get "${hadoop_full_path}$filename" "$filename"
     tar xvfz $filename
     cd $package_name
@@ -78,7 +77,7 @@ done
 wget http://peak.telecommunity.com/dist/ez_setup.py
 sudo python ez_setup.py
 #
-reinstall_package_names=(
+easy_install_package_names=(
     cython
     mrjob
     numpy
@@ -88,7 +87,7 @@ reinstall_package_names=(
     # dateutil
     # pandas
 )
-for package_name in ${reinstall_package_names[*]} ; do
+for package_name in ${easy_install_package_names[*]} ; do
     sudo easy_install $package_name
 done
 
