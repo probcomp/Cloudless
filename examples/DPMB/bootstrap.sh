@@ -98,6 +98,15 @@ sudo git clone -b mrjobify git://github.com/mit-probabilistic-computing-project/
 sudo chown -R hadoop Cloudless
 
 # compile cython code
+extra_include=/home/hadoop/numpy-1.6.2/build/src.linux-i686-2.7/numpy/core/include/numpy/
 cd "${cloudless_dir}/examples/DPMB/"
 cython -a -I "${python_include}" pyx_functions.pyx
-gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} pyx_functions.c
+gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
+
+hadoop fs -get 's3://mitpcp-dpmb/tiny_image_problems/*gz' /tmp/
+
+cat >> /home/hadoop/.bashrc <<EOF
+aws_access_key_id=$aws_access_key_id
+aws_secret_access_key=$aws_secret_access_key
+EOF
+chown hadoop /home/hadoop/.bashrc
