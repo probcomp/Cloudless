@@ -16,7 +16,7 @@ import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
 
 
-default_base_dir = '/usr/local/Cloudless/examples/DPMB/Data/20120928_programmatic_mrjob'
+default_base_dir = '/usr/local/Cloudless/examples/DPMB/Data/BigLearnData'
 parser = argparse.ArgumentParser()
 parser.add_argument('--dir', default=default_base_dir, type=str)
 args = parser.parse_args()
@@ -74,21 +74,23 @@ def extract_series_dict(end_true_dict):
 all_dirs = os.listdir(base_dir)
 programmatic_dirs = filter(programmatic_filter, all_dirs)
 #
-fieldnames = ['num_rows', 'num_clusters', 'beta_d']
 parameters_set_dict = defaultdict(set)
 clusters_by_numnodes = defaultdict(defaultdict_result)
 testlls_by_numnodes = defaultdict(defaultdict_result)
+aris_by_numnodes = defaultdict(defaultdict_result)
 for programmatic_dir in programmatic_dirs:
     data_dir = os.path.join(base_dir, programmatic_dir)
-    #
+    # read parameters, problem, summaries
     parameters = update_parameters_set_dict(data_dir, parameters_set_dict)
     if parameters is None: continue
     reduced_summaries = rf.unpickle(reduced_summaries_name, dir=data_dir)
     problem = rf.unpickle(problem_filename, dir=data_dir)
-    #
+    # determine true values 
     true_clusters = parameters['num_clusters']
     true_testlls = numpy.mean(problem['test_lls'])
+    true_ari = 1
     for summary_name, summary in reduced_summaries.iteritems():
+        print summary_name
         numnodes = summary_name_to_numnodes(summary_name)
         #
         end_clusters = summary['num_clusters'][-1]
@@ -98,6 +100,10 @@ for programmatic_dir in programmatic_dirs:
         end_testlls = numpy.mean(summary['test_lls'][-1])
         testlls_by_numnodes[numnodes]['end'].append(end_testlls)
         testlls_by_numnodes[numnodes]['true'].append(true_testlls)
+        #
+        end_ari = summary['ari'][-1]
+        aris_by_numnodes[numnodes]['end'].append(end_ari)
+        aris_by_numnodes[numnodes]['true'].append(true_ari)
 
 uniq_rows = sorted(list(parameters_set_dict['num_rows']))
 uniq_clusters = sorted(list(parameters_set_dict['num_clusters']))
