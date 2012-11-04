@@ -117,6 +117,7 @@ problem_size = ' x '.join(problem_size_list)
 
 cluster_series_dict = extract_series_dict(clusters_by_numnodes)
 testlls_series_dict = extract_series_dict(testlls_by_numnodes)
+aris_series_dict = extract_series_dict(aris_by_numnodes)
 
 num_nodes_list = [1, 2, 4]
 colors_list = ['red', 'blue', 'green']
@@ -203,10 +204,24 @@ def plot_series_dict(series_dict, series_name, do_log_log,
 testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
 testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
+mixed_series_dict = {}
+for key in aris_series_dict:
+    aris_series = aris_series_dict[key]
+    testlls_series = testlls_series_dict[key]
+    mixed_series = pandas.Series(aris_series, testlls_series)
+    mixed_series_dict[key] = mixed_series
+
+# series_dict, series_name, do_log_log, jitter_range, jitter_op, do_lines,
+# xlabel, ylabel
 series_tuples = [
     (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
     (testlls_series_dict, 'test_lls', False, 2, operator.add, False, testlls_xlabel, testlls_ylabel),
+    (mixed_series_dict, 'testlls_vs_ari', True, .1, operator.add)
     ]
 #
+
+                     
+                     
+
 for series_tuple in series_tuples:
     plot_series_dict(*series_tuple)
