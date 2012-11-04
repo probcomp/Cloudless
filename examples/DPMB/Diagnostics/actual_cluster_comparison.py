@@ -216,12 +216,8 @@ for key in aris_series_dict:
 series_tuples = [
     (cluster_series_dict, 'num_clusters', True, .1, operator.mul, True),
     (testlls_series_dict, 'test_lls', False, 2, operator.add, False, testlls_xlabel, testlls_ylabel),
-    (mixed_series_dict, 'testlls_vs_ari', True, .1, operator.add)
+    (mixed_series_dict, 'ari_vs_testlls', False, .01, operator.add, False),
     ]
 #
-
-                     
-                     
-
 for series_tuple in series_tuples:
     plot_series_dict(*series_tuple)
