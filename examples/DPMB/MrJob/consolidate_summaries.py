@@ -42,7 +42,7 @@ def get_summary_tuples(data_dir, init_filename=default_init_filename):
         summary_names_dict[summary_name].append(summary_tuple)
     return summary_names_dict
 
-num_workers = cpu_count()
+num_workers = cpu_count() / 2
 #
 def read_tuple(in_tuple):
     full_filename, iter_num = in_tuple
@@ -318,7 +318,7 @@ def extract_reduced_summaries(summaries_dict, extract_func_tuples):
             reduced_summaries_dict[summaries_name][extract_name] = extract_vals
     return reduced_summaries_dict
 
-def main():
+if __name__ == '__main__':
     # parse some args
     parser = argparse.ArgumentParser('consolidate summaries')
     parser.add_argument('data_dirs',nargs='+',type=str)
@@ -346,7 +346,3 @@ def main():
             init_filename=init_filename,
             )
         plot_summaries(summaries_dict, problem=problem, title=title)
-    return summaries_dict, numnodes1_parent_list
-
-if __name__ == '__main__':
-    summaries_dict, numnodes1_parent_list = main()
