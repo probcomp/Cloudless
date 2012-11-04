@@ -17,7 +17,7 @@ reduced_summaries_name = S.files.reduced_summaries_name
 # parse some args
 parser = argparse.ArgumentParser('')
 parser.add_argument('--top_dir', default='.', type=str)
-parser.add_argument('---data_dir_prefix', default='programmatic_', type=str)
+parser.add_argument('--data_dir_prefix', default='programmatic_', type=str)
 args = parser.parse_args()
 top_dir = args.top_dir
 data_dir_prefix = args.data_dir_prefix
