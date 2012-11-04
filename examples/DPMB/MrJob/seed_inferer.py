@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/python
 import datetime
 import os
 import hashlib
@@ -29,7 +29,6 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = 'structured_problem.pkl.gz'
 default_resume_file = None
-push_to_s3 = False
 
 create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
     '_'.join([
@@ -64,13 +63,14 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-iters', type='int', default=8)
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
-        self.add_passthrough_option('--data_dir', type='str', default=settings.data_dir)
-        self.add_passthrough_option(
-            '--problem-file',type='str', default=default_problem_file)
-        self.add_passthrough_option(
-            '--resume-file',type='str', default=default_resume_file)
-        self.add_passthrough_option(
-            '--gibbs-init-file',type='str', default=None)
+        self.add_passthrough_option('--push_to_s3', action='store_true')
+        self.add_passthrough_option('--data_dir', type='str',
+                                    default=settings.data_dir)
+        self.add_passthrough_option('--problem-file', type='str',
+                                    default=default_problem_file)
+        self.add_passthrough_option('--resume-file',type='str', default=None)
+        self.add_passthrough_option('--gibbs-init-file',type='str', default=None)
+            
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
@@ -79,6 +79,7 @@ class MRSeedInferer(MRJob):
         self.num_nodes = self.options.num_nodes
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
+        self.push_to_s3 = self.options.push_to_s3
         self.data_dir = self.options.data_dir
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
@@ -145,7 +146,7 @@ class MRSeedInferer(MRJob):
             gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1))
         # FIXME: should only pickle if it wasn't read
         rf.pickle(summary, gibbs_init_file, dir=data_dir)
-        if push_to_s3:
+        if self.push_to_s3:
             s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
             s3.put_s3(gibbs_init_file)
         #
@@ -243,7 +244,7 @@ class MRSeedInferer(MRJob):
                 iter_num = iter_idx + 1
                 pkl_file = get_child_pkl_file(iter_num)
                 rf.pickle(last_summary, pkl_file, dir=data_dir)
-                if push_to_s3:
+                if self.push_to_s3:
                     s3 = s3h.S3_helper(
                         bucket_dir=summary_bucket_dir, local_dir=data_dir)
                     s3.put_s3(pkl_file)
@@ -268,7 +269,7 @@ class MRSeedInferer(MRJob):
             # for child_iter_num, child_summary in enumerate(child_summaries):
             #     pkl_file = get_child_pkl_file(child_iter_num)
             #     rf.pickle(child_summary, pkl_file, dir=data_dir)
-            #     if push_to_s3:
+            #     if self.push_to_s3:
             #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
             # FIXME : to robustify, should be checking for failure conditions
@@ -382,8 +383,9 @@ class MRSeedInferer(MRJob):
         #
         # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
-        rf.pickle(summary, pkl_file, dir=data_dir)
-        if push_to_s3:
+        with hf.Timer('pickling summary', verbose=True):
+            rf.pickle(summary, pkl_file, dir=data_dir)
+        if self.push_to_s3:
             s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
             s3.put_s3(pkl_file)
             # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)

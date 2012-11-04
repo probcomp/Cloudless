@@ -105,8 +105,15 @@ gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_includ
 
 hadoop fs -get 's3://mitpcp-dpmb/tiny_image_problems/*gz' /tmp/
 
-cat >> /home/hadoop/.bashrc <<EOF
+cat > /home/hadoop/.bashrc <<EOF
 aws_access_key_id=$aws_access_key_id
 aws_secret_access_key=$aws_secret_access_key
 EOF
 chown hadoop /home/hadoop/.bashrc
+
+cat > /home/hadoop/.boto <<EOF
+[Credentials]
+aws_access_key_id = $aws_access_key_id
+aws_secret_access_key = $aws_secret_access_key
+EOF
+chown hadoop /home/hadoop/.boto
