@@ -10,8 +10,8 @@ python_binary="Python-2.7.3"
 python_dir="${install_dir}/${python_binary}/"
 python_include="${python_dir}/Include/"
 PYTHONPATH=$install_dir
-aws_access_key_id=AWS_ACCESS_KEY_ID
-aws_secret_access_key=AWS_SECRET_ACCESS_KEY
+aws_access_key_id=AKIAIAGKVNQFYGBPHBDQ
+aws_secret_access_key=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
 ##########################
 #first we set two vars...I had errors without this
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
