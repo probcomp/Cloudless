@@ -24,7 +24,7 @@ def gen_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test=None):
         num_cols=num_cols,
         num_rows=num_rows,
         init_z=('balanced',num_clusters),
-        init_betas = numpy.repeat(beta_d,num_cols)
+        init_betas = numpy.repeat(float(beta_d),num_cols)
     )
     # set alpha to MLE
     logp_list,lnPdf,grid = hf.calc_alpha_conditional(state)
