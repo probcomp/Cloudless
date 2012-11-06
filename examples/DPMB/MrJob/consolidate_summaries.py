@@ -219,6 +219,7 @@ def read_run_parameters(data_dir, parameters_filename=parameters_filename):
         return None
     with open(parameters_full_filename) as fh:
         exec fh in parameters
+    parameters.pop('__builtins__')
     return parameters
 
 parameters_of_interest = ['beta_d', 'num_clusters', 'num_rows']
