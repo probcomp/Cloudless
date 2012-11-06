@@ -1,6 +1,8 @@
 import os
 from collections import Counter
 #
+import Cloudless.examples.DPMB.optionally_use_agg as oua
+oua.optionally_use_agg()
 import pylab
 #
 import Cloudless.examples.DPMB.remote_functions as rf
