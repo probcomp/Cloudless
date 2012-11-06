@@ -14,29 +14,39 @@ reload(S)
 init_filename = 'summary_numnodes4_seed0_iternum-1.pkl.gz'
 reduced_summaries_name = S.files.reduced_summaries_name
 
-# parse some args
-parser = argparse.ArgumentParser('')
-parser.add_argument('--top_dir', default='.', type=str)
-parser.add_argument('--data_dir_prefix', default='programmatic_', type=str)
-args = parser.parse_args()
-top_dir = args.top_dir
-data_dir_prefix = args.data_dir_prefix
-
 # helper functions
 is_data_dir = lambda x: x.startswith(data_dir_prefix)
 
-# determine directories to process
-all_dirs = os.listdir(top_dir)
-data_dirs = filter(is_data_dir, all_dirs)
+def reduce_summaries(top_dir, data_dir_prefix):
+    # determine directories to process
+    all_dirs = os.listdir(top_dir)
+    data_dirs = filter(is_data_dir, all_dirs)
+    #
+    reduced_summaries_dict = dict()
+    # process directories
+    for data_dir in data_dirs:
+        full_data_dir = os.path.join(top_dir, data_dir)
+        reduced_summary_full_filename = os.path.join(full_data_dir, reduced_summaries_name)
+        if not os.path.isfile(reduced_summary_full_filename):
+            summaries_dict, numnodes1_parent_list = cs.read_summaries(
+                [full_data_dir],
+                init_filename=init_filename
+                )
+            reduced_summaries = cs.extract_reduced_summaries(
+                summaries_dict, cs.reduced_summary_extract_func_tuples)
+            rf.pickle(reduced_summaries, reduced_summaries_name, dir=full_data_dir)
+        else:
+            reduced_summaries = rf.unpickle(reduced_summaries_name, full_data_dir)
+        reduced_summaries_dict[data_dir] = reduced_summaries
+    return reduced_summaries_dict
 
+if __name__ == '__main__':
+    # parse some args
+    parser = argparse.ArgumentParser('')
+    parser.add_argument('--top_dir', default='.', type=str)
+    parser.add_argument('--data_dir_prefix', default='programmatic_', type=str)
+    args = parser.parse_args()
+    top_dir = args.top_dir
+    data_dir_prefix = args.data_dir_prefix
 
-# process directories
-for data_dir in data_dirs:
-    full_data_dir = os.path.join(top_dir, data_dir)
-    summaries_dict, numnodes1_parent_list = cs.read_summaries(
-        [full_data_dir],
-        init_filename=init_filename
-        )
-    reduced_summaries_dict = cs.extract_reduced_summaries(
-        summaries_dict, cs.reduced_summary_extract_func_tuples)
-    rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=full_data_dir)
+    reduced_summaries_dict = reduce_summaries(top_dir, data_dir_prefix)
