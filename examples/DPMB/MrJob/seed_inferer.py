@@ -157,7 +157,8 @@ class MRSeedInferer(MRJob):
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
         master_alpha = summary['alpha']
         betas = summary['betas']
-        master_inf_seed = summary['inf_seed']
+        # master_inf_seed = summary['inf_seed'] # FIXME: set above so retain?
+        master_inf_seed = master_infer_seed # FIXME: don't switch names, at least not so slightly?
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
