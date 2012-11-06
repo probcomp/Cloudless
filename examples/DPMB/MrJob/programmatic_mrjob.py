@@ -23,6 +23,7 @@ reload(rf)
 parser_description = 'programmatically run mrjob on a synthetic problem'
 parser = argparse.ArgumentParser(description=parser_description)
 # problem settings
+parser.add_argument('--infer_seed', type=int, default=0)
 parser.add_argument('gen_seed', type=int)
 parser.add_argument('num_rows', type=int)
 parser.add_argument('num_cols', type=int)
@@ -36,6 +37,7 @@ parser.add_argument('num_nodes_list', nargs='+', type=int)
 args = parser.parse_args()
 
 # problem settings
+infer_seed = args.infer_seed
 gen_seed = args.gen_seed
 num_rows = args.num_rows
 num_cols = args.num_cols
@@ -62,6 +64,7 @@ def pop_runspec_args(in_dict):
     out_dict = in_dict.copy()
     out_dict.pop('num_iters')
     out_dict.pop('num_nodes_list')
+    out_dict.pop('infer_seed')
     return out_dict
 args_to_hexdigest = lambda args: get_hexdigest(pop_runspec_args(vars(args)))
 
@@ -80,7 +83,7 @@ problem, problem_filename = csd.pkl_mrjob_problem(
     gen_seed, num_rows, num_cols, num_clusters, beta_d,
     image_save_str=image_save_str, dir=data_dir)
 seed_full_filename = os.path.join(data_dir, seed_filename)
-os.system('printf "0\n" > ' + seed_full_filename)
+os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
 create_args = lambda num_iters, num_nodes: [
@@ -125,7 +128,9 @@ with open(parameters_full_filename, 'w') as fh:
 
 xlabel = 'time (seconds)'
 # summarize the data
-summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir])
+# is seed always zero in the filename?
+init_filename = 'summary_numnodes' + str(num_nodes) + '_seed' + str(infer_seed) + '_iternum-1.pkl.gz'
+summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir], init_filename=init_filename)
 title = cs.title_from_parameters(parameters)
 cs.plot_summaries(summaries_dict, problem=problem,
                   title=title, xlabel=xlabel, plot_dir=data_dir)
