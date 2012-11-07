@@ -25,7 +25,7 @@ def get_unique_handles_labels(handles, labels):
     return unique_handles, unique_labels
 
 def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center',
-                   ncol=None, unique=False):
+                   ncol=None, unique=True):
     # labels must be set in original plot call: plot(..., label=label)
     if ax is None:
         ax = pylab.gca()
