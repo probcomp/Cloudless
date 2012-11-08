@@ -29,14 +29,18 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = 'structured_problem.pkl.gz'
 default_resume_file = None
+postpone_scoring = False
 
-create_pickle_file_str = lambda num_nodes, seed_str, iter_num : \
-    '_'.join([
+def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
+    file_str = '_'.join([
         'summary',
         'numnodes' + str(num_nodes),
         'seed' + seed_str,
-        'iternum' + str(iter_num) + '.pkl.gz'
+        'he' + str(hypers_every_N), # FIXME: need to make this conform to name filtering everywhere
+        'iternum' + str(iter_num) + '.pkl.gz',
         ])
+    return file_str
+
 get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
 master_state_tuple = namedtuple(
     'master_state_tuple',
@@ -59,7 +63,8 @@ class MRSeedInferer(MRJob):
 
     def configure_options(self):
         super(MRSeedInferer, self).configure_options()
-        self.add_passthrough_option('--num-steps', type='int', default=None)
+        self.add_passthrough_option('--num-iters-per-step', type='int',
+                                    default=1)
         self.add_passthrough_option('--num-iters', type='int', default=8)
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
@@ -74,9 +79,10 @@ class MRSeedInferer(MRJob):
 
     def load_options(self, args):
         super(MRSeedInferer, self).load_options(args=args)
-        self.num_steps = self.options.num_steps
         self.num_iters = self.options.num_iters
         self.num_nodes = self.options.num_nodes
+        self.num_iters_per_step = self.options.num_iters_per_step
+        self.num_steps = self.num_iters
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
         self.push_to_s3 = self.options.push_to_s3
@@ -84,20 +90,10 @@ class MRSeedInferer(MRJob):
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
         self.gibbs_init_file = self.options.gibbs_init_file
-        # if self.num_steps is None:
-        #     if self.num_nodes == 1 and self.num_iters !=0:
-        #         self.num_steps = 1
-        #     else:
-        #         self.num_steps = self.num_iters/self.num_nodes
-        # #
-        # self.num_iters_per_step = self.num_iters/self.num_steps \
-        #     if self.num_steps != 0 else 0
         if self.num_nodes == 1 and self.num_iters !=0:
+            # override values
             self.num_steps = 1
             self.num_iters_per_step = self.num_iters
-        else:
-            self.num_steps = self.num_iters
-            self.num_iters_per_step = 1
 
     def init(self, key, run_key):
         start_dt = datetime.datetime.now()
@@ -107,6 +103,8 @@ class MRSeedInferer(MRJob):
         problem_file = self.problem_file
         resume_file = self.resume_file
         gibbs_init_file = self.gibbs_init_file
+        num_iters_per_step = self.num_iters_per_step
+        
         problem_full_file = os.path.join(data_dir, problem_file)
         if not os.path.isfile(problem_full_file):
             s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
@@ -143,7 +141,8 @@ class MRSeedInferer(MRJob):
         #
         # FIXME : infer will pickle over this
         if gibbs_init_file is None:
-            gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1))
+            gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1),
+                                                     num_iters_per_step)
         # FIXME: should only pickle if it wasn't read
         rf.pickle(summary, gibbs_init_file, dir=data_dir)
         if self.push_to_s3:
@@ -230,12 +229,14 @@ class MRSeedInferer(MRJob):
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
         child_summaries = None
         if num_nodes == 1:
-            true_zs = orig_problem.get('true_zs', None)
-            if true_zs is not None:
-                true_zs = [true_zs[x_index] for x_index in x_indices]
+            true_zs, test_xs = None, None
+            if not postpone_scoring:
+                true_zs = orig_problem.get('true_zs', None)
+                if true_zs is not None:
+                    true_zs = [true_zs[x_index] for x_index in x_indices]
+                test_xs = numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
             sub_problem['true_zs'] = true_zs
-            sub_problem['test_xs'] = \
-                numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
+            sub_problem['test_xs'] = test_xs
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
             #
@@ -297,6 +298,7 @@ class MRSeedInferer(MRJob):
         num_nodes = self.num_nodes
         data_dir = self.data_dir
         problem_file = self.problem_file
+        num_iters_per_step = self.num_iters_per_step
         zs_list = []
         x_indices_list = []
         list_of_x_indices = []
@@ -320,19 +322,18 @@ class MRSeedInferer(MRJob):
             jumbled_zs[reorder_index]
             for reorder_index in numpy.argsort(x_indices)
             ]
+        zs, cluster_idx = hf.canonicalize_list(zs)
         #
         problem = rf.unpickle(problem_file, dir=data_dir)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
-        true_zs, cluster_idx = None, None
-        if 'true_zs' in  problem:
-            true_zs = problem['true_zs']
-            true_zs, cluster_idx = hf.canonicalize_list(true_zs)
-
-        # this is very necessary! Maybe not anymore: done in DPMB_State init
-        zs, cluster_idx = hf.canonicalize_list(zs)
+        true_zs, test_xs = None, None
+        if not postpone_scoring:
+            if 'true_zs' in problem:
+                true_zs = problem['true_zs']
+                true_zs, cluster_idx = hf.canonicalize_list(true_zs)
+            test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
 
         # create singleton state
-        test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
         consolidated_state = ds.DPMB_State(
             gen_seed=0, # FIXME : random variate from master_inf_seed?
             num_cols=len(betas),
@@ -383,7 +384,8 @@ class MRSeedInferer(MRJob):
         consolidated_state.plot(save_str=save_str, which_plots=['just_data'])
         #
         # save pkl'ed summary locally, push to s3 if appropriate
-        pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num)
+        pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
+                                          hypers_every_N=num_iters_per_step)
         with hf.Timer('pickling summary', verbose=True):
             rf.pickle(summary, pkl_file, dir=data_dir)
         if self.push_to_s3:
