@@ -13,10 +13,17 @@ import scipy
 #
 import Cloudless.examples.DPMB.remote_functions as rf
 reload(rf)
+import Cloudless.examples.DPMB.DPMB_State as ds
+reload(ds)
+import Cloudless.examples.DPMB.DPMB as dm
+reload(dm)
+import Cloudless.examples.DPMB.helper_functions as hf
+reload(hf)
 import Cloudless.examples.DPMB.settings as S
 reload(S)
 import Cloudless.examples.DPMB.plot_utils as pu
 reload(pu)
+
 
 # helper functions
 is_summary = lambda x : x[:8] == 'summary_'
@@ -46,13 +53,33 @@ num_workers = cpu_count() / 2
 #
 def read_tuple(in_tuple):
     full_filename, iter_num = in_tuple
-    return rf.unpickle(full_filename), iter_num
+    summary = rf.unpickle(full_filename)
+    return summary, iter_num
 #
-def get_summaries_dict(summary_names, data_dir):
+def score_tuple(in_tuple):
+    problem = in_tuple[-1]
+    summary, iter_num = read_tuple(in_tuple[:-1])
+    if problem is not None:
+        scored_summary = score_summary(summary, problem)
+        field_list = ['ari', 'test_lls', 'score']
+        for field in field_list:
+            summary[field] = scored_summary[field]
+    return summary, iter_num
+def get_summaries_dict(summary_names, data_dir, problem_filename=None):
+    problem = None
+    if problem_filename is not None:
+        problem = rf.unpickle(problem_filename, dir=data_dir)
     summaries_dict = {}
     p = Pool(num_workers)
     for summary_name, tuple_list in summary_names.iteritems():
-        result = p.map_async(read_tuple, tuple_list)
+        result = None
+        if problem is not None:
+            append_problem = lambda in_tuple: \
+                tuple(numpy.append(in_tuple, problem))
+            new_tuple_list = map(append_problem, tuple_list)
+            result = p.map_async(score_tuple, new_tuple_list)
+        else:
+            result = p.map_async(read_tuple, tuple_list)
         result.wait(60)
         if not result.successful():
             raise Exception('pool not successful')
@@ -122,15 +149,17 @@ def print_info(summaries_dict):
             print extract_func(summaries)
         print
 
-shorten_re = re.compile('.*numnodes(\d+)_')
+shorten_re = re.compile('.*numnodes(\d+)_.*he(\d+)')
 def shorten_name(instr):
     match = shorten_re.match(instr)
     shortened_name = instr
     if match is not None:
-        shortened_name = 'nodes=' + match.groups()[0]
+        num_nodes_str = match.groups()[0]
+        he_str = match.groups()[1]
+        shortened_name = 'nodes=' + num_nodes_str + '_' + 'he=' + he_str
     return shortened_name
 
-numnodes_to_color = {'1':'red', '2':'yellow', '4':'green', 'other':'black'}
+numnodes_to_color = {'1':'red', '2':'blue', '4':'green', 'other':'black'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
@@ -141,6 +170,18 @@ def get_color(summaries_key):
         numnodes_str = 'other'
     color = numnodes_to_color[numnodes_str]
     return color
+
+he_to_style = {'1':'-', '2':'.', '4':'-.', 'other':'--'}
+def get_style(summaries_key):
+    summaries_re = re.compile('.*he(\d+)_.*')
+    summaries_match = summaries_re.match(summaries_key)
+    he_str = None
+    if summaries_match is not None:
+        he_str = summaries_match.groups()[0]
+    else:
+        he_str = 'other'
+    style = he_to_style[he_str]
+    return style
     
 def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
                  hline=None, do_legend=False, alpha=0.8):
@@ -152,8 +193,10 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         timing = numpy.array(extract_delta_t(summaries), dtype=float)
         extract_vals = numpy.array(extract_func(summaries), dtype=float)
         color = get_color(summaries_name)
+        style = get_style(summaries_name)
         label = label_func(summaries_name)
-        pylab.plot(timing, extract_vals, label=label, color=color, alpha=alpha)
+        pylab.plot(timing, extract_vals, label=label, color=color,
+                   linestyle=style, alpha=alpha)
     if hline is not None:
         pylab.axhline(hline, color='magenta', label='gen')
     if do_legend:
@@ -185,7 +228,44 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
     pylab.ylabel('fraction of data at or below cluster_size')
     pylab.title('data/cluster size distribution')
 
-def read_summaries(data_dirs, init_filename=None, do_print=False):
+def score_summary(summary, problem):
+    # pull out parameters
+    true_zs = problem['true_zs']
+    test_xs = problem['test_xs']
+    init_x = problem['xs']
+    num_rows = len(init_x)
+    num_cols = len(init_x[0])
+    #
+    init_alpha = summary['alpha']
+    init_betas = summary['betas']
+    init_z = summary.get('zs')
+    if init_z is None:
+        list_of_x_indices = summary.get('list_of_x_indices',
+                                        summary.get('last_valid_list_of_x_indices'))
+        #
+        # post process raw summary data
+        uncannonicalized_zs = numpy.ndarray((num_rows,), dtype=int)
+        for cluster_idx, cluster_x_indices in enumerate(list_of_x_indices):
+            for x_index in cluster_x_indices:
+                uncannonicalized_zs[x_index] = cluster_idx
+        init_z, other = hf.canonicalize_list(uncannonicalized_zs)
+    #
+    # create a state
+    state = ds.DPMB_State(gen_seed=0,
+                          num_cols=num_cols,
+                          num_rows=num_rows,
+                          init_alpha=init_alpha,
+                          init_betas=init_betas,
+                          init_z=init_z,
+                          init_x=init_x,
+                          )
+    transitioner = dm.DPMB(0, state, False, False)
+    scored_summary = transitioner.extract_state_summary(
+        true_zs=true_zs, test_xs=test_xs)
+    return scored_summary
+
+def read_summaries(data_dirs, init_filename=None, problem_filename=None, 
+                   do_print=False):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
@@ -193,7 +273,8 @@ def read_summaries(data_dirs, init_filename=None, do_print=False):
             data_dir,
             init_filename=init_filename,
             )
-        working_summaries_dict = get_summaries_dict(summary_tuples, data_dir)
+        working_summaries_dict = get_summaries_dict(
+            summary_tuples, data_dir, problem_filename=problem_filename)
         if do_print:
             print_info(working_summaries_dict)
         summaries_dict.update(working_summaries_dict)
@@ -328,13 +409,13 @@ if __name__ == '__main__':
     data_dirs = args.data_dirs
     init_filename = args.init_filename
     #
-    problem_file = 'problem.pkl.gz'
+    problem_filename = 'problem.pkl.gz'
     parameters_file = 'run_parameters.txt'
     for data_dir in data_dirs:
-        problem_full_file = os.path.join(data_dir, problem_file)
+        problem_full_filename = os.path.join(data_dir, problem_filename)
         problem = None
-        if os.path.isfile(problem_full_file):
-            problem = rf.unpickle(problem_file, dir=data_dir)
+        if os.path.isfile(problem_full_filename):
+            problem = rf.unpickle(problem_filename, dir=data_dir)
         parameters_full_file = os.path.join(data_dir, parameters_file)
         title = ''
         if os.path.isfile(parameters_full_file):
@@ -345,5 +426,6 @@ if __name__ == '__main__':
         summaries_dict, numnodes1_parent_list = read_summaries(
             [data_dir],
             init_filename=init_filename,
+            # problem_filename=problem_filename, # uncomment to rescore
             )
         plot_summaries(summaries_dict, problem=problem, title=title)
