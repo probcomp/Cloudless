@@ -24,6 +24,7 @@ parser_description = 'programmatically run mrjob on a synthetic problem'
 parser = argparse.ArgumentParser(description=parser_description)
 # problem settings
 parser.add_argument('--infer_seed', type=int, default=0)
+parser.add_argument('--num_iters_per_step', type=int, default=1)
 parser.add_argument('gen_seed', type=int)
 parser.add_argument('num_rows', type=int)
 parser.add_argument('num_cols', type=int)
@@ -38,6 +39,7 @@ args = parser.parse_args()
 
 # problem settings
 infer_seed = args.infer_seed
+num_iters_per_step = args.num_iters_per_step
 gen_seed = args.gen_seed
 num_rows = args.num_rows
 num_cols = args.num_cols
@@ -65,6 +67,7 @@ def pop_runspec_args(in_dict):
     out_dict.pop('num_iters')
     out_dict.pop('num_nodes_list')
     out_dict.pop('infer_seed')
+    out_dict.pop('num_iters_per_step')
     return out_dict
 args_to_hexdigest = lambda args: get_hexdigest(pop_runspec_args(vars(args)))
 
@@ -90,6 +93,7 @@ create_args = lambda num_iters, num_nodes: [
     '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
     # may need to specify mapred.map.tasks greater than num_nodes
     '--num-iters', str(num_iters),
+    '--num-iters-per-step', str(num_iters_per_step),
     '--num-nodes', str(num_nodes),
     '--problem-file', problem_filename,
     '--data_dir', data_dir,
@@ -126,14 +130,14 @@ with open(parameters_full_filename, 'w') as fh:
         line = str(key) + ' = ' + str(value) + '\n'
         fh.write(line)
 
-xlabel = 'time (seconds)'
-# summarize the data
-# is seed always zero in the filename?
-init_filename = 'summary_numnodes' + str(num_nodes) + '_seed' + str(infer_seed) + '_iternum-1.pkl.gz'
-summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir], init_filename=init_filename)
-title = cs.title_from_parameters(parameters)
-cs.plot_summaries(summaries_dict, problem=problem,
-                  title=title, xlabel=xlabel, plot_dir=data_dir)
-reduced_summaries_dict = cs.extract_reduced_summaries(
-    summaries_dict, cs.reduced_summary_extract_func_tuples)
-rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
+# xlabel = 'time (seconds)'
+# # summarize the data
+# # is seed always zero in the filename?
+# init_filename = 'summary_numnodes' + str(num_nodes) + '_seed' + str(infer_seed) + '_iternum-1.pkl.gz'
+# summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir], init_filename=init_filename)
+# title = cs.title_from_parameters(parameters)
+# cs.plot_summaries(summaries_dict, problem=problem,
+#                   title=title, xlabel=xlabel, plot_dir=data_dir)
+# reduced_summaries_dict = cs.extract_reduced_summaries(
+#     summaries_dict, cs.reduced_summary_extract_func_tuples)
+# rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
