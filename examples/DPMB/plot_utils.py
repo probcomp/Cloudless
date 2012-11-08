@@ -33,7 +33,7 @@ def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center',
     if unique:
         handles, labels = get_unique_handles_labels(handles, labels)
     if ncol is None:
-        ncol = len(labels)
+        ncol = min(len(labels), 4)
     lgd = ax.legend(handles, labels, loc=loc, ncol=ncol,
     	            bbox_to_anchor=bbox_to_anchor)
 
