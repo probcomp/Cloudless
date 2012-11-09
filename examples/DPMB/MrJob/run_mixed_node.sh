@@ -11,7 +11,7 @@ num_iters_per_step_list="1 4"
 num_nodes_list="2 4"
 #
 num_rows=16384
-infer_seed_list="1 2 3"
+infer_seed_list="0 1 2 3"
 
 function get_logbase {
     infer_seed=$1
@@ -33,13 +33,13 @@ for infer_seed in ${infer_seed_list[*]}; do
     done
 done
 
-# num_nodes=1
-# for infer_seed in ${infer_seed_list[*]}; do
-#     logbase=$(get_logbase $infer_seed $num_iters_per_step)
-#     echo "Kicking off infer_seed=$infer_seed"
-#     python programmatic_mrjob.py --infer_seed $infer_seed \
-# 	$gen_seed $num_rows $num_cols $num_clusters $beta_d $num_iters $num_nodes \
-# 	> "${logbase}.out" 2> "${logbase}.err"
-#     sleep 30 # must sleep since mjrob names folders by time?
-# done
-# wait
+num_nodes=1
+for infer_seed in ${infer_seed_list[*]}; do
+    logbase=$(get_logbase $infer_seed $num_iters_per_step)
+    echo "Kicking off infer_seed=$infer_seed"
+    python programmatic_mrjob.py --infer_seed $infer_seed \
+	$gen_seed $num_rows $num_cols $num_clusters $beta_d $num_iters $num_nodes \
+	> "${logbase}.out" 2> "${logbase}.err" &
+    sleep 30 # must sleep since mjrob names folders by time?
+done
+wait
