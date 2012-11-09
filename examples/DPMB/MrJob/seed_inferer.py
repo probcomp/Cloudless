@@ -403,6 +403,28 @@ class MRSeedInferer(MRJob):
             master_inf_seed=master_inf_seed, iter_num=iter_num)
         yield run_key, master_state
 
+    def s3_push_step(self, run_key, master_state_in):
+        problem_file = self.problem_file
+        data_dir = self.data_dir
+        num_nodes = self.num_nodes
+        hypers_every_N = self.num_iters_per_step
+        iter_num = master_state_in.iter_num
+        seed_str = run_key
+        #
+        # FIXME: presuming that s3 path is only one dir
+        last_data_dir = os.path.split(data_dir)[-1]
+        run_bucket_dir = os.path.join(summary_bucket_dir, last_data_dir)
+        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=data_dir)
+        for iter_num in numpy.append(-1, range(1, iter_num + 1)):
+            pkl_filename = create_pickle_file_str(
+                num_nodes, seed_str, iter_num, hypers_every_N=hypers_every_N)
+            pkl_full_filename = os.path.join(data_dir, pkl_filename)
+            if os.path.isfile(pkl_full_filename):
+                s3.put_s3(pkl_filename)
+        # who pushes up problem, run_parameters?
+        # whoever created them and set data_dir
+        yield run_key, master_state_in
+
     def steps(self):
         step_list = [self.mr(self.init)]
         infer_step = [
@@ -410,6 +432,8 @@ class MRSeedInferer(MRJob):
             self.mr(self.infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
+        if self.push_to_s3:
+            step_list.extend([self.mr(self.s3_push_step)])
         return step_list
 
 if __name__ == '__main__':
