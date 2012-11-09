@@ -9,6 +9,8 @@ matplotlib.use('Agg')
 #
 import Cloudless.examples.DPMB.settings as S
 reload(S)
+import Cloudless.examples.DPMB.s3_helper as s3h
+reload(s3h)
 import Cloudless.examples.DPMB.MrJob.seed_inferer as si
 reload(si)
 import Cloudless.examples.DPMB.Tests.create_synthetic_data as csd
@@ -25,6 +27,7 @@ parser = argparse.ArgumentParser(description=parser_description)
 # problem settings
 parser.add_argument('--infer_seed', type=int, default=0)
 parser.add_argument('--num_iters_per_step', type=int, default=1)
+parser.add_argument('--push_to_s3', action='store_true')
 parser.add_argument('gen_seed', type=int)
 parser.add_argument('num_rows', type=int)
 parser.add_argument('num_cols', type=int)
@@ -45,6 +48,7 @@ num_rows = args.num_rows
 num_cols = args.num_cols
 num_clusters = args.num_clusters
 beta_d = args.beta_d
+push_to_s3 = args.push_to_s3
 #
 # inference settings
 num_iters = args.num_iters
@@ -74,18 +78,18 @@ args_to_hexdigest = lambda args: get_hexdigest(pop_runspec_args(vars(args)))
 # FIXME: should omit num_iters, num_nodes_list from hexdigest
 hex_digest = args_to_hexdigest(args)
 data_dir = data_dir_prefix + hex_digest
-data_dir = os.path.join(base_dir, data_dir)
-print data_dir
+data_full_dir = os.path.join(base_dir, data_dir)
+print data_full_dir
 try:
-    os.makedirs(data_dir)
+    os.makedirs(data_full_dir)
 except OSError, ose:
     pass
 
 # create the problem and seed file
 problem, problem_filename = csd.pkl_mrjob_problem(
     gen_seed, num_rows, num_cols, num_clusters, beta_d,
-    image_save_str=image_save_str, dir=data_dir)
-seed_full_filename = os.path.join(data_dir, seed_filename)
+    image_save_str=image_save_str, dir=data_full_dir)
+seed_full_filename = os.path.join(data_full_dir, seed_filename)
 os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
@@ -96,11 +100,11 @@ create_args = lambda num_iters, num_nodes: [
     '--num-iters-per-step', str(num_iters_per_step),
     '--num-nodes', str(num_nodes),
     '--problem-file', problem_filename,
-    '--data_dir', data_dir,
+    '--data_dir', data_full_dir,
     seed_full_filename,
     ]
 
-gibbs_init_full_filename = os.path.join(data_dir, gibbs_init_filename)
+gibbs_init_full_filename = os.path.join(data_full_dir, gibbs_init_filename)
 if not os.path.isfile(gibbs_init_full_filename):
     # gibbs init to be used by all subsequent inference
     gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
@@ -117,6 +121,8 @@ else:
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
     infer_args = ['--resume-file', gibbs_init_filename]
+    if push_to_s3:
+        infer_args.extend(['--push_to_s3'])
     infer_args.extend(create_args(num_iters, num_nodes))
     mr_job = si.MRSeedInferer(args=infer_args)
     with mr_job.make_runner() as runner:
@@ -124,11 +130,20 @@ for num_nodes in num_nodes_list:
 
 # save the initial parameters
 parameters = vars(args)
-parameters_full_filename = os.path.join(data_dir, parameters_filename)
+parameters_full_filename = os.path.join(data_full_dir, parameters_filename)
 with open(parameters_full_filename, 'w') as fh:
     for key, value in parameters.iteritems():
         line = str(key) + ' = ' + str(value) + '\n'
         fh.write(line)
+
+if push_to_s3:
+    summary_bucket_dir = S.s3.summary_bucket_dir
+    # FIXME : does data_dir have /tmp prefix?  
+    run_bucket_dir = os.path.join(summary_bucket_dir, data_dir)
+    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=data_full_dir)
+    s3.put_s3(gibbs_init_filename)
+    s3.put_s3(parameters_filename)
+    s3.put_s3(problem_filename)
 
 # xlabel = 'time (seconds)'
 # # summarize the data
