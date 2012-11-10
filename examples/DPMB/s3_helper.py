@@ -50,6 +50,7 @@ class S3_helper():
         key = self.bucket.get_key(key_str)
         success = False
         if key is not None:
+            ensure_dir(self.local_dir)
             key.get_contents_to_filename(full_filename)
             success = True
         return success
@@ -69,6 +70,13 @@ class S3_helper():
         for filename in file_list:
             results[filename] = self.verify_file(filename,write_s3)
         return results
+
+def ensure_dir(dir):
+    if not os.path.isdir(dir):
+        try:
+            os.makedirs(local_dir)
+        except Exception, e:
+            pass
 
 def main():
     parser = argparse.ArgumentParser('s3_helper')
