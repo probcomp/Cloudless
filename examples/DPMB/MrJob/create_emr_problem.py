@@ -41,14 +41,17 @@ image_save_str = S.files.gen_state_image_save_str
 init_filename = S.files.gibbs_init_filename
 run_dir_prefix = S.files.run_dir_prefix
 parameters_filename = S.files.parameters_filename
+ignore_params = ['dont_push_to_s3']
 
 # helper_functions
 get_hexdigest = lambda variable: \
     hashlib.sha224(str(variable)).hexdigest()[:10]
-def pop_runspec_args(in_dict):
+def pop_args(in_dict, ignore_params):
     out_dict = in_dict.copy()
+    for ignore_param in ignore_params:
+        out_dict.pop(ignore_param)
     return out_dict
-args_to_hexdigest = lambda args: get_hexdigest(vars(args))
+dict_to_hexdigest = lambda in_dict: get_hexdigest(in_dict)
 create_args = lambda num_iters, num_nodes: [
     '--jobconf', 'mapred.map.tasks=2',
     '--num-iters', str(num_iters),
@@ -58,8 +61,9 @@ create_args = lambda num_iters, num_nodes: [
     seed_full_filename,
     ]
 
+parameters = pop_args(vars(args), ignore_params)
 # determine some path variables
-hex_digest = args_to_hexdigest(args)
+hex_digest = dict_to_hexdigest(parameters)
 run_dir = run_dir_prefix + hex_digest
 run_full_dir = os.path.join(data_dir, run_dir)
 seed_full_filename = os.path.join(run_full_dir, 'fake_seed_for_gen.txt')
@@ -95,7 +99,6 @@ else:
     print '!!!using prior init!!!'
 
 # save the initial parameters
-parameters = vars(args)
 with open(parameters_full_filename, 'w') as fh:
     for key, value in parameters.iteritems():
         line = str(key) + ' = ' + str(value) + '\n'
