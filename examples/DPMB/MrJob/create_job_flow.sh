@@ -47,8 +47,9 @@ python $DPMB/MrJob/seed_inferer.py -r emr --emr-job-flow-id=$emr_job_flow_id \
 #     ec2-54-242-66-133.compute-1.amazonaws.com
 #     ec2-72-44-54-14.compute-1.amazonaws.com
 # )
-# ssh -i ~/.ssh/dlovell.pem hadoop@${slave_ips[0]}
 
 # for slave_ip in ${slave_ips[*]} ; do
 #     ssh -i ~/.ssh/dlovell.pem $slave_ip 'cd /usr/local/lib/python2.7/site-packages/Cloudless && git pull'
 # done
+
+# ssh -i ~/.ssh/dlovell.pem hadoop@${slave_ips[0]}
