@@ -20,17 +20,17 @@ python -m /home/dlovell/mrjob/mrjob/tools/emr/create_job_flow \
 emr_job_flow_id=$(tail -n 1 create_job_flow.out)
 # --ec2-instance-type $ec2_instance_type \
 
-cd $DPMB/MrJob
-run_dir=programmatic_mrjob_437b056c5a
-seed_list=seed_list.txt
-python $DPMB/MrJob/seed_inferer.py -r emr --emr-job-flow-id=$emr_job_flow_id \
-    --pool-wait-minutes 30 \
-    --jobconf mapred.map.tasks=$num_map_tasks --num-nodes $num_nodes \
-    --resume-file gibbs_init.pkl.gz --problem-file problem.pkl.gz \
-    --run_dir $run_dir \
-    --num-iters $num_iters --num-iters-per-step $num_iters_per_step \
-    --push_to_s3 \
-    $seed_list > out
+# cd $DPMB/MrJob
+# run_dir=programmatic_mrjob_437b056c5a
+# seed_list=seed_list.txt
+# python $DPMB/MrJob/seed_inferer.py -r emr --emr-job-flow-id=$emr_job_flow_id \
+#     --pool-wait-minutes 30 \
+#     --jobconf mapred.map.tasks=$num_map_tasks --num-nodes $num_nodes \
+#     --resume-file gibbs_init.pkl.gz --problem-file problem.pkl.gz \
+#     --run_dir $run_dir \
+#     --num-iters $num_iters --num-iters-per-step $num_iters_per_step \
+#     --push_to_s3 \
+#     $seed_list > out
 
 # this is supposed to run a command on all nodes but doesn't 
 # python -m mrjob.tools.emr.mrboss $emr_job_flow_id -v 'cd /usr/local/lib/python2.7/site-packages/Cloudless/ && git pull'
