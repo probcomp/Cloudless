@@ -20,8 +20,6 @@ python -m /home/dlovell/mrjob/mrjob/tools/emr/create_job_flow \
 emr_job_flow_id=$(tail -n 1 create_job_flow.out)
 # --ec2-instance-type $ec2_instance_type \
 
-# emr_job_flow_id="j-1HLTP8JEUD5BD" # 4 workers = 8 nodes
-
 cd $DPMB/MrJob
 run_dir=programmatic_mrjob_437b056c5a
 seed_list=seed_list.txt
@@ -34,20 +32,25 @@ python $DPMB/MrJob/seed_inferer.py -r emr --emr-job-flow-id=$emr_job_flow_id \
     --push_to_s3 \
     $seed_list > out
 
+# this is supposed to run a command on all nodes but doesn't 
 # python -m mrjob.tools.emr.mrboss $emr_job_flow_id -v 'cd /usr/local/lib/python2.7/site-packages/Cloudless/ && git pull'
+
+# this pulls down logs, but they are often unuseful in debugging
 # python -m mrjob.tools.emr.fetch_logs -a $emr_job_flow_id | less
 
-# master_ip=ec2-23-21-28-54.compute-1.amazonaws.com
+# master_ip=ecXX-XX-XX-XX-XX.compute-1.amazonaws.com
 # scp -i ~/.ssh/dlovell.pem ~/.ssh/dlovell.pem hadoop@$master_ip:/home/hadoop/.ssh/
 # ssh -i ~/.ssh/dlovell.pem hadoop@$master_ip
 
 # slave_ips=(
-#     ec2-50-19-204-231.compute-1.amazonaws.com
-#     ec2-23-22-85-58.compute-1.amazonaws.com
-#     ec2-54-242-66-133.compute-1.amazonaws.com
-#     ec2-72-44-54-14.compute-1.amazonaws.com
+#     ecXX-XX-XX-XX-XX.compute-1.amazonaws.com
+#     ecYY-YY-YY-YY-YY.compute-1.amazonaws.com
+#     ...
+#     ecZZ-ZZ-ZZ-ZZ-ZZ.compute-1.amazonaws.com
 # )
 
+# manually pull changes down to master, workers
+# ssh -i ~/.ssh/dlovell.pem $master_ip 'cd /usr/local/lib/python2.7/site-packages/Cloudless && git pull'
 # for slave_ip in ${slave_ips[*]} ; do
 #     ssh -i ~/.ssh/dlovell.pem $slave_ip 'cd /usr/local/lib/python2.7/site-packages/Cloudless && git pull'
 # done
