@@ -31,7 +31,7 @@ class files():
     seed_filename = 'seed_list.txt'
     gen_state_image_save_str = 'mrjob_problem_gen_state'
     gibbs_init_filename = 'gibbs_init.pkl.gz'
-    data_dir_prefix = 'programmatic_mrjob_'
+    run_dir_prefix = 'programmatic_mrjob_'
     parameters_filename = 'run_parameters.txt'
     reduced_summaries_name = 'reduced_summaries.pkl.gz'
     
