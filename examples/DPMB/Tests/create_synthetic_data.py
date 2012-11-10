@@ -222,9 +222,9 @@ make_filename = lambda num_rows, num_cols: '_'.join([
         'pkl.gz'
         ])
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
-                      pkl_filename=None, image_save_str=None, dir=''):
-    if pkl_filename is None:
-        pkl_filename = 'problem.pkl.gz'
+                      problem_filename=None, image_save_str=None, dir=''):
+    if problem_filename is None:
+        problem_filename = 'problem.pkl.gz'
     test_fraction = .1
     max_num_test = 1000
     N_test = min(max_num_test, int(num_rows * test_fraction))
@@ -252,9 +252,9 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         'gen_score':gen_score,
         'inverse_permutation_indices':inverse_permutation_indices,
         }
-    rf.pickle(pkl_vals, pkl_filename, dir=dir)
+    rf.pickle(pkl_vals, problem_filename, dir=dir)
     #
-    return pkl_vals, pkl_filename
+    return pkl_vals, problem_filename
  
 def main():
     parser = argparse.ArgumentParser('Create a synthetic problem')
