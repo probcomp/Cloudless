@@ -63,6 +63,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
         '--num-iters-per-step', str(num_iters_per_step),
         '--num-nodes', str(num_nodes),
         '--problem-file', problem_filename,
+        '--resume-file', gibbs_init_filename,
         '--run_dir', run_dir,
         seed_full_filename,
         ]
@@ -74,8 +75,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
 # now run for each num_nodes
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
-    infer_args = ['--resume-file', gibbs_init_filename]
-    infer_args.extend(create_args(num_iters, num_nodes, push_to_s3, job_flow_id))
+    infer_args = create_args(num_iters, num_nodes, push_to_s3, job_flow_id)
     mr_job = si.MRSeedInferer(args=infer_args)
     with mr_job.make_runner() as runner:
         runner.run()
