@@ -455,8 +455,8 @@ class MRSeedInferer(MRJob):
             self.mr(self.infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
-        if self.push_to_s3:
-            step_list.extend([self.mr(self.s3_push_step)])
+        # if self.push_to_s3:
+        #     step_list.extend([self.mr(self.s3_push_step)])
         return step_list
 
 if __name__ == '__main__':
