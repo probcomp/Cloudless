@@ -163,24 +163,20 @@ numnodes_to_color = {'1':'red', '2':'blue', '4':'green', 'other':'black'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
-    numnodes_str = None
+    numnodes_str = 'other'
     if summaries_match is not None:
         numnodes_str = summaries_match.groups()[0]
-    else:
-        numnodes_str = 'other'
-    color = numnodes_to_color[numnodes_str]
+    color = numnodes_to_color.get(numnodes_str, 'black')
     return color
 
 he_to_style = {'1':'-', '2':'.', '4':'-.', 'other':'--'}
 def get_style(summaries_key):
     summaries_re = re.compile('.*he(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
-    he_str = None
+    he_str = 'other'
     if summaries_match is not None:
         he_str = summaries_match.groups()[0]
-    else:
-        he_str = 'other'
-    style = he_to_style[he_str]
+    style = he_to_style.get(he_str, '--')
     return style
     
 def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
