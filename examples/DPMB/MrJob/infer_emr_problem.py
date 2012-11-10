@@ -54,7 +54,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
     if job_flow_id != None:
-        emr_args.extend(['--emr-job-flow_id', job_flow_id])
+        emr_args.extend(['--emr-job-flow-id', job_flow_id])
     #
     other_args = [
         '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
@@ -75,9 +75,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
     infer_args = ['--resume-file', gibbs_init_filename]
-    if push_to_s3:
-        infer_args.extend(['--push_to_s3'])
-    infer_args.extend(create_args(num_iters, num_nodes))
+    infer_args.extend(create_args(num_iters, num_nodes, push_to_s3, job_flow_id))
     mr_job = si.MRSeedInferer(args=infer_args)
     with mr_job.make_runner() as runner:
         runner.run()
