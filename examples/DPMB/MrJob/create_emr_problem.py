@@ -37,6 +37,7 @@ push_to_s3 = not args.dont_push_to_s3
 #
 # non passable settings
 data_dir = S.data_dir
+problem_filename = S.file.problem_filename
 image_save_str = S.files.gen_state_image_save_str
 init_filename = S.files.gibbs_init_filename
 run_dir_prefix = S.files.run_dir_prefix
@@ -82,6 +83,7 @@ except OSError, ose:
 # create the problem
 problem, problem_filename = csd.pkl_mrjob_problem(
     gen_seed, num_rows, num_cols, num_clusters, beta_d,
+    problem_filename=problem_filename,
     image_save_str=image_save_str, dir=run_full_dir)
 
 # actually create the inference problem init state
