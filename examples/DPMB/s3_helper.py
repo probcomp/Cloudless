@@ -74,7 +74,7 @@ class S3_helper():
 def ensure_dir(dir):
     if not os.path.isdir(dir):
         try:
-            os.makedirs(local_dir)
+            os.makedirs(dir)
         except Exception, e:
             pass
 
