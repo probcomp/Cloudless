@@ -18,6 +18,7 @@ python -m /home/dlovell/mrjob/mrjob/tools/emr/create_job_flow \
     --bootstrap-action $DPMB/bootstrap.sh \
     > create_job_flow.out
 emr_job_flow_id=$(tail -n 1 create_job_flow.out)
+echo $emr_job_flow_id
 # --ec2-instance-type $ec2_instance_type \
 
 # cd $DPMB/MrJob
