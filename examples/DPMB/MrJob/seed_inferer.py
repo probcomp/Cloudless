@@ -112,8 +112,8 @@ class MRSeedInferer(MRJob):
         run_full_dir = os.path.join(data_dir, run_dir)
         problem_full_file = os.path.join(run_full_dir, problem_file)
         if not os.path.isfile(problem_full_file):
-            s3h.S3_helper(bucket_dir=run_bucket_dir).verify_file(
-                problem_file)
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+            s3.verify_file(problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
@@ -121,9 +121,9 @@ class MRSeedInferer(MRJob):
             if resume_file:
                 resume_full_file = os.path.join(run_full_dir, resume_file)
                 if not os.path.isfile(resume_full_file):
-                    s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                  local_dir=run_full_dir).verify_file(
-                        resume_file)
+                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
+                                       local_dir=run_full_dir)
+                    s3.verify_file(resume_file)
                 summary = rf.unpickle(resume_file, dir=run_full_dir)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
@@ -224,7 +224,12 @@ class MRSeedInferer(MRJob):
             num_iters_per_step, num_nodes)
         # FIXME : write a new routine to read only those xs necessary
         # FIXME : look to 80MM TinyImages reader
+
         run_full_dir = os.path.join(data_dir, run_dir)
+        problem_full_file = os.path.join(run_full_dir, problem_file)
+        if not os.path.isfile(problem_full_file):
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+            s3.verify_file(problem_file)
 
         orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
         problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
@@ -256,8 +261,8 @@ class MRSeedInferer(MRJob):
                 pkl_file = get_child_pkl_file(iter_num)
                 rf.pickle(last_summary, pkl_file, dir=run_full_dir)
                 if self.push_to_s3:
-                    s3 = s3h.S3_helper(
-                        bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
+                                       local_dir=run_full_dir)
                     s3.put_s3(pkl_file)
                     # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
                 state.plot()
@@ -337,6 +342,11 @@ class MRSeedInferer(MRJob):
         zs, cluster_idx = hf.canonicalize_list(zs)
         #
         run_full_dir = os.path.join(data_dir, run_dir)
+        problem_full_file = os.path.join(run_full_dir, problem_file)
+        if not os.path.isfile(problem_full_file):
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+            s3.verify_file(problem_file)
+
         problem = rf.unpickle(problem_file, dir=run_full_dir)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
         true_zs, test_xs = None, None
