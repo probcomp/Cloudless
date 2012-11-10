@@ -37,7 +37,7 @@ push_to_s3 = not args.dont_push_to_s3
 #
 # non passable settings
 data_dir = S.data_dir
-problem_filename = S.file.problem_filename
+problem_filename = S.files.problem_filename
 image_save_str = S.files.gen_state_image_save_str
 init_filename = S.files.gibbs_init_filename
 run_dir_prefix = S.files.run_dir_prefix
@@ -111,3 +111,5 @@ if push_to_s3:
     s3.put_s3(init_filename)
     s3.put_s3(parameters_filename)
     s3.put_s3(problem_filename)
+
+print run_dir
