@@ -1,10 +1,13 @@
 #!/bin/bash
 # usage: bash create_job_flow.sh num_ec2_core_instances
 
+
+# parse args
 if [ -z $1 ] ; then
     echo "usage: bash create_job_flow.sh num_ec2_core_instances";
     exit;
 fi
+
 # settings
 ec2_instance_type=c1.medium
 num_ec2_instances=$(( $1 + 1 ))
