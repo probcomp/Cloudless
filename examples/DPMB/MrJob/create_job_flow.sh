@@ -28,6 +28,9 @@ echo $emr_job_flow_id
 # this pulls down logs, but they are often unuseful in debugging
 # python -m mrjob.tools.emr.fetch_logs -a $emr_job_flow_id | less
 
+# python -m mrjob.tools.emr.mrboss  j-2DLB05ODZ9ASD --ec2-key-pair-file=/home/hadoop/.ssh/dlovell.pem -v '/home/hadoop/bin/hadoop job  -Dmapred.job.tracker=10.114.17.221:9001 -kill job_201211102241_0004'
+
+
 # master_ip=ecXX-XX-XX-XX-XX.compute-1.amazonaws.com
 # scp -i ~/.ssh/dlovell.pem ~/.ssh/dlovell.pem hadoop@$master_ip:/home/hadoop/.ssh/
 # ssh -i ~/.ssh/dlovell.pem hadoop@$master_ip
