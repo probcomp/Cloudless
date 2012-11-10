@@ -224,7 +224,7 @@ make_filename = lambda num_rows, num_cols: '_'.join([
 def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
                       problem_filename=None, image_save_str=None, dir=''):
     if problem_filename is None:
-        problem_filename = 'problem.pkl.gz'
+        problem_filename = S.files.problem_filename
     test_fraction = .1
     max_num_test = 1000
     N_test = min(max_num_test, int(num_rows * test_fraction))
