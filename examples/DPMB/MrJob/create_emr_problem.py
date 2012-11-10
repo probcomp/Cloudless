@@ -17,7 +17,7 @@ reload(csd)
 parser_description = 'create problem to run on emr'
 parser = argparse.ArgumentParser(description=parser_description)
 # problem settings
-parser.add_argument('--push_to_s3', action='store_false')
+parser.add_argument('--dont_push_to_s3', action='store_true')
 parser.add_argument('gen_seed', type=int)
 parser.add_argument('num_rows', type=int)
 parser.add_argument('num_cols', type=int)
@@ -33,7 +33,7 @@ num_rows = args.num_rows
 num_cols = args.num_cols
 num_clusters = args.num_clusters
 beta_d = args.beta_d
-push_to_s3 = args.push_to_s3
+push_to_s3 = not args.dont_push_to_s3
 #
 # non passable settings
 data_dir = S.data_dir
