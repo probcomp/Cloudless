@@ -24,6 +24,7 @@ reload(settings)
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
+data_dir = settings.path.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
@@ -69,8 +70,7 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--num-nodes', type='int', default=4)
         self.add_passthrough_option('--time-seatbelt', type='int', default=None)
         self.add_passthrough_option('--push_to_s3', action='store_true')
-        self.add_passthrough_option('--data_dir', type='str',
-                                    default=settings.data_dir)
+        self.add_passthrough_option('--run_dir', type='str', default='')
         self.add_passthrough_option('--problem-file', type='str',
                                     default=default_problem_file)
         self.add_passthrough_option('--resume-file',type='str', default=None)
@@ -82,11 +82,12 @@ class MRSeedInferer(MRJob):
         self.num_iters = self.options.num_iters
         self.num_nodes = self.options.num_nodes
         self.num_iters_per_step = self.options.num_iters_per_step
+        self.hypers_every_N = self.options.num_iters_per_step
         self.num_steps = self.num_iters
         # time_seatbelt only works on single node inference
         self.time_seatbelt = self.options.time_seatbelt
         self.push_to_s3 = self.options.push_to_s3
-        self.data_dir = self.options.data_dir
+        self.run_dir = self.options.run_dir
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
         self.gibbs_init_file = self.options.gibbs_init_file
@@ -94,31 +95,36 @@ class MRSeedInferer(MRJob):
             # override values
             self.num_steps = 1
             self.num_iters_per_step = self.num_iters
+        self.run_bucket_dir = os.path.join(summary_bucket_dir, self.run_dir)
 
     def init(self, key, run_key):
         start_dt = datetime.datetime.now()
         master_infer_seed = int(run_key)
         num_nodes = self.num_nodes
-        data_dir = self.data_dir
+        run_dir = self.run_dir
         problem_file = self.problem_file
         resume_file = self.resume_file
         gibbs_init_file = self.gibbs_init_file
         num_iters_per_step = self.num_iters_per_step
-        
-        problem_full_file = os.path.join(data_dir, problem_file)
+        hypers_every_N = self.hypers_every_N
+        run_bucket_dir = self.run_bucket_dir
+
+        run_full_dir = os.path.join(data_dir, run_dir)
+        problem_full_file = os.path.join(run_full_dir, problem_file)
         if not os.path.isfile(problem_full_file):
-            s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
+            s3h.S3_helper(bucket_dir=run_bucket_dir).verify_file(
                 problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
-                resume_full_file = os.path.join(data_dir, resume_file)
+                resume_full_file = os.path.join(run_full_dir, resume_file)
                 if not os.path.isfile(resume_full_file):
-                    s3h.S3_helper(bucket_dir=problem_bucket_dir).verify_file(
+                    s3h.S3_helper(bucket_dir=run_bucket_dir,
+                                  local_dir=run_full_dir).verify_file(
                         resume_file)
-                summary = rf.unpickle(resume_file, dir=data_dir)
+                summary = rf.unpickle(resume_file, dir=run_full_dir)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
@@ -126,10 +132,10 @@ class MRSeedInferer(MRJob):
                     num_iters=0 # no inference, just init
                    )
                 # FIXME: should I pass permute=False here?
-                run_spec['dataset_spec']['data_dir'] = data_dir
+                run_spec['dataset_spec']['data_dir'] = run_full_dir
                 problem = rf.gen_problem(run_spec['dataset_spec'])
                 init_save_str = 'gibbs_init_state'
-                init_save_str = os.path.join(data_dir, init_save_str)
+                init_save_str = os.path.join(run_full_dir, init_save_str)
                 summary = rf.infer(
                     run_spec, problem, init_save_str=init_save_str)[-1]
                 problem_hexdigest = get_hexdigest(problem)
@@ -142,11 +148,11 @@ class MRSeedInferer(MRJob):
         # FIXME : infer will pickle over this
         if gibbs_init_file is None:
             gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1),
-                                                     num_iters_per_step)
+                                                     hypers_every_N)
         # FIXME: should only pickle if it wasn't read
-        rf.pickle(summary, gibbs_init_file, dir=data_dir)
+        rf.pickle(summary, gibbs_init_file, dir=run_full_dir)
         if self.push_to_s3:
-            s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.put_s3(gibbs_init_file)
         #
         # pull out the values to pass on
@@ -198,9 +204,10 @@ class MRSeedInferer(MRJob):
 
     def infer(self, run_key, child_state_in):
         num_nodes = self.num_nodes
-        data_dir = self.data_dir
+        run_dir = self.run_dir
         problem_file = self.problem_file
         num_iters_per_step = self.num_iters_per_step
+        run_bucket_dir = self.run_bucket_dir
         x_indices = child_state_in.x_indices
         zs = child_state_in.zs
         master_alpha = child_state_in.master_alpha
@@ -217,7 +224,9 @@ class MRSeedInferer(MRJob):
             num_iters_per_step, num_nodes)
         # FIXME : write a new routine to read only those xs necessary
         # FIXME : look to 80MM TinyImages reader
-        orig_problem = rf.unpickle(problem_file, dir=data_dir)
+        run_full_dir = os.path.join(data_dir, run_dir)
+
+        orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
         problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
         init_x = [
             orig_problem['xs'][x_index]
@@ -242,13 +251,13 @@ class MRSeedInferer(MRJob):
             #
             # set up for intermediate results to be pickled on the fly
             def single_node_post_infer_func(iter_idx, state, last_summary,
-                                            data_dir=data_dir):
+                                            data_dir=run_full_dir):
                 iter_num = iter_idx + 1
                 pkl_file = get_child_pkl_file(iter_num)
-                rf.pickle(last_summary, pkl_file, dir=data_dir)
+                rf.pickle(last_summary, pkl_file, dir=run_full_dir)
                 if self.push_to_s3:
                     s3 = s3h.S3_helper(
-                        bucket_dir=summary_bucket_dir, local_dir=data_dir)
+                        bucket_dir=run_bucket_dir, local_dir=run_full_dir)
                     s3.put_s3(pkl_file)
                     # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
                 state.plot()
@@ -258,9 +267,9 @@ class MRSeedInferer(MRJob):
                         'child0',
                         'iter', str(iter_num)
                         ])
-                save_str = os.path.join(data_dir, save_str_base)
+                save_str = os.path.join(run_full_dir, save_str_base)
                 state.plot(save_str=save_str)
-                save_str = os.path.join(data_dir, 'just_state_' + save_str_base)
+                save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
                 state.plot(save_str=save_str,
                                         which_plots=['just_data'])
             #
@@ -296,9 +305,12 @@ class MRSeedInferer(MRJob):
     def consolidate_data(self, run_key, child_infer_output_generator):
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
-        data_dir = self.data_dir
+        run_dir = self.run_dir
         problem_file = self.problem_file
         num_iters_per_step = self.num_iters_per_step
+        hypers_every_N = self.hypers_every_N
+        run_bucket_dir = self.run_bucket_dir
+
         zs_list = []
         x_indices_list = []
         list_of_x_indices = []
@@ -324,7 +336,8 @@ class MRSeedInferer(MRJob):
             ]
         zs, cluster_idx = hf.canonicalize_list(zs)
         #
-        problem = rf.unpickle(problem_file, dir=data_dir)
+        run_full_dir = os.path.join(data_dir, run_dir)
+        problem = rf.unpickle(problem_file, dir=run_full_dir)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
         true_zs, test_xs = None, None
         if not postpone_scoring:
@@ -378,18 +391,18 @@ class MRSeedInferer(MRJob):
                 'numnodes', str(num_nodes),
                 'iter', str(iter_num)
                 ])
-        save_str = os.path.join(data_dir, save_str_base)
+        save_str = os.path.join(run_full_dir, save_str_base)
         consolidated_state.plot(save_str=save_str)
-        save_str = os.path.join(data_dir, 'just_state_' + save_str_base)
+        save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
         consolidated_state.plot(save_str=save_str, which_plots=['just_data'])
         #
         # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
-                                          hypers_every_N=num_iters_per_step)
+                                          hypers_every_N=hypers_every_N)
         with hf.Timer('pickling summary', verbose=True):
-            rf.pickle(summary, pkl_file, dir=data_dir)
+            rf.pickle(summary, pkl_file, dir=run_full_dir)
         if self.push_to_s3:
-            s3 = s3h.S3_helper(bucket_dir=summary_bucket_dir, local_dir=data_dir)
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.put_s3(pkl_file)
             # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         #
@@ -405,20 +418,20 @@ class MRSeedInferer(MRJob):
 
     def s3_push_step(self, run_key, master_state_in):
         problem_file = self.problem_file
-        data_dir = self.data_dir
+        run_dir = self.run_dir
         num_nodes = self.num_nodes
         hypers_every_N = self.num_iters_per_step
+        run_bucket_dir = self.run_bucket_dir
         iter_num = master_state_in.iter_num
         seed_str = run_key
+        run_full_dir = os.path.join(data_dir, run_dir)
         #
         # FIXME: presuming that s3 path is only one dir
-        last_data_dir = os.path.split(data_dir)[-1]
-        run_bucket_dir = os.path.join(summary_bucket_dir, last_data_dir)
-        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=data_dir)
+        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
         for iter_num in numpy.append(-1, range(1, iter_num + 1)):
             pkl_filename = create_pickle_file_str(
                 num_nodes, seed_str, iter_num, hypers_every_N=hypers_every_N)
-            pkl_full_filename = os.path.join(data_dir, pkl_filename)
+            pkl_full_filename = os.path.join(run_full_dir, pkl_filename)
             if os.path.isfile(pkl_full_filename):
                 s3.put_s3(pkl_filename)
         # who pushes up problem, run_parameters?

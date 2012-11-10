@@ -55,11 +55,11 @@ num_iters = args.num_iters
 num_nodes_list = args.num_nodes_list
 #
 # non passable settings
-base_dir = S.data_dir
+data_dir = S.data_dir
 seed_filename = S.files.seed_filename
 image_save_str = S.files.gen_state_image_save_str
 gibbs_init_filename = S.files.gibbs_init_filename
-data_dir_prefix = S.files.data_dir_prefix
+run_dir_prefix = S.files.run_dir_prefix
 parameters_filename = S.files.parameters_filename
 reduced_summaries_name = S.files.reduced_summaries_name
 
@@ -77,19 +77,19 @@ args_to_hexdigest = lambda args: get_hexdigest(pop_runspec_args(vars(args)))
 
 # FIXME: should omit num_iters, num_nodes_list from hexdigest
 hex_digest = args_to_hexdigest(args)
-data_dir = data_dir_prefix + hex_digest
-data_full_dir = os.path.join(base_dir, data_dir)
-print data_full_dir
+run_dir = run_dir_prefix + hex_digest
+run_full_dir = os.path.join(data_dir, run_dir)
+print run_full_dir
 try:
-    os.makedirs(data_full_dir)
+    os.makedirs(run_full_dir)
 except OSError, ose:
     pass
 
 # create the problem and seed file
 problem, problem_filename = csd.pkl_mrjob_problem(
     gen_seed, num_rows, num_cols, num_clusters, beta_d,
-    image_save_str=image_save_str, dir=data_full_dir)
-seed_full_filename = os.path.join(data_full_dir, seed_filename)
+    image_save_str=image_save_str, dir=run_full_dir)
+seed_full_filename = os.path.join(run_full_dir, seed_filename)
 os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
@@ -100,11 +100,11 @@ create_args = lambda num_iters, num_nodes: [
     '--num-iters-per-step', str(num_iters_per_step),
     '--num-nodes', str(num_nodes),
     '--problem-file', problem_filename,
-    '--data_dir', data_full_dir,
+    '--run_dir', run_dir,
     seed_full_filename,
     ]
 
-gibbs_init_full_filename = os.path.join(data_full_dir, gibbs_init_filename)
+gibbs_init_full_filename = os.path.join(run_full_dir, gibbs_init_filename)
 if not os.path.isfile(gibbs_init_full_filename):
     # gibbs init to be used by all subsequent inference
     gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
@@ -117,6 +117,23 @@ if not os.path.isfile(gibbs_init_full_filename):
 else:
     print '!!!using prior gibbs_init!!!'
 
+# save the initial parameters
+parameters = vars(args)
+parameters_full_filename = os.path.join(run_full_dir, parameters_filename)
+with open(parameters_full_filename, 'w') as fh:
+    for key, value in parameters.iteritems():
+        line = str(key) + ' = ' + str(value) + '\n'
+        fh.write(line)
+
+if push_to_s3:
+    summary_bucket_dir = S.s3.summary_bucket_dir
+    # FIXME : does data_dir have /tmp prefix?  
+    run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+    s3.put_s3(gibbs_init_filename)
+    s3.put_s3(parameters_filename)
+    s3.put_s3(problem_filename)
+
 # now run for each num_nodes
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
@@ -127,23 +144,6 @@ for num_nodes in num_nodes_list:
     mr_job = si.MRSeedInferer(args=infer_args)
     with mr_job.make_runner() as runner:
         runner.run()
-
-# save the initial parameters
-parameters = vars(args)
-parameters_full_filename = os.path.join(data_full_dir, parameters_filename)
-with open(parameters_full_filename, 'w') as fh:
-    for key, value in parameters.iteritems():
-        line = str(key) + ' = ' + str(value) + '\n'
-        fh.write(line)
-
-if push_to_s3:
-    summary_bucket_dir = S.s3.summary_bucket_dir
-    # FIXME : does data_dir have /tmp prefix?  
-    run_bucket_dir = os.path.join(summary_bucket_dir, data_dir)
-    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=data_full_dir)
-    s3.put_s3(gibbs_init_filename)
-    s3.put_s3(parameters_filename)
-    s3.put_s3(problem_filename)
 
 # xlabel = 'time (seconds)'
 # # summarize the data
