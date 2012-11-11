@@ -18,6 +18,8 @@ from scipy.stats import linregress
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
+import Cloudless.examples.DPMB.h5_functions as h5
+reload(h5)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
 import Cloudless.examples.DPMB.PDPMB_State as pds
@@ -455,21 +457,45 @@ def get_open(file_str):
         my_open = open
     return my_open
 
-def pickle(var_to_pkl, file_str, dir=None):
+def pickle(in_var, file_str, dir=''):
     my_open = get_open(file_str)
-    if dir:
-        file_str = os.path.join(dir, file_str)
+    file_str = os.path.join(dir, file_str)
+    var_to_pkl = in_var
+    # FIXME: move this upstream!!
+    if isinstance(in_var, dict) and 'xs' in in_var and 'hdf5_vars' not in in_var:
+        in_var['hdf5_vars'] = ['xs']
+    if isinstance(in_var, dict) and 'hdf5_vars' in in_var:
+        var_to_pkl = in_var.copy()
+        create_hdf5_from_dict(var_to_pkl, file_str, dir=dir)
     with my_open(file_str, 'wb') as fh:
         cPickle.dump(var_to_pkl, fh)
 
-def unpickle(file_str, dir=None):
+def create_hdf5_from_dict(in_dict, file_str, dir=''):
+    h5_filename = h5.get_h5_name_from_pkl_name(file_str)
+    with h5.h5_context(h5_filename, mode='w', dir=dir) as my_h5:
+        varnames = in_dict['hdf5_vars']
+        for varname in varnames:
+            value = in_dict.pop(varname)
+            h5.h5ify(varname, value, my_h5)
+    return in_dict
+
+def unpickle(file_str, dir=''):
     from numpy import array
     my_open = get_open(file_str)
-    if dir:
-        file_str = os.path.join(dir, file_str)
+    file_str = os.path.join(dir, file_str)
     with my_open(file_str, 'rb') as fh:
         var_from_pkl = cPickle.load(fh)
+    if isinstance(var_from_pkl, dict) and 'hdf5_vars' in var_from_pkl:
+        var_from_pkl = fill_dict_from_hdf5(var_from_pkl, file_str, dir=dir)
     return var_from_pkl
+
+def fill_dict_from_hdf5(in_dict, pkl_file_str, dir=''):
+    hdf5_filename = h5.get_h5_name_from_pkl_name(pkl_file_str)
+    varnames = in_dict['hdf5_vars']
+    with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
+        for varname in varnames:
+            in_dict[varname] = h5.unh5ify(varname, my_h5)
+    return in_dict
 
 def pickle_asyncmemoize(asyncmemo,file_str):
     pickle(asyncmemo.memo,file_str)
