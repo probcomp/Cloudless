@@ -26,4 +26,4 @@ bucket_els = [el for el in bucket_dir_list if el.name != bucket_dir]
 # now pull
 for bucket_el in bucket_els:
     filename = os.path.split(bucket_el.name)[-1]
-    s3.get_s3(filename)
+    s3.verify_file(filename)
