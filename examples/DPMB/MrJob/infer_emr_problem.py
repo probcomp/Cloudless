@@ -49,7 +49,7 @@ os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 # helper functions
 def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
     emr_args = [
-        '-r', 'emr', '--pool-wait-minutes', '30'
+        '-r', 'emr', '--pool-wait-minutes', '600'
         ]
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
