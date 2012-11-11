@@ -16,6 +16,23 @@ aws_secret_access_key=+0g9BPzT1bcdAL2CT6jU5Y9YrY1yVjOiwssjfYGp
 #first we set two vars...I had errors without this
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 export LD_RUN_PATH=/usr/local/lib:$LD_RUN_PATH
+#
+export JAVA_HOME=/usr/lib/jvm/java-6-sun-1.6.0.26/
+echo export JAVA_HOME=/usr/lib/jvm/java-6-sun-1.6.0.26/ >> \
+    /home/hadoop/conf/hadoop-env.sh
+# detect architecture for python install
+arch=64
+arch_infix=_x64
+if [ $(uname -m) = i686 ] ; then
+    arch=32
+    arch_infix=
+fi
+
+# make swapfile
+swapfile=/mnt/swapfile
+dd if=/dev/zero of=$swapfile bs=1G count=10
+sudo mkswap $swapfile
+sudo swapon $swapfile
 
 # install a few things to satisfy dependencies
 ubuntu_package_names=(
@@ -24,6 +41,7 @@ ubuntu_package_names=(
     libatlas-base-dev
     git=1:1.7.2.5-3   # must upgrade, else can't get branch
     python-matplotlib # to get ALL its dependencies
+    libfreetype6-dev
 )
 for package_name in ${ubuntu_package_names[*]} ; do
     sudo apt-get install -y $package_name
@@ -33,7 +51,7 @@ done
 cd $install_dir
 #
 hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
-filename="${python_binary}.installed.tar.gz"
+filename="${python_binary}.installed${arch_infix}.tar.gz"
 hadoop fs -get "${hadoop_full_path}$filename" "$filename"
 tar xvfz $filename
 cd $python_binary
@@ -81,7 +99,7 @@ easy_install_package_names=(
     cython
     mrjob
     numpy
-    matplotlib
+    matplotlib==1.1.1
     scipy
     boto
     # dateutil
@@ -103,7 +121,7 @@ cd "${cloudless_dir}/examples/DPMB/"
 cython -a -I "${python_include}" pyx_functions.pyx
 gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
 
-hadoop fs -get 's3://mitpcp-dpmb/tiny_image_problems/*gz' /tmp/
+# hadoop fs -get 's3://mitpcp-dpmb/tiny_image_problems/*gz' /tmp/
 
 cat > /home/hadoop/.bashrc <<EOF
 aws_access_key_id=$aws_access_key_id
