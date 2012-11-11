@@ -13,14 +13,12 @@ reload(settings)
 
 
 data_dir = settings.data_dir
-get_h5_name_from_pkl_name = lambda filename: \
-    os.path.splitext(os.path.splitext(filename)[0])[0] + '.h5'
 is_problem_file = lambda filename: filename[:18] == 'tiny_image_problem'
 dir_contents = os.listdir(data_dir)
 problem_files = filter(is_problem_file, dir_contents)
 
 for problem_file in problem_files:
-  h5_file = get_h5_name_from_pkl_name(problem_file)
+  h5_file = h5.get_h5_name_from_pkl_name(problem_file)
 
   with hf.Timer('unpickle', verbose=True) as unpickle_timer:
     problem = rf.unpickle(problem_file, dir=data_dir)
@@ -42,7 +40,7 @@ for problem_file in problem_files:
 # with hf.Timer('unpickle', verbose=True) as unpickle_timer:
 #   summary = rf.unpickle(summary_file, dir=data_dir)
 
-# h5_file = get_h5_name_from_pkl_name(summary_file)
+# h5_file = h5.get_h5_name_from_pkl_name(summary_file)
 # with h5.h5_context(h5_file, dir=data_dir) as my_h5:
 #   h5.h5ify_dict(summary, my_h5)
 
