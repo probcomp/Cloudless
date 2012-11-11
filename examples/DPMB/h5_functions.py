@@ -4,6 +4,10 @@ import os
 import h5py
 
 
+# helper functions
+get_h5_name_from_pkl_name = lambda filename: \
+    os.path.splitext(os.path.splitext(filename)[0])[0] + '.h5'
+
 class h5_context(object):
     def __init__(self, filename, mode=None, dir=''):
         self.filename = filename
