@@ -28,110 +28,123 @@ if [ $(uname -m) = i686 ] ; then
     arch_infix=
 fi
 
+function echo_time {
+    echo "`date`: $1"
+}
+
 # make swapfile
-swapfile=/mnt/swapfile
-dd if=/dev/zero of=$swapfile bs=1G count=10
-sudo mkswap $swapfile
-sudo swapon $swapfile
+(
+    echo_time "starting swapfile creation" >> /home/hadoop/bootstrap_progress ;
+    swapfile=/mnt/swapfile ;
+    dd if=/dev/zero of=$swapfile bs=1G count=10 ;
+    sudo mkswap $swapfile ;
+    sudo swapon $swapfile ;
+    echo_time "done creating swapfile" >> /home/hadoop/bootstrap_progress ;
+) &
 
-# install a few things to satisfy dependencies
-ubuntu_package_names=(
-    htop              # not a dependency, just for monitoring
-    libssl-dev        # for httplib.HTTPSConnection?
-    libatlas-base-dev
-    git=1:1.7.2.5-3   # must upgrade, else can't get branch
-    python-matplotlib # to get ALL its dependencies
-    libfreetype6-dev
-)
-for package_name in ${ubuntu_package_names[*]} ; do
-    sudo apt-get install -y $package_name
-done
-
-# install a recent python 
-cd $install_dir
-#
-hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
-filename="${python_binary}.installed${arch_infix}.tar.gz"
-hadoop fs -get "${hadoop_full_path}$filename" "$filename"
-tar xvfz $filename
-cd $python_binary
-# sudo ./configure # configure required if installing for first time
-sudo make install
-cd ..
-# special case for python binary
-sudo rm /usr/bin/python
-sudo ln -s /usr/bin/python2.7 /usr/bin/python
-
-# some things must be installed post python install
-ubuntu_package_names=(
-    # python-dateutil   # for pandas
-    # python-boto # don't do this, fails here
-    # python-setuptools # doesn't get registered?
-)
-for package_name in ${ubuntu_package_names[*]} ; do
-    sudo apt-get install -y $package_name
-done
-
-# install from source to get particular versions
-hadoop_full_path="s3://${bucketname}/emr_resources/python_packages/"
-python_package_names=(
-    Cython-0.17
-    mrjob-0.3.5
-    numpy-1.6.2
-    matplotlib-1.1.1
-    scipy-0.11.0rc2
-    # pandas-0.7.0rc1
-)
-for package_name in ${python_package_names[*]} ; do
-    filename="${package_name}.installed.tar.gz"
-    hadoop fs -get "${hadoop_full_path}$filename" "$filename"
-    tar xvfz $filename
-    cd $package_name
-    sudo python setup.py install
-    cd ..
-done
-
-# easy install to register packages properly?
-wget http://peak.telecommunity.com/dist/ez_setup.py
-sudo python ez_setup.py
-#
-easy_install_package_names=(
-    cython
-    mrjob
-    numpy
-    matplotlib==1.1.1
-    scipy
-    boto
-    # dateutil
-    # pandas
-)
-for package_name in ${easy_install_package_names[*]} ; do
-    sudo easy_install $package_name
-done
-
-# get Cloudless code
-# MUST install to site_packages_dir, HADOOP doesn't pay attention to PYTHONPATH
-cd $site_packages_dir
-sudo git clone -b mrjobify git://github.com/mit-probabilistic-computing-project/Cloudless.git
-sudo chown -R hadoop Cloudless
-
-# compile cython code
-extra_include=/home/hadoop/numpy-1.6.2/build/src.linux-i686-2.7/numpy/core/include/numpy/
-cd "${cloudless_dir}/examples/DPMB/"
-cython -a -I "${python_include}" pyx_functions.pyx
-gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
-
-# hadoop fs -get 's3://mitpcp-dpmb/tiny_image_problems/*gz' /tmp/
-
+# set up credentials
 cat > /home/hadoop/.bashrc <<EOF
 aws_access_key_id=$aws_access_key_id
 aws_secret_access_key=$aws_secret_access_key
 EOF
 chown hadoop /home/hadoop/.bashrc
-
+#
 cat > /home/hadoop/.boto <<EOF
 [Credentials]
 aws_access_key_id = $aws_access_key_id
 aws_secret_access_key = $aws_secret_access_key
 EOF
 chown hadoop /home/hadoop/.boto
+
+# detect architecture
+if [ $arch != 64 ] ; then
+    sudo apt-get install -y htop
+    echo_time "arch not 64" >> /home/hadoop/bootstrap_progress
+else
+    echo_time "arch is 64" >> /home/hadoop/bootstrap_progress
+
+    # install a few things to satisfy dependencies
+    ubuntu_package_names=(
+	htop              # not a dependency, just for monitoring
+	libssl-dev        # for httplib.HTTPSConnection?
+	libatlas-base-dev
+	git=1:1.7.2.5-3   # must upgrade, else can't get branch
+	python-matplotlib # to get ALL its dependencies
+	libfreetype6-dev
+    )
+    for package_name in ${ubuntu_package_names[*]} ; do
+	sudo apt-get install -y $package_name
+    done
+    echo_time "done ubuntu packages" >> /home/hadoop/bootstrap_progress
+
+    # install a recent python 
+    cd $install_dir
+    #
+    hadoop_full_path="s3://${bucketname}/emr_resources/python_binaries/"
+    filename="${python_binary}.installed${arch_infix}.tar.gz"
+    hadoop fs -get "${hadoop_full_path}$filename" "$filename"
+    tar xvfz $filename
+    cd $python_binary
+    # sudo ./configure # configure required if installing for first time
+    sudo make install
+    cd ..
+    echo_time "done python install" >> /home/hadoop/bootstrap_progress
+
+    function install_python_package {
+	package_name=$1
+	hadoop_full_path="s3://${bucketname}/emr_resources/python_packages/"
+	filename="${package_name}.installed.tar.gz"
+	hadoop fs -get "${hadoop_full_path}$filename" "$filename"
+	tar xvfz $filename
+	cd $package_name
+	echo_time "starting $package_name" >> /home/hadoop/bootstrap_progress
+	sudo python setup.py install ;
+	echo_time "done $package_name" >> /home/hadoop/bootstrap_progress
+	cd ..
+    }
+    # install from source to get particular versions
+    install_python_package Cython-0.17 &
+    install_python_package mrjob-0.3.5 &
+    install_python_package numpy-1.6.2
+    install_python_package matplotlib-1.1.1 &
+    install_python_package scipy-0.11.0rc2 &
+    wait %4 %5
+    echo_time "done wait on python packages" >> /home/hadoop/bootstrap_progress
+
+    # easy install to register packages properly?
+    wget http://peak.telecommunity.com/dist/ez_setup.py
+    sudo python ez_setup.py
+    #
+    easy_install_package_names=(
+	cython
+	mrjob
+	numpy
+	matplotlib==1.1.1
+	scipy
+	boto
+    )
+    for package_name in ${easy_install_package_names[*]} ; do
+	sudo easy_install $package_name
+    done
+    echo_time "done easy install packages" >> /home/hadoop/bootstrap_progress
+
+    # must update for hdf5?  MUST do after everything else, else scipy fails? 
+    sudo apt-get update
+    sudo apt-get install -y libhdf5-dev
+    sudo easy_install h5py
+    echo_time "done h5py" >> /home/hadoop/bootstrap_progress
+
+    # get Cloudless code
+    # MUST install to site_packages_dir, HADOOP doesn't pay attention to PYTHONPATH
+    cd $site_packages_dir
+    sudo git clone -b mrjobify git://github.com/mit-probabilistic-computing-project/Cloudless.git
+    sudo chown -R hadoop Cloudless
+
+    # compile cython code
+    extra_include=/home/hadoop/numpy-1.6.2/build/src.linux-i686-2.7/numpy/core/include/numpy/
+    cd "${cloudless_dir}/examples/DPMB/"
+    cython -a -I "${python_include}" pyx_functions.pyx
+    gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
+fi
+
+echo_time "done bootstrap.sh" >> /home/hadoop/bootstrap_progress
