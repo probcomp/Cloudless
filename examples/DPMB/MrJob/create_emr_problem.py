@@ -5,6 +5,8 @@ import argparse
 #
 import Cloudless.examples.DPMB.settings as S
 reload(S)
+import Cloudless.examples.DPMB.h5_functions as h5
+reload(h5)
 import Cloudless.examples.DPMB.s3_helper as s3h
 reload(s3h)
 import Cloudless.examples.DPMB.MrJob.seed_inferer as si
@@ -38,6 +40,7 @@ push_to_s3 = not args.dont_push_to_s3
 # non passable settings
 data_dir = S.data_dir
 problem_filename = S.files.problem_filename
+h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
 image_save_str = S.files.gen_state_image_save_str
 init_filename = S.files.gibbs_init_filename
 run_dir_prefix = S.files.run_dir_prefix
@@ -111,5 +114,6 @@ if push_to_s3:
     s3.put_s3(init_filename)
     s3.put_s3(parameters_filename)
     s3.put_s3(problem_filename)
+    s3.put_s3(h5_filename)
 
 print run_dir
