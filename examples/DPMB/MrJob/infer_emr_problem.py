@@ -43,6 +43,7 @@ problem_filename = S.files.problem_filename
 seed_filename = S.files.seed_filename
 gibbs_init_filename = S.files.gibbs_init_filename
 #
+s3h.ensure_dir(os.path.join(data_dir, run_dir))
 seed_full_filename = os.path.join(data_dir, run_dir, seed_filename)
 os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 

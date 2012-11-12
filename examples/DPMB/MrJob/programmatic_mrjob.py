@@ -89,6 +89,7 @@ except OSError, ose:
 problem, problem_filename = csd.pkl_mrjob_problem(
     gen_seed, num_rows, num_cols, num_clusters, beta_d,
     image_save_str=image_save_str, dir=run_full_dir)
+s3h.ensure_dir(run_full_dir)
 seed_full_filename = os.path.join(run_full_dir, seed_filename)
 os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
