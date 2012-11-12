@@ -32,7 +32,8 @@ ssh -i ~/.ssh/dlovell.pem ${slave_ips[0]}
 
 # manually pull changes down to master, workers
 # do this from local machine
-ssh -i ~/.ssh/dlovell.pem $master_ip 'cd /usr/local/lib/python2.7/site-packages/Cloudless && git pull'
+scp -i ~/.ssh/dlovell.pem ~/.ssh/dlovell.pem hadoop@$master_ip:/home/hadoop/.ssh/
+ssh -i ~/.ssh/dlovell.pem hadoop@$master_ip 'cd /usr/local/lib/python2.7/site-packages/Cloudless && git pull'
 # then ssh into master to run on slaves
 ssh -i ~/.ssh/dlovell.pem hadoop@$master_ip
 for slave_ip in ${slave_ips[*]} ; do
