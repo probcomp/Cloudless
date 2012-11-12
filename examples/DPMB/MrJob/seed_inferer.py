@@ -14,6 +14,8 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
 reload(dm)
+import Cloudless.examples.DPMB.h5_functions as h5
+reload(h5)
 import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 import Cloudless.examples.DPMB.s3_helper as s3h
@@ -114,6 +116,8 @@ class MRSeedInferer(MRJob):
         if not os.path.isfile(problem_full_file):
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.verify_file(problem_file)
+            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
+            s3.verify_file(h5_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
@@ -230,6 +234,8 @@ class MRSeedInferer(MRJob):
         if not os.path.isfile(problem_full_file):
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.verify_file(problem_file)
+            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
+            s3.verify_file(h5_file)
 
         orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
         problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
@@ -346,6 +352,8 @@ class MRSeedInferer(MRJob):
         if not os.path.isfile(problem_full_file):
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.verify_file(problem_file)
+            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
+            s3.verify_file(h5_file)
 
         problem = rf.unpickle(problem_file, dir=run_full_dir)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
