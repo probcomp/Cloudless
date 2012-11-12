@@ -1,7 +1,6 @@
-emr_job_flow_id=SOMESTRING
-
-# this is supposed to run a command on all nodes but doesn't 
-python -m mrjob.tools.emr.mrboss $emr_job_flow_id -v \
+job_flow_id=SOMESTRING
+ is supposed to run a command on all nodes but doesn't 
+python -m mrjob.tools.emr.mrboss $job_flow_id -v \
     'cd /usr/local/lib/python2.7/site-packages/Cloudless/ && git pull'
 
 # tried adding ec2-key-pair-file, but don't think it changed anything 
@@ -10,7 +9,7 @@ python -m mrjob.tools.emr.mrboss  j-2DLB05ODZ9ASD -v \
     '/home/hadoop/bin/hadoop job  -Dmapred.job.tracker=10.114.17.221:9001 -kill job_201211102241_0004'
 
 # this pulls down logs, but they are often unuseful in debugging
-python -m mrjob.tools.emr.fetch_logs -a $emr_job_flow_id | less
+python -m mrjob.tools.emr.fetch_logs -a $job_flow_id | less
 
 
 master_ip=ecXX-XX-XX-XX-XX.compute-1.amazonaws.com
