@@ -186,10 +186,11 @@ def calculate_node_conditional(pstate,cluster):
     return conditionals
 
 def mle_alpha(clusters,points_per_cluster,max_alpha=100):
-    mle = 1+np.argmax([ss.gammaln(alpha) + clusters*np.log(alpha) 
+    alpha_ps = [ss.gammaln(alpha) + clusters*np.log(alpha) 
                        - ss.gammaln(clusters*points_per_cluster+alpha) 
-                       for alpha in range(1,max_alpha)])
-    return mle
+                       for alpha in range(1,max_alpha)]
+    mle = 1+np.argmax(alpha_ps)
+    return mle, alpha_ps
 
 def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
     samples = [initVal]
