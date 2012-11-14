@@ -54,8 +54,14 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
         ]
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
-    if job_flow_id != None:
+    if job_flow_id is not None:
         emr_args.extend(['--emr-job-flow-id', job_flow_id])
+    else:
+        bootstrap_full_filename = os.path.join(S.path.base_dir, 'bootstrap.sh')
+        emr_args.extend(['--num-ec2-instances', '1'])
+        emr_args.extend(['--ec2-instance-type', 'c1.xlarge'])
+        emr_args.extend(['--bootstrap-action', bootstrap_full_filename])
+        emr_args.extend(['--ec2-master-instance-type', 'c1.xlarge'])
     #
     other_args = [
         '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),

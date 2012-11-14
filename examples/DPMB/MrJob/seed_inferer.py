@@ -231,7 +231,8 @@ class MRSeedInferer(MRJob):
 
         run_full_dir = os.path.join(data_dir, run_dir)
         problem_full_file = os.path.join(run_full_dir, problem_file)
-        if not os.path.isfile(problem_full_file):
+        h5_full_file = h5.get_h5_name_from_pkl_name(problem_file)
+        if not os.path.isfile(problem_full_file) or not os.path.isfile(h5_full_file):
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.verify_file(problem_file)
             h5_file = h5.get_h5_name_from_pkl_name(problem_file)
