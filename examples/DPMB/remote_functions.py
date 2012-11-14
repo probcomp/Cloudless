@@ -79,7 +79,7 @@ def modify_jobspec_to_results(jobspec,job_value):
 def run_spec_from_child_state_info(
     zs, master_alpha, betas, inf_seed, gen_seed, num_iters_per_step, num_nodes):
 
-    num_cols = 256 # FIXME : hardcoded
+    num_cols = len(betas) # FIXME : hardcoded
     gen_alpha_beta = 3.0
     #
     # gen dataset_spec
@@ -142,12 +142,13 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
         if 'N_test' in dataset_spec:
             test_xs = np.array(test_xs[:dataset_spec['N_test']],dtype=np.int32)
         # verify dataset spec variables correct
-        dataset_spec['num_cols'] = len(xs[0])
+        num_cols = len(xs[0])
+        dataset_spec['num_cols'] = num_cols
         dataset_spec['num_rows'] = len(xs)
         # FIXME : convenience operations, should do elsewhere
         dataset_spec.setdefault('gen_seed',0)
         dataset_spec.setdefault('gen_alpha',1.0)
-        dataset_spec.setdefault('gen_betas',np.repeat(2.0,256))
+        dataset_spec.setdefault('gen_betas',np.repeat(2.0,num_cols))
     elif 'last_valid_zs' in dataset_spec:
         zs = dataset_spec['last_valid_zs']
         xs = dataset_spec['xs']
@@ -850,7 +851,6 @@ def timing_plots(cluster_counts,z_diff_times,args,save_dir=None):
 ####
 
 def gen_default_cifar_run_spec(problem_file,infer_seed,num_iters):
-    num_rows = 256
     gen_alpha = None
     gen_betas = None
     random_state = hf.generate_random_state(infer_seed)
