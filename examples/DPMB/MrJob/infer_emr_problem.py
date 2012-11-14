@@ -24,6 +24,10 @@ parser.add_argument('num_iters', type=int)
 parser.add_argument('run_dir', type=str)
 parser.add_argument('num_nodes_list', nargs='+', type=int)
 #
+parser.add_argument('--num-ec2-instances', type=int, default=1)
+parser.add_argument('--ec2-instance-type', type=str, default='c1.xlarge')
+parser.add_argument('--ec2-master-instance-type', type=str, default='c1.xlarge')
+#
 # args = parser.parse_args(['--infer_seed', '0', '--num_iters_per_step', '2', '3', 'programmatic_mrjob_74ffa9b56d', '2'])
 args = parser.parse_args()
 
@@ -36,6 +40,12 @@ num_iters = args.num_iters
 run_dir = args.run_dir
 num_iters_per_step = args.num_iters_per_step
 num_nodes_list = args.num_nodes_list
+#
+instance_count_helper = lambda instance_count: instance_count + 1 \
+    if instance_count != 1 else 1
+num_ec2_instances = str(instance_count_helper(args.num_ec2_instances))
+ec2_instance_type = args.ec2_instance_type
+ec2_master_instance_type = args.ec2_master_instance_type
 
 # non passable settings
 data_dir = S.path.data_dir
@@ -49,19 +59,20 @@ os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
 def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
-    emr_args = [
-        '-r', 'emr', '--pool-wait-minutes', '600'
-        ]
+    emr_args = ['-r', 'emr']
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
     if job_flow_id is not None:
-        emr_args.extend(['--emr-job-flow-id', job_flow_id])
+        emr_args.extend([
+                '--emr-job-flow-id', job_flow_id,
+                '--pool-wait-minutes', '600'
+                ])
     else:
         bootstrap_full_filename = os.path.join(S.path.base_dir, 'bootstrap.sh')
-        emr_args.extend(['--num-ec2-instances', '1'])
-        emr_args.extend(['--ec2-instance-type', 'c1.xlarge'])
+        emr_args.extend(['--num-ec2-instances', num_ec2_instances])
+        emr_args.extend(['--ec2-instance-type', ec2_instance_type])
         emr_args.extend(['--bootstrap-action', bootstrap_full_filename])
-        emr_args.extend(['--ec2-master-instance-type', 'c1.xlarge'])
+        emr_args.extend(['--ec2-master-instance-type', ec2_master_instance_type])
     #
     other_args = [
         '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
