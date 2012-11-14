@@ -159,7 +159,7 @@ def shorten_name(instr):
         shortened_name = 'nodes=' + num_nodes_str + '_' + 'he=' + he_str
     return shortened_name
 
-numnodes_to_color = {'1':'red', '2':'blue', '4':'green', '8':'yellow', '16':'brown', 'other':'black'}
+numnodes_to_color = {'1':'yellow', '2':'blue', '4':'green', '8':'red', '16':'brown', 'other':'black'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
@@ -169,7 +169,7 @@ def get_color(summaries_key):
     color = numnodes_to_color.get(numnodes_str, 'black')
     return color
 
-he_to_style = {'1':'-', '2':'.', '4':'-.', 'other':'--'}
+he_to_style = {'1':':', '2':'-.', '4':'--', '8':'-', 'other':'-'}
 def get_style(summaries_key):
     summaries_re = re.compile('.*he(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
@@ -407,6 +407,7 @@ if __name__ == '__main__':
     #
     problem_filename = 'problem.pkl.gz'
     parameters_file = 'run_parameters.txt'
+
     for data_dir in data_dirs:
         problem_full_filename = os.path.join(data_dir, problem_filename)
         problem = None
@@ -425,3 +426,8 @@ if __name__ == '__main__':
             # problem_filename=problem_filename, # uncomment to rescore
             )
         plot_summaries(summaries_dict, problem=problem, title=title)
+
+    # reduced_summaries_name = S.files.reduced_summaries_name
+    # reduced_summaries_dict = extract_reduced_summaries(
+    #     summaries_dict, reduced_summary_extract_func_tuples)
+    # rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
