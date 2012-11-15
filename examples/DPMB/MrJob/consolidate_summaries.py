@@ -80,7 +80,7 @@ def get_summaries_dict(summary_names, data_dir, problem_filename=None):
             result = p.map_async(score_tuple, new_tuple_list)
         else:
             result = p.map_async(read_tuple, tuple_list)
-        result.wait(60)
+        result.wait(180)
         if not result.successful():
             raise Exception('pool not successful')
         sort_by_second_el = lambda x, y: cmp(x[1], y[1])
