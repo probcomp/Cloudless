@@ -30,7 +30,7 @@ data_dir = settings.path.data_dir
 #
 # problem_file = settings.tiny_image_problem_file
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
-default_problem_file = 'structured_problem.pkl.gz'
+default_problem_file = settings.files.problem_filename
 default_resume_file = None
 postpone_scoring = False
 
