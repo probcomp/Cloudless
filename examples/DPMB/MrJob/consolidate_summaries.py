@@ -169,7 +169,12 @@ def get_color(summaries_key):
     color = numnodes_to_color.get(numnodes_str, 'black')
     return color
 
-he_to_style = {'1':':', '2':'-.', '4':'--', '8':'-', 'other':'-'}
+he_to_style = {
+    '1' : '-',
+    '2' : ':',
+    '4' : '-.',
+    '8' : '--',
+    'other' : '-'}
 def get_style(summaries_key):
     summaries_re = re.compile('.*he(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
@@ -316,8 +321,8 @@ def get_time_plotter(extract_func, **kwargs):
                       **kwargs))
     return plot_func
 def plot_summaries(summaries_dict, problem=None,
-                   title='', xlabel='time (seconds)', plot_dir='',
-                   subset_betas=False):
+                   title='', xlabel='TIME (SECONDS)', plot_dir='',
+                   subset_betas=True):
     fh_list = []
     gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
@@ -326,12 +331,67 @@ def plot_summaries(summaries_dict, problem=None,
         gen_beta = problem['beta_d']
         true_num_clusters = problem['num_clusters']
 
+    figname = 'test_lls.pdf'
+    plot_tuples = [
+        (get_time_plotter(extract_test_lls, hline=gen_test_lls),
+         'TEST SET\nMEAN LOG LIKELIHOOD'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'score.pdf'
+    plot_tuples = [
+        (get_time_plotter(extract_score, hline=gen_score),
+         'MODEL SCORE'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'ari.pdf'
+    plot_tuples = [
+        (get_time_plotter(extract_ari, hline=1.0),
+         'ARI'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'alpha.pdf'
+    plot_tuples = [
+        (get_time_plotter(extract_log10_alpha),
+         'LOG10 ALPHA'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
+    figname = 'num_clusters.pdf'
+    plot_tuples = [
+        (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
+         'NUM CLUSTERS'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
     figname = 'test_lls_score.pdf'
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
-         'test set\nmean log likelihood'),
+         'TEST SET\nMEAN LOG LIKELIHOOD'),
         (get_time_plotter(extract_score, hline=gen_score),
-         'model score'),
+         'MODEL SCORE'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -342,9 +402,9 @@ def plot_summaries(summaries_dict, problem=None,
     figname = 'ari_score.pdf'
     plot_tuples = [
         (get_time_plotter(extract_ari, hline=1.0),
-         'ari'),
+         'ARI'),
         (get_time_plotter(extract_score, hline=gen_score),
-         'model score'),
+         'MODEL SCORE'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -355,9 +415,9 @@ def plot_summaries(summaries_dict, problem=None,
     figname = 'alpha_num_clusters.pdf'
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha),
-         'log10 alpha'),
+         'LOG10 ALPHA'),
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
-         'num clusters'),
+         'NUM CLUSTERS'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -373,12 +433,24 @@ def plot_summaries(summaries_dict, problem=None,
         new_extract_log10_beta = lambda summaries: get_subset(extract_log10_beta(summaries))
     else:
         new_extract_log10_beta = extract_log10_beta
+
+    figname = 'beta.pdf'
+    plot_tuples = [
+        (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
+         'LOG10 BETA'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
     figname = 'beta_num_clusters.pdf'
     plot_tuples = [
         (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
-         'log10 beta'),
+         'LOG10 BETA'),
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
-         'num clusters'),
+         'NUM CLUSTERS'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
@@ -434,7 +506,7 @@ if __name__ == '__main__':
             init_filename=init_filename,
             # problem_filename=problem_filename, # uncomment to rescore
             )
-        plot_summaries(summaries_dict, problem=problem, title=title)
+        plot_summaries(summaries_dict, problem=problem, title='')
 
     # reduced_summaries_name = S.files.reduced_summaries_name
     # reduced_summaries_dict = extract_reduced_summaries(
