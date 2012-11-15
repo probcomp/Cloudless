@@ -159,7 +159,7 @@ def shorten_name(instr):
         shortened_name = 'nodes=' + num_nodes_str + '_' + 'he=' + he_str
     return shortened_name
 
-numnodes_to_color = {'1':'yellow', '2':'blue', '4':'green', '8':'red', '16':'brown', 'other':'black'}
+numnodes_to_color = {'1':'blue', '2':'orange', '4':'green', '8':'red', '16':'brown', 'other':'black'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
@@ -316,7 +316,8 @@ def get_time_plotter(extract_func, **kwargs):
                       **kwargs))
     return plot_func
 def plot_summaries(summaries_dict, problem=None,
-                   title='', xlabel='time (seconds)', plot_dir=''):
+                   title='', xlabel='time (seconds)', plot_dir='',
+                   subset_betas=False):
     fh_list = []
     gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
@@ -364,9 +365,17 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
+    if subset_betas:
+        def get_subset(betas, num_betas=4, seed=0):
+            rs = numpy.random.RandomState(seed)
+            which_indices = rs.permutation(range(len(betas)))[:num_betas]
+            return map(lambda x: x[which_indices], betas)
+        new_extract_log10_beta = lambda summaries: get_subset(extract_log10_beta(summaries))
+    else:
+        new_extract_log10_beta = extract_log10_beta
     figname = 'beta_num_clusters.pdf'
     plot_tuples = [
-        (get_time_plotter(extract_log10_beta, hline=gen_beta, alpha=0.2),
+        (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
          'log10 beta'),
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
          'num clusters'),
