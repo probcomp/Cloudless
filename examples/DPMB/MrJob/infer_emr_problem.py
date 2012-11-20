@@ -94,6 +94,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
     infer_args = create_args(num_iters, num_nodes, push_to_s3, job_flow_id)
+    print 'args passed: ' + ' '.join(infer_args)
     mr_job = si.MRSeedInferer(args=infer_args)
     with mr_job.make_runner() as runner:
         runner.run()
