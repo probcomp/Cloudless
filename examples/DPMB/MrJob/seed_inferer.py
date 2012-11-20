@@ -207,114 +207,118 @@ class MRSeedInferer(MRJob):
             yield run_key, child_state
 
     def infer(self, run_key, child_state_in):
-        num_nodes = self.num_nodes
-        run_dir = self.run_dir
-        problem_file = self.problem_file
-        num_iters_per_step = self.num_iters_per_step
-        run_bucket_dir = self.run_bucket_dir
-        x_indices = child_state_in.x_indices
-        zs = child_state_in.zs
-        master_alpha = child_state_in.master_alpha
-        betas = child_state_in.betas
-        master_inf_seed = child_state_in.master_inf_seed
-        iter_num = child_state_in.iter_num
-        child_inf_seed = child_state_in.child_inf_seed
-        child_gen_seed = child_state_in.child_gen_seed
-        child_counter = child_state_in.child_counter
-        iter_start_dt = child_state_in.iter_start_dt
-        #
-        run_spec = rf.run_spec_from_child_state_info(
-            zs, master_alpha, betas, child_inf_seed, child_gen_seed,
-            num_iters_per_step, num_nodes)
-        # FIXME : write a new routine to read only those xs necessary
-        # FIXME : look to 80MM TinyImages reader
+        os.system('echo "enter infer: `date`" >> /tmp/steps')
+        yield run_key, child_state_in
+        # num_nodes = self.num_nodes
+        # run_dir = self.run_dir
+        # problem_file = self.problem_file
+        # num_iters_per_step = self.num_iters_per_step
+        # run_bucket_dir = self.run_bucket_dir
+        # x_indices = child_state_in.x_indices
+        # zs = child_state_in.zs
+        # master_alpha = child_state_in.master_alpha
+        # betas = child_state_in.betas
+        # master_inf_seed = child_state_in.master_inf_seed
+        # iter_num = child_state_in.iter_num
+        # child_inf_seed = child_state_in.child_inf_seed
+        # child_gen_seed = child_state_in.child_gen_seed
+        # child_counter = child_state_in.child_counter
+        # iter_start_dt = child_state_in.iter_start_dt
+        # #
+        # run_spec = rf.run_spec_from_child_state_info(
+        #     zs, master_alpha, betas, child_inf_seed, child_gen_seed,
+        #     num_iters_per_step, num_nodes)
+        # # FIXME : write a new routine to read only those xs necessary
+        # # FIXME : look to 80MM TinyImages reader
 
-        run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        h5_full_file = h5.get_h5_name_from_pkl_name(problem_file)
-        if not os.path.isfile(problem_full_file) or not os.path.isfile(h5_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
+        # run_full_dir = os.path.join(data_dir, run_dir)
+        # problem_full_file = os.path.join(run_full_dir, problem_file)
+        # h5_full_file = h5.get_h5_name_from_pkl_name(problem_file)
+        # if not os.path.isfile(problem_full_file) or not os.path.isfile(h5_full_file):
+        #     s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+        #     s3.verify_file(problem_file)
+        #     h5_file = h5.get_h5_name_from_pkl_name(problem_file)
+        #     s3.verify_file(h5_file)
 
-        orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
-        problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
-        init_x = [
-            orig_problem['xs'][x_index]
-            for x_index in x_indices
-            ]
-        sub_problem = {'xs':init_x, 'zs':zs, 'test_xs':None}
-        # actually infer
-        get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
-            num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
-        child_summaries = None
-        if num_nodes == 1:
-            true_zs, test_xs = None, None
-            if not postpone_scoring:
-                true_zs = orig_problem.get('true_zs', None)
-                if true_zs is not None:
-                    true_zs = [true_zs[x_index] for x_index in x_indices]
-                test_xs = numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
-            sub_problem['true_zs'] = true_zs
-            sub_problem['test_xs'] = test_xs
-            run_spec['infer_do_alpha_inference'] = True
-            run_spec['infer_do_betas_inference'] = True
-            #
-            # set up for intermediate results to be pickled on the fly
-            def single_node_post_infer_func(iter_idx, state, last_summary,
-                                            data_dir=run_full_dir):
-                iter_num = iter_idx + 1
-                pkl_file = get_child_pkl_file(iter_num)
-                rf.pickle(last_summary, pkl_file, dir=run_full_dir)
-                if self.push_to_s3:
-                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                       local_dir=run_full_dir)
-                    s3.put_s3(pkl_file)
-                    # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
-                state.plot()
-                save_str_base = '_'.join([
-                        'infer_state',
-                        'numnodes', str(num_nodes),
-                        'child0',
-                        'iter', str(iter_num)
-                        ])
-                save_str = os.path.join(run_full_dir, save_str_base)
-                state.plot(save_str=save_str)
-                save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
-                state.plot(save_str=save_str,
-                                        which_plots=['just_data'])
-            #
-            child_summaries = rf.infer(
-                run_spec, sub_problem, send_zs=True,
-                post_infer_func=single_node_post_infer_func)
-            # # FIXME: for now, pickle after the fact
-            # for child_iter_num, child_summary in enumerate(child_summaries):
-            #     pkl_file = get_child_pkl_file(child_iter_num)
-            #     rf.pickle(child_summary, pkl_file, dir=data_dir)
-            #     if self.push_to_s3:
-            #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
-        else:
-            # FIXME : to robustify, should be checking for failure conditions
-            child_summaries = rf.infer(run_spec, sub_problem)
+        # orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
+        # problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
+        # init_x = [
+        #     orig_problem['xs'][x_index]
+        #     for x_index in x_indices
+        #     ]
+        # sub_problem = {'xs':init_x, 'zs':zs, 'test_xs':None}
+        # # actually infer
+        # get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
+        #     num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
+        # child_summaries = None
+        # if num_nodes == 1:
+        #     true_zs, test_xs = None, None
+        #     if not postpone_scoring:
+        #         true_zs = orig_problem.get('true_zs', None)
+        #         if true_zs is not None:
+        #             true_zs = [true_zs[x_index] for x_index in x_indices]
+        #         test_xs = numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
+        #     sub_problem['true_zs'] = true_zs
+        #     sub_problem['test_xs'] = test_xs
+        #     run_spec['infer_do_alpha_inference'] = True
+        #     run_spec['infer_do_betas_inference'] = True
+        #     #
+        #     # set up for intermediate results to be pickled on the fly
+        #     def single_node_post_infer_func(iter_idx, state, last_summary,
+        #                                     data_dir=run_full_dir):
+        #         iter_num = iter_idx + 1
+        #         pkl_file = get_child_pkl_file(iter_num)
+        #         rf.pickle(last_summary, pkl_file, dir=run_full_dir)
+        #         if self.push_to_s3:
+        #             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
+        #                                local_dir=run_full_dir)
+        #             s3.put_s3(pkl_file)
+        #             # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+        #         state.plot()
+        #         save_str_base = '_'.join([
+        #                 'infer_state',
+        #                 'numnodes', str(num_nodes),
+        #                 'child0',
+        #                 'iter', str(iter_num)
+        #                 ])
+        #         save_str = os.path.join(run_full_dir, save_str_base)
+        #         state.plot(save_str=save_str)
+        #         save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
+        #         state.plot(save_str=save_str,
+        #                                 which_plots=['just_data'])
+        #     #
+        #     child_summaries = rf.infer(
+        #         run_spec, sub_problem, send_zs=True,
+        #         post_infer_func=single_node_post_infer_func)
+        #     # # FIXME: for now, pickle after the fact
+        #     # for child_iter_num, child_summary in enumerate(child_summaries):
+        #     #     pkl_file = get_child_pkl_file(child_iter_num)
+        #     #     rf.pickle(child_summary, pkl_file, dir=data_dir)
+        #     #     if self.push_to_s3:
+        #     #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
+        # else:
+        #     # FIXME : to robustify, should be checking for failure conditions
+        #     child_summaries = rf.infer(run_spec, sub_problem)
 
-        last_valid_zs = child_summaries[-1]['last_valid_zs']
-        last_valid_list_of_x_indices = \
-            child_summaries[-1]['last_valid_list_of_x_indices']
-        list_of_x_indices = child_state_in.list_of_x_indices
-        list_of_x_indices = [
-            [x_indices[idx] for idx in cluster_indices]
-            for cluster_indices in last_valid_list_of_x_indices
-            ]
-        new_iter_num = iter_num + 1
-        child_state_out = child_state_tuple(
-            list_of_x_indices, x_indices, last_valid_zs,
-            master_alpha, betas, master_inf_seed, new_iter_num,
-            None, None, None, iter_start_dt
-            )
-        yield run_key, child_state_out
+        # last_valid_zs = child_summaries[-1]['last_valid_zs']
+        # last_valid_list_of_x_indices = \
+        #     child_summaries[-1]['last_valid_list_of_x_indices']
+        # list_of_x_indices = child_state_in.list_of_x_indices
+        # list_of_x_indices = [
+        #     [x_indices[idx] for idx in cluster_indices]
+        #     for cluster_indices in last_valid_list_of_x_indices
+        #     ]
+        # new_iter_num = iter_num + 1
+        # child_state_out = child_state_tuple(
+        #     list_of_x_indices, x_indices, last_valid_zs,
+        #     master_alpha, betas, master_inf_seed, new_iter_num,
+        #     None, None, None, iter_start_dt
+        #     )
+        os.system('echo "exit infer: `date`" >> /tmp/steps')
+        # yield run_key, child_state_out
 
     def consolidate_data(self, run_key, child_infer_output_generator):
+        os.system('echo "enter consolidate: `date`" >> /tmp/steps')
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
         run_dir = self.run_dir
@@ -433,6 +437,7 @@ class MRSeedInferer(MRJob):
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
+        os.system('echo "exit consolidate: `date`" >> /tmp/steps')
         yield run_key, master_state
 
     def s3_push_step(self, run_key, master_state_in):
