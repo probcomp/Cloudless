@@ -25,13 +25,17 @@ def get_unique_handles_labels(handles, labels):
     return unique_handles, unique_labels
 
 def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center',
-                   ncol=None, unique=True):
+                   ncol=None, unique=True, sort=False):
     # labels must be set in original plot call: plot(..., label=label)
     if ax is None:
         ax = pylab.gca()
     handles, labels = ax.get_legend_handles_labels()
     if unique:
         handles, labels = get_unique_handles_labels(handles, labels)
+    if sort:
+        sorted_indices = pylab.argsort(labels)[::-1]
+        handles = pylab.array(handles)[sorted_indices]
+        labels = pylab.array(labels)[sorted_indices]
     if ncol is None:
         ncol = min(len(labels), 4)
     lgd = ax.legend(handles, labels, loc=loc, ncol=ncol,
