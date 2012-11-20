@@ -181,7 +181,7 @@ def get_style(summaries_key):
     he_str = 'other'
     if summaries_match is not None:
         he_str = summaries_match.groups()[0]
-    style = he_to_style.get(he_str, '--')
+    style = he_to_style.get(he_str, he_to_style['other'])
     return style
     
 def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None, 
