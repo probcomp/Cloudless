@@ -63,9 +63,9 @@ get_hexdigest = lambda variable: \
 hex_digest = get_hexdigest(vars(args))
 run_dir = data_dir_prefix + hex_digest
 run_full_dir = os.path.join(base_dir, run_dir)
-print run_dir
+print run_full_dir
 try:
-    os.makedirs(run_dir)
+    os.makedirs(run_full_dir)
 except OSError, ose:
     pass
 
@@ -111,6 +111,26 @@ init_yielder = mr_job.init(gen_seed_str, gen_seed_str)
 run_key, consolidated_data = init_yielder.next()
 
 flatten = lambda data: [y for x in data for y in x]
+
+import scipy.special as ss
+import numpy as np
+def create_alpha_lnPdf(list_of_x_indices):
+    # Note : this is extraneous work for relative probabilities
+    #      : but necessary to determine true distribution probabilities
+    lnProdGammas = sum([ss.gammaln(len(x_indices))
+                        for x_indices in list_of_x_indices])
+    num_vectors = sum(map(len, list_of_x_indices))
+    lnPdf = lambda alpha: ss.gammaln(alpha) \
+        + len(list_of_x_indices)*np.log(alpha) \
+        - ss.gammaln(alpha+num_vectors) \
+        + lnProdGammas
+    return lnPdf
+temp_pdf = create_alpha_lnPdf(consolidated_data.list_of_x_indices)
+temp_alphas = 10.0**np.linspace(np.log10(1E-2), np.log10(1E6), 99)
+temp_log_probs = map(temp_pdf, temp_alphas)
+temp_norm_log_probs = temp_log_probs - reduce(np.logaddexp, temp_log_probs)
+pylab.plot(temp_alphas, np.exp(temp_norm_log_probs))
+pylab.savefig('temp')
 
 for iter_idx in range(num_iters):
     # distribute
