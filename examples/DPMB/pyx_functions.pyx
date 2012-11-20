@@ -75,9 +75,9 @@ def sample_from_crp(
     random_state = np.random.RandomState(random_seed)
     counts = [1]
     cdef np.int_t sum_counts_int = 1
-    draws = []
+    draws = [0]
     #
-    for draw_idx in xrange(num_draws):
+    for draw_idx in xrange(num_draws - 1):
         random_draw = random_state.uniform()
         draw = sample_unnormalized_with_partition(
             np.append(counts, alpha),
