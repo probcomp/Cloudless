@@ -20,32 +20,6 @@ import Cloudless.examples.DPMB.helper_functions as hf
 reload(hf)
 
 
-# parse some arguments
-parser_description = 'programmatically run mrjob on a synthetic problem'
-parser = argparse.ArgumentParser(description=parser_description)
-# problem settings
-parser.add_argument('gen_seed', type=int)
-parser.add_argument('num_rows', type=int)
-parser.add_argument('num_cols', type=int)
-parser.add_argument('num_clusters', type=int)
-parser.add_argument('beta_d', type=float)
-# inference settings
-parser.add_argument('num_iters', type=int)
-parser.add_argument('num_nodes_list', nargs='+', type=int)
-#
-# args = parser.parse_args(['0', '2048', '256', '32', '1.0', '3', '1', '4'])
-args = parser.parse_args(['0', '2048', '256', '32', '1.0', '10', '4'])
-
-gen_seed = args.gen_seed
-num_rows = args.num_rows
-num_cols = args.num_cols
-num_clusters = args.num_clusters
-beta_d = args.beta_d
-#
-# inference settings
-num_iters = args.num_iters
-num_nodes_list = args.num_nodes_list
-#
 # non passable settings
 base_dir = S.data_dir
 seed_filename = 'seed_list.txt'
@@ -56,18 +30,70 @@ parameters_filename = 'run_parameters.txt'
 reduced_summaries_name = 'reduced_summaries.pkl.gz'
 problem_filename = 'problem.pkl.gz'
 
-# determine data dir
-get_hexdigest = lambda variable: \
-    hashlib.sha224(str(variable)).hexdigest()[:10]
-# FIXME: should omit num_iters, num_nodes_list from hexdigest
-hex_digest = get_hexdigest(vars(args))
-run_dir = data_dir_prefix + hex_digest
+if True:
+    # parse some arguments
+    parser_description = 'programmatically run mrjob on a synthetic problem'
+    parser = argparse.ArgumentParser(description=parser_description)
+    # problem settings
+    parser.add_argument('gen_seed', type=int)
+    parser.add_argument('num_rows', type=int)
+    parser.add_argument('num_cols', type=int)
+    parser.add_argument('num_clusters', type=int)
+    parser.add_argument('beta_d', type=float)
+    # inference settings
+    parser.add_argument('num_iters', type=int)
+    parser.add_argument('num_nodes_list', nargs='+', type=int)
+    #
+    # args = parser.parse_args(['0', '2048', '256', '32', '1.0', '3', '1', '4'])
+    args = parser.parse_args(['0', '2048', '256', '32', '1.0', '10', '4'])
+    #
+    gen_seed = args.gen_seed
+    num_rows = args.num_rows
+    num_cols = args.num_cols
+    num_clusters = args.num_clusters
+    beta_d = args.beta_d
+    #
+    # inference settings
+    num_iters = args.num_iters
+    num_nodes_list = args.num_nodes_list
+    #
+    # determine data dir
+    get_hexdigest = lambda variable: \
+        hashlib.sha224(str(variable)).hexdigest()[:10]
+    # FIXME: should omit num_iters, num_nodes_list from hexdigest
+    hex_digest = get_hexdigest(vars(args))
+    run_dir = data_dir_prefix + hex_digest
+    #
+    run_full_dir = os.path.join(base_dir, run_dir)
+    try:
+        os.makedirs(run_full_dir)
+    except OSError, ose:
+        pass
+    # save the initial parameters
+    parameters = vars(args)
+    parameters_full_filename = os.path.join(run_full_dir, parameters_filename)
+    with open(parameters_full_filename, 'w') as fh:
+        for key, value in parameters.iteritems():
+            line = str(key) + ' = ' + str(value) + '\n'
+            fh.write(line)
+else:
+    parameters = dict()
+    # run_dir = '/tmp/programmatic_mrjob_a36e808195/'
+    run_dir = '/tmp/programmatic_mrjob_288320018d/'
+    with open(os.path.join(run_dir, 'run_parameters.txt')) as fh:
+        exec fh in parameters
+    gen_seed = parameters['gen_seed']
+    num_rows = parameters['num_rows']
+    num_cols = parameters['num_cols']
+    num_clusters = parameters['num_clusters']
+    beta_d = parameters['beta_d']
+    #
+    # inference settings
+    num_iters = 10
+    num_nodes_list = [16]
+
 run_full_dir = os.path.join(base_dir, run_dir)
 print run_full_dir
-try:
-    os.makedirs(run_full_dir)
-except OSError, ose:
-    pass
 
 create_args = lambda num_iters, num_nodes: [
     '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
@@ -114,6 +140,7 @@ flatten = lambda data: [y for x in data for y in x]
 
 import scipy.special as ss
 import numpy as np
+import pylab
 def create_alpha_lnPdf(list_of_x_indices):
     # Note : this is extraneous work for relative probabilities
     #      : but necessary to determine true distribution probabilities
@@ -146,14 +173,6 @@ for iter_idx in range(num_iters):
     # consolidate
     run_key, consolidated_data = mr_job.consolidate_data(
         run_key, infer_out_list).next()
-
-# save the initial parameters
-parameters = vars(args)
-parameters_full_filename = os.path.join(run_full_dir, parameters_filename)
-with open(parameters_full_filename, 'w') as fh:
-    for key, value in parameters.iteritems():
-        line = str(key) + ' = ' + str(value) + '\n'
-        fh.write(line)
 
 xlabel = 'time (seconds)'
 # summarize the data
