@@ -506,7 +506,7 @@ if __name__ == '__main__':
             init_filename=init_filename,
             # problem_filename=problem_filename, # uncomment to rescore
             )
-        plot_summaries(summaries_dict, problem=problem, title='')
+        plot_summaries(summaries_dict, problem=problem, title=title)
 
     # reduced_summaries_name = S.files.reduced_summaries_name
     # reduced_summaries_dict = extract_reduced_summaries(
