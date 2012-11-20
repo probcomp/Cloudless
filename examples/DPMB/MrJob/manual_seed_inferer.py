@@ -61,11 +61,11 @@ get_hexdigest = lambda variable: \
     hashlib.sha224(str(variable)).hexdigest()[:10]
 # FIXME: should omit num_iters, num_nodes_list from hexdigest
 hex_digest = get_hexdigest(vars(args))
-data_dir = data_dir_prefix + hex_digest
-data_dir = os.path.join(base_dir, data_dir)
-print data_dir
+run_dir = data_dir_prefix + hex_digest
+run_full_dir = os.path.join(base_dir, run_dir)
+print run_dir
 try:
-    os.makedirs(data_dir)
+    os.makedirs(run_dir)
 except OSError, ose:
     pass
 
@@ -75,21 +75,21 @@ create_args = lambda num_iters, num_nodes: [
     '--num-iters', str(num_iters),
     '--num-nodes', str(num_nodes),
     '--problem-file', problem_filename,
-    '--data_dir', data_dir,
+    '--run_dir', run_dir,
     seed_full_filename,
     ]
 
 # create the problem and seed file
 problem_filename = 'problem.pkl.gz'
 try:
-    problem = rf.unpickle(problem_filename, dir=data_dir)
-    seed_full_filename = os.path.join(data_dir, seed_filename)
+    problem = rf.unpickle(problem_filename, dir=run_full_dir)
+    seed_full_filename = os.path.join(run_full_dir, seed_filename)
 except Exception, e:
     # create problem
     problem, problem_filename = csd.pkl_mrjob_problem(
         gen_seed, num_rows, num_cols, num_clusters, beta_d,
-        image_save_str=image_save_str, dir=data_dir)
-    seed_full_filename = os.path.join(data_dir, seed_filename)
+        image_save_str=image_save_str, dir=run_full_dir)
+    seed_full_filename = os.path.join(run_full_dir, seed_filename)
     os.system('printf "0\n" > ' + seed_full_filename)
     #
     # gibbs init
@@ -129,7 +129,7 @@ for iter_idx in range(num_iters):
 
 # save the initial parameters
 parameters = vars(args)
-parameters_full_filename = os.path.join(data_dir, parameters_filename)
+parameters_full_filename = os.path.join(run_full_dir, parameters_filename)
 with open(parameters_full_filename, 'w') as fh:
     for key, value in parameters.iteritems():
         line = str(key) + ' = ' + str(value) + '\n'
@@ -137,13 +137,13 @@ with open(parameters_full_filename, 'w') as fh:
 
 xlabel = 'time (seconds)'
 # summarize the data
-summaries_dict, numnodes1_parent_list = cs.read_summaries([data_dir])
+summaries_dict, numnodes1_parent_list = cs.read_summaries([run_full_dir])
 title = cs.title_from_parameters(parameters)
 cs.plot_summaries(summaries_dict, problem=problem,
-                  title=title, xlabel=xlabel, plot_dir=data_dir)
+                  title=title, xlabel=xlabel, plot_dir=run_full_dir)
 reduced_summaries_dict = cs.extract_reduced_summaries(
     summaries_dict, cs.reduced_summary_extract_func_tuples)
-rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=data_dir)
+rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=run_full_dir)
 
 
 # flatten = lambda data: [y for x in data for y in x]
