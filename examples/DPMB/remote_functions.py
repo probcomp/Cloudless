@@ -196,6 +196,7 @@ def plot_helper(name, state):
 
 def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
           post_infer_func=None):
+    hf.echo_date('entering remote_functions.infer()')
     dataset_spec = run_spec["dataset_spec"]
     data_dir = dataset_spec.get('data_dir', settings.data_dir)
     if problem is None:
@@ -248,7 +249,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
                                      data_dir=data_dir,
                                      **state_kwargs
                                      )
-
+    hf.echo_date('rf.infer(): built inference state')
     plot_timer = None
     if init_save_str is not None:
         with hf.Timer('plot') as plot_timer:
@@ -268,6 +269,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         **model_kwargs
         )
     #
+    hf.echo_date('rf.infer(): built transitioner')
     summaries = []
     with hf.Timer('extact_state_summary') as extract_state_summary_timer:
         init_summary = transitioner.extract_state_summary(
@@ -276,6 +278,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
             test_xs=problem["test_xs"],
             send_zs=send_zs,
             )
+    hf.echo_date('rf.infer(): extracted init summary')
     summaries.append(init_summary)
     summaries[-1]["timing"]["plot"] = plot_timer.elapsed_secs \
         if plot_timer is not None else None
@@ -292,6 +295,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     last_valid_list_of_x_indices = transitioner.state.get_list_of_x_indices()
     last_valid_seed = transitioner.random_state.get_state()
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
+    hf.echo_date('rf.infer(): starting inference')
     for i in range(run_spec["num_iters"]):
         iter_start_dt = datetime.datetime.now()
         transition_return = transitioner.transition(
@@ -329,6 +333,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     summaries[-1]["last_valid_list_of_x_indices"] = last_valid_list_of_x_indices
     summaries[-1]["last_valid_seed"] = last_valid_seed
     summaries[-1]["decanon_indices"] = decanon_indices
+    hf.echo_date('rf.infer(): exiting rf.infer()')
     return summaries
 
 def infer_separate(run_spec):
