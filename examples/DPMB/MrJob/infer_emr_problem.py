@@ -76,6 +76,11 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
     #
     other_args = [
         '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
+        '--jobconf', 'mapred.reduce.tasks=1',
+        '--jobconf', 'mapred.reduce.max.attempts=1',
+        '--jobconf', 'mapred.child.java.opts=-Xmx10G',
+        # mapred.reduce.tasks.speculative.execution False
+        #
         # may need to specify mapred.map.tasks greater than num_nodes
         '--num-iters', str(num_iters),
         '--num-iters-per-step', str(num_iters_per_step),
