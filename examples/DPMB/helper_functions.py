@@ -440,3 +440,7 @@ def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha
     pylab.title("MLE alpha for a given data configuration\nmax alpha: "+str(max_alpha-1))
     for clusters,points_per_cluster,mle in mle_vals:
         pylab.text(clusters,points_per_cluster,str(int(mle)),color='red')
+
+def echo_date(in_str, outfile='/tmp/steps'):
+    cmd_str = 'echo "`date` :: ' + in_str + '" >> ' + outfile
+    os.system(cmd_str)
