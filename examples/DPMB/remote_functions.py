@@ -304,6 +304,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
             # true_zs=true_zs # necessary for seatbelt 
             )
         hf.printTS("finished doing iteration " + str(i))
+        hf.echo_date('rf.infer(): extracting summary')
         next_summary = transitioner.extract_state_summary(
             true_zs=true_zs,
             verbose_state=verbose_state,
@@ -318,6 +319,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
             break
         summaries.append(next_summary)
         hf.printTS("finished saving iteration " + str(i))
+        hf.echo_date('rf.infer(): caching progress')
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
             last_valid_list_of_x_indices = \
