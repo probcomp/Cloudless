@@ -500,8 +500,11 @@ def unpickle(file_str, dir='', check_hdf5=True):
 def get_xs_subset_from_h5(filename, x_indices, dir=''):
     hdf5_filename = h5.get_h5_name_from_pkl_name(filename)
     xs = None
+    sorted_x_indices = np.sort(x_indices)
+    inverse_indices = np.argsort(np.argsort(x_indices))
     with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
-        xs = my_h5['xs'][x_indices]
+        xs = my_h5['xs'][sorted_x_indices]
+        xs = xs[inverse_indices]
     return xs
 
 def fill_dict_from_hdf5(in_dict, pkl_file_str, dir=''):
