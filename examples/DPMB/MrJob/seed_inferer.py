@@ -243,11 +243,10 @@ class MRSeedInferer(MRJob):
             s3.verify_file(problem_file)
             h5_file = h5.get_h5_name_from_pkl_name(problem_file)
             s3.verify_file(h5_file)
-
-        problem_xs = rf.get_xs_subset_from_h5(
+        sub_problem_xs = rf.get_xs_subset_from_h5(
             problem_file, x_indices, dir=run_full_dir)
         hf.echo_date('infer(): read problem')
-        sub_problem = {'xs':init_x, 'zs':zs, 'test_xs':None}
+        sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
         # actually infer
         get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
