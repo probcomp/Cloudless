@@ -503,7 +503,7 @@ def get_xs_subset_from_h5(filename, x_indices, dir=''):
     sorted_x_indices = np.sort(x_indices)
     inverse_indices = np.argsort(np.argsort(x_indices))
     with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
-        xs = my_h5['xs'][sorted_x_indices]
+        xs = my_h5['xs'].value[sorted_x_indices]
         xs = xs[inverse_indices]
     return xs
 
