@@ -499,9 +499,8 @@ def unpickle(file_str, dir='', check_hdf5=True):
 
 def get_xs_subset_from_h5(filename, x_indices, dir=''):
     hdf5_filename = h5.get_h5_name_from_pkl_name(filename)
-    hdf5_full_filename = os.path.join(dir, hdf5_filename)
     xs = None
-    with h5.h5_context(hdf5_full_filename, dir=dir) as my_h5:
+    with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
         xs = my_h5['xs'][x_indices]
     return xs
 
