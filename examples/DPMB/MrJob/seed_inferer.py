@@ -32,7 +32,7 @@ data_dir = settings.path.data_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = settings.files.problem_filename
 default_resume_file = None
-postpone_scoring = False
+postpone_scoring = True
 
 def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
     file_str = '_'.join([
@@ -207,12 +207,12 @@ class MRSeedInferer(MRJob):
             yield run_key, child_state
 
     def fake_infer(self, run_key, child_state_in):
-        os.system('echo "`date` :: enter fake infer" >> /tmp/steps')
-        os.system('echo "`date` :: exit fake infer" >> /tmp/steps')
+        hf.echo_date('enter fake infer')
+        hf.echo_date('exit fake infer')
         yield run_key, child_state_in
         
     def infer(self, run_key, child_state_in):
-        os.system('echo "`date` :: enter infer" >> /tmp/steps')
+        hf.echo_date('enter infer')
         num_nodes = self.num_nodes
         run_dir = self.run_dir
         problem_file = self.problem_file
@@ -244,12 +244,9 @@ class MRSeedInferer(MRJob):
             h5_file = h5.get_h5_name_from_pkl_name(problem_file)
             s3.verify_file(h5_file)
 
-        orig_problem = rf.unpickle(problem_file, dir=run_full_dir)
-        problem_xs = numpy.array(orig_problem['xs'], dtype=numpy.int32)
-        init_x = [
-            orig_problem['xs'][x_index]
-            for x_index in x_indices
-            ]
+        problem_xs = rf.get_xs_subset_from_h5(
+            problem_file, x_indices, dir=run_full_dir)
+        hf.echo_date('infer(): read problem')
         sub_problem = {'xs':init_x, 'zs':zs, 'test_xs':None}
         # actually infer
         get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
@@ -258,6 +255,8 @@ class MRSeedInferer(MRJob):
         if num_nodes == 1:
             true_zs, test_xs = None, None
             if not postpone_scoring:
+                orig_problem = rf.unpickle(
+                    problem_file, dir=run_full_dir, check_hdf5=False)
                 true_zs = orig_problem.get('true_zs', None)
                 if true_zs is not None:
                     true_zs = [true_zs[x_index] for x_index in x_indices]
@@ -302,8 +301,10 @@ class MRSeedInferer(MRJob):
             #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
             # FIXME : to robustify, should be checking for failure conditions
+            hf.echo_date('infer(): entering rf.infer()')
             child_summaries = rf.infer(run_spec, sub_problem)
 
+        hf.echo_date('infer(): done rf.infer')
         last_valid_zs = child_summaries[-1]['last_valid_zs']
         last_valid_list_of_x_indices = \
             child_summaries[-1]['last_valid_list_of_x_indices']
@@ -318,11 +319,11 @@ class MRSeedInferer(MRJob):
             master_alpha, betas, master_inf_seed, new_iter_num,
             None, None, None, iter_start_dt
             )
-        os.system('echo "`date` :: exit infer" >> /tmp/steps')
+        hf.echo_date('exit infer')
         yield run_key, child_state_out
 
     def consolidate_data(self, run_key, child_infer_output_generator):
-        os.system('echo "`date` :: enter consolidate" >> /tmp/steps')
+        hf.echo_date('enter consolidate')
         start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
         run_dir = self.run_dir
@@ -342,7 +343,7 @@ class MRSeedInferer(MRJob):
              x_indices_list.append(child_state_out.x_indices)
              list_of_x_indices.extend(child_state_out.list_of_x_indices)
              child_state_counter += 1
-        os.system('echo "`date` :: received ' + str(child_state_counter) + ' child states" >> /tmp/steps')
+        hf.echo_date('received ' + str(child_state_counter) + ' child states')
 
         # all master_alpha, betas, master_inf_seed are all the same, use last
         master_alpha = child_state_out.master_alpha
@@ -359,7 +360,7 @@ class MRSeedInferer(MRJob):
             for reorder_index in numpy.argsort(x_indices)
             ]
         zs, cluster_idx = hf.canonicalize_list(zs)
-        os.system('echo "`date` :: canonicalized zs" >> /tmp/steps')
+        hf.echo_date('canonicalized zs')
         #
         run_full_dir = os.path.join(data_dir, run_dir)
         problem_full_file = os.path.join(run_full_dir, problem_file)
@@ -377,7 +378,7 @@ class MRSeedInferer(MRJob):
                 true_zs = problem['true_zs']
                 true_zs, cluster_idx = hf.canonicalize_list(true_zs)
             test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
-        os.system('echo "`date` :: read problem" >> /tmp/steps')
+        hf.echo_date('read problem')
 
         # create singleton state
         consolidated_state = ds.DPMB_State(
@@ -390,7 +391,7 @@ class MRSeedInferer(MRJob):
             init_x=init_x
             )
         consolidate_delta = hf.delta_since(start_dt)
-        os.system('echo "`date` :: done creating consolidated state" >> /tmp/steps')
+        hf.echo_date('done creating consolidated state')
         #
         # run hyper inference
         transitioner = dm.DPMB(master_inf_seed, consolidated_state,
@@ -401,9 +402,9 @@ class MRSeedInferer(MRJob):
             transitioner.transition_beta, transitioner.transition_alpha]
         for transition_type in random_state.permutation(transition_types):
             transition_type_str = str(transition_type)
-            os.system('echo "`date` :: faking transition ' + transition_type_str + '" >> /tmp/steps')
+            hf.echo_date('faking transition ' + transition_type_str)
             # transition_type()
-        os.system('echo "`date` :: done transitioning" >> /tmp/steps')
+        hf.echo_date('done transitioning')
         #
 
         # extract summary
@@ -412,7 +413,6 @@ class MRSeedInferer(MRJob):
                 true_zs=true_zs,
                 test_xs=test_xs,
                 )
-            os.system('echo "`date` :: done scoring for ari, test_lls" >> /tmp/steps')
         summary['last_valid_zs'] = transitioner.state.getZIndices()
         summary['list_of_x_indices'] = transitioner.state.get_list_of_x_indices()
         summary['timing'].update({
@@ -425,7 +425,7 @@ class MRSeedInferer(MRJob):
         summary['timing']['iter_start_dt'] = iter_start_dt
         summary['timing']['iter_end_dt'] = iter_end_dt
 
-        os.system('echo "`date` :: faking plotting" >> /tmp/steps')
+        hf.echo_date('faking plotting')
         #
         # save intermediate state plots
         # save_str_base = '_'.join([
@@ -448,7 +448,7 @@ class MRSeedInferer(MRJob):
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.put_s3(pkl_file)
             # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
-        os.system('echo "`date` :: done pickling summary" >> /tmp/steps')
+        hf.echo_date('done pickling summary')
 
         #
         # format summary to pass out 
@@ -459,7 +459,7 @@ class MRSeedInferer(MRJob):
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
-        os.system('echo "`date` :: exit consolidate" >> /tmp/steps')
+        hf.echo_date('exit consolidate')
         yield run_key, master_state
 
     def s3_push_step(self, run_key, master_state_in):
@@ -488,8 +488,8 @@ class MRSeedInferer(MRJob):
         step_list = [self.mr(self.init)]
         infer_step = [
             self.mr(self.distribute_data),
-            # self.mr(self.infer, self.consolidate_data),
-            self.mr(self.fake_infer, self.consolidate_data),
+            self.mr(self.infer, self.consolidate_data),
+            # self.mr(self.fake_infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
         # if self.push_to_s3:
