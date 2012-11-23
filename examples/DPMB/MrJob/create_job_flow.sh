@@ -28,8 +28,9 @@ python -m /home/dlovell/mrjob/mrjob/tools/emr/create_job_flow \
     --num-ec2-instances $num_ec2_instances \
     --ec2-instance-type $ec2_instance_type \
     --bootstrap-action $DPMB/bootstrap.sh \
+    --bootstrap-action $DPMB/core_dump_setup.sh \
     --ec2-master-instance-type $ec2_master_instance_type >> create_job_flow.out
-    
+
 emr_job_flow_id=$(tail -n 1 create_job_flow.out)
 echo "ec2_instance_type: $ec2_instance_type"
 echo "ec2_master_instance_type: $ec2_master_instance_type"

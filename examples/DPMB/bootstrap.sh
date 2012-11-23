@@ -86,7 +86,7 @@ else
     tar xvfz $filename
     cd $python_binary
     sudo make clean
-    sudo ./configure # configure required if installing for first time
+    sudo ./configure --enable-pydebug
     sudo make install
     cd ..
     echo_time "done python install" >> /home/hadoop/bootstrap_progress
