@@ -85,7 +85,8 @@ else
     hadoop fs -get "${hadoop_full_path}$filename" "$filename"
     tar xvfz $filename
     cd $python_binary
-    # sudo ./configure # configure required if installing for first time
+    sudo make clean
+    sudo ./configure # configure required if installing for first time
     sudo make install
     cd ..
     echo_time "done python install" >> /home/hadoop/bootstrap_progress
@@ -130,7 +131,10 @@ else
 
     # must update for hdf5?  MUST do after everything else, else scipy fails? 
     sudo apt-get update
-    sudo apt-get install -y libhdf5-dev
+    sudo apt-get -f install -y gcc-4.7-base
+    sudo apt-get -f install -y libquadmath0
+    sudo apt-get -f install -y libhdf5-7
+    sudo apt-get -f install -y libhdf5-dev
     sudo easy_install h5py
     echo_time "done h5py" >> /home/hadoop/bootstrap_progress
 
