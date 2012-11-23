@@ -487,15 +487,22 @@ def create_hdf5_from_dict(in_dict, file_str, dir=''):
             h5.h5ify(varname, value, my_h5)
     return in_dict
 
-def unpickle(file_str, dir=''):
+def unpickle(file_str, dir='', check_hdf5=True):
     from numpy import array
     my_open = get_open(file_str)
     file_str = os.path.join(dir, file_str)
     with my_open(file_str, 'rb') as fh:
         var_from_pkl = cPickle.load(fh)
-    if isinstance(var_from_pkl, dict) and 'hdf5_vars' in var_from_pkl:
+    if isinstance(var_from_pkl, dict) and 'hdf5_vars' in var_from_pkl and check_hdf5:
         var_from_pkl = fill_dict_from_hdf5(var_from_pkl, file_str, dir=dir)
     return var_from_pkl
+
+def get_xs_subset_from_h5(filename, x_indices, dir=''):
+    hdf5_filename = h5.get_h5_name_from_pkl_name(filename)
+    xs = None
+    with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
+        xs = my_h5['xs'][x_indices]
+    return xs
 
 def fill_dict_from_hdf5(in_dict, pkl_file_str, dir=''):
     hdf5_filename = h5.get_h5_name_from_pkl_name(pkl_file_str)
