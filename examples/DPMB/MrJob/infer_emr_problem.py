@@ -59,7 +59,7 @@ os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
 def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
-    emr_args = ['-r', 'emr']
+    emr_args = ['-r', 'emr', '--verbose']
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
     if job_flow_id is not None:
@@ -74,12 +74,20 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
         emr_args.extend(['--bootstrap-action', bootstrap_full_filename])
         emr_args.extend(['--ec2-master-instance-type', ec2_master_instance_type])
     #
+# check
+# http://wiki.apache.org/hadoop/HowManyMapsAndReduces
+# for how to control # mappers, # reducers
     other_args = [
-        '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
+        # '--jobconf', 'mapred.task.default.maxvmem=-1',
+        # '--jobconf', 'mapred.child.java.opts=-Xmx7G',
+        # this doesn't work '--jobconf', '--enable-emr-debugging',
+        # '--jobconf', 'mapred.map.tasks=' + str(4),
         '--jobconf', 'mapred.reduce.tasks=1',
         '--jobconf', 'mapred.reduce.max.attempts=1',
-        '--jobconf', 'mapred.child.java.opts=-Xmx10G',
-        # mapred.reduce.tasks.speculative.execution False
+        '--jobconf', 'mapred.map.max.attempts=1',
+        '--jobconf', 'mapred.task.timeout=60000000',
+        '--jobconf', 'mapred.tasktracker.map.tasks.maximum=4',
+        '--jobconf', 'mapred.reduce.tasks.speculative.execution=False',
         #
         # may need to specify mapred.map.tasks greater than num_nodes
         '--num-iters', str(num_iters),
