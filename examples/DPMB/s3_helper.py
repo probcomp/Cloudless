@@ -6,7 +6,7 @@ import boto
 #
 import Cloudless.examples.DPMB.settings as settings
 reload(settings)
-
+import Cloudless.examples.DPMB.helper_functions as hf
 
 class S3_helper():
 
@@ -43,7 +43,9 @@ class S3_helper():
         return True
         
     def get_s3(self,filename):
-        print "getS3('"+filename+"')"
+        status_str = "getS3('"+filename+"')"
+        print status_str
+        hf.echo_date(status_str)
         key_str = os.path.join(self.bucket_dir,filename)
         full_filename = os.path.join(self.local_dir,filename)
         #
