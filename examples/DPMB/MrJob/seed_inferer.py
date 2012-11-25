@@ -401,8 +401,8 @@ class MRSeedInferer(MRJob):
             transitioner.transition_beta, transitioner.transition_alpha]
         for transition_type in random_state.permutation(transition_types):
             transition_type_str = str(transition_type)
-            hf.echo_date('faking transition ' + transition_type_str)
-            # transition_type()
+            hf.echo_date('transitioning type: ' + transition_type_str)
+            transition_type()
         hf.echo_date('done transitioning')
         #
 
