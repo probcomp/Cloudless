@@ -129,6 +129,8 @@ else
     done
     echo_time "done easy install packages" >> /home/hadoop/bootstrap_progress
 
+    python -c 'import pylab' # to run initializatoin
+
     # must update for hdf5?  MUST do after everything else, else scipy fails? 
     sudo apt-get update
     sudo apt-get -f install -y gcc-4.7-base
