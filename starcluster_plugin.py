@@ -40,6 +40,7 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.execute('python -c \'import matplotlib\'')
                node.ssh.execute('chmod -R ugo+rwx ' + cloudless_dir)
                node.ssh.execute('easy_install scikits.learn')
+               node.ssh.execute('easy_install h5py')
                node.ssh.execute('if [ ! -d /mnt/TinyImages ] ; '
                                 'then mkdir /mnt/TinyImages ; fi')
                node.ssh.execute('chown sgeadmin /mnt/TinyImages')
