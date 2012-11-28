@@ -124,7 +124,8 @@ def process_file_queue(queue_or_queuename):
 def process_summary(summary_tuple, problem, bucket_dir_suffix):
     summary_filename, message_deleter = summary_tuple
     hf.echo_date(summary_filename)
-    summary = verify_file_helper(summary_filename, bucket_dir_suffix)
+    summary = verify_file_helper(summary_filename, bucket_dir_suffix,
+                                 unpickle=True)
     scored_summary = cs.score_summary(summary, problem)
     # must read in problem : will be building a state, may need m2.2xlarge
     import pdb
