@@ -26,11 +26,16 @@ def filter_bucket_filenames(bucket, bucket_dir_suffix, filter_func):
 get_score_name = lambda summary_name: re.sub('^summary_', 'score_', summary_name)
 get_summary_name = lambda score_name: re.sub('^score_', 'summary_', score_name)
 
+def clear_queue(queue_or_queuename):
+    queue_iterator = get_queue_iterator(queue_or_queuename)
+    for msg_data, message_deleter in queue_iterator:
+        message_deleter()
+
 def create_queue_from_list(in_list, queue_name):
     sqs = boto.connect_sqs()
     queue = sqs.get_queue(queue_name)
     if queue is None:
-        queue = sqs.create_queue(queue_name) ##should probably clear queue here
+        queue = sqs.create_queue(queue_name)
     for list_el in in_list: 
         body = simplejson.dumps(list_el)
         message = queue.new_message(body=body)
