@@ -154,7 +154,7 @@ if __name__ == '__main__':
         verify_problem_local(bucket_dir_suffix)
         num_workers = cpu_count()
         for worker_idx in range(num_workers):
-            os.system('python generate_scoring.py ' + bucket_dir_suffix)
+            os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
         hf.echo_date('is_NOT_controller')
         processed_files = process_file_queue(bucket_dir_suffix)
