@@ -128,8 +128,6 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
                                  unpickle=True)
     scored_summary = cs.score_summary(summary, problem)
     # must read in problem : will be building a state, may need m2.2xlarge
-    import pdb
-    pdb.set_trace()
     score_dict = dict(ari=scored_summary['ari'], score=scored_summary['score'])
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join('/tmp', bucket_dir_suffix)
