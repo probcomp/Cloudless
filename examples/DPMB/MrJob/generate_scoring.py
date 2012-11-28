@@ -132,7 +132,7 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join('/tmp', bucket_dir_suffix)
     rf.pickle(score_dict, score_filename, dir=local_dir)
-    verify_file_helper(score_filename, bucket_dir_suffix, push_s3=True)
+    verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
     message_deleter()
     return summary_filename
 
