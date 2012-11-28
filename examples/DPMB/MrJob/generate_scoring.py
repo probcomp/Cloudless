@@ -152,7 +152,6 @@ if __name__ == '__main__':
     if is_controller:
         hf.echo_date('is_controller')
         verify_problem_local(bucket_dir_suffix)
-        num_workers = cpu_count()
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
