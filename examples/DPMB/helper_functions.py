@@ -345,17 +345,17 @@ def generate_random_state(seed):
 
 ####################
 # ARI FUNCTIONS
-def calc_ari_subset(group_idx_list_1, group_idx_list_2, seed, count):
+def get_matched_subset(list_1, list_2, seed, count):
     random_state = generate_random_state(seed)
-    num_vectors = len(group_idx_list_1)
+    num_vectors = len(list_1)
     subset_indices = random_state.permutation(xrange(num_vectors))[:count]
     # subset_indices = random_state.randint(low=0, high=num_vectors, count)
-    return calc_ari(group_idx_list_1[subset_indices],
-                    group_idx_list_2[subset_indices])
+    return list_1[subset_indices], list_2[subset_indices]
 
-def calc_ari(group_idx_list_1, group_idx_list_2):
+def calc_ari(group_idx_list_1, group_idx_list_2, seed=0, count=10000):
     ##https://en.wikipedia.org/wiki/Rand_index#The_contingency_table
-    ##presumes group_idx's are canonicaized
+    group_idx_list_1, group_idx_list_2 = get_matched_subset(
+        group_idx_list_1, group_idx_list_2, seed, count)
     Ns, As, Bs = gen_contingency_data(group_idx_list_1, group_idx_list_2)
     n_choose_2 = choose_2_sum(np.array([len(group_idx_list_1)]))
     cross_sums = choose_2_sum(Ns[Ns>1])
