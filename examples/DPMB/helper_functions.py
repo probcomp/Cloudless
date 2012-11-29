@@ -4,6 +4,7 @@ import re
 import sys
 import pdb
 from timeit import default_timer
+from collections import defaultdict
 #
 import pylab
 # import pandas # imported below only in case actually used
@@ -344,42 +345,45 @@ def generate_random_state(seed):
 
 ####################
 # ARI FUNCTIONS
-def calc_ari(group_idx_list_1,group_idx_list_2):
+def calc_ari_subset(group_idx_list_1, group_idx_list_2, seed, count):
+    random_state = generate_random_state(seed)
+    num_vectors = len(group_idx_list_1)
+    subset_indices = random_state.permutation(xrange(num_vectors))[:count]
+    # subset_indices = random_state.randint(low=0, high=num_vectors, count)
+    return calc_ari(group_idx_list_1[subset_indices],
+                    group_idx_list_2[subset_indices])
+
+def calc_ari(group_idx_list_1, group_idx_list_2):
     ##https://en.wikipedia.org/wiki/Rand_index#The_contingency_table
     ##presumes group_idx's are canonicaized
-    Ns,As,Bs = gen_contingency_data(group_idx_list_1,group_idx_list_2)
+    Ns, As, Bs = gen_contingency_data(group_idx_list_1, group_idx_list_2)
     n_choose_2 = choose_2_sum(np.array([len(group_idx_list_1)]))
     cross_sums = choose_2_sum(Ns[Ns>1])
     a_sums = choose_2_sum(As)
     b_sums = choose_2_sum(Bs)
-    return ((n_choose_2*cross_sums - a_sums*b_sums)
-            /(.5*n_choose_2*(a_sums+b_sums) - a_sums*b_sums))
+    numerator = n_choose_2 * cross_sums - a_sums * b_sums
+    denominator = .5 * n_choose_2 * (a_sums + b_sums) - a_sums * b_sums
+    return numerator / denominator
 
 def choose_2_sum(x):
-    return sum(x*(x-1)/2.0)
-            
-def count_dict_overlap(dict1,dict2):
-    overlap = 0
-    for key in dict1:
-        if key in dict2:
-            overlap += 1
-    return overlap
+    return sum(x * (x - 1) / 2.0)
 
-def gen_contingency_data(group_idx_list_1,group_idx_list_2):
-    group_idx_dict_1 = {}
-    for list_idx,group_idx in enumerate(group_idx_list_1):
-        group_idx_dict_1.setdefault(group_idx,{})[list_idx] = None
-    group_idx_dict_2 = {}
-    for list_idx,group_idx in enumerate(group_idx_list_2):
-        group_idx_dict_2.setdefault(group_idx,{})[list_idx] = None
+def gen_contingency_data(group_idx_list_1, group_idx_list_2):
+    group_idx_dict_1 = defaultdict(set)
+    for list_idx, group_idx in enumerate(group_idx_list_1):
+        group_idx_dict_1[group_idx].add(list_idx)
+    group_idx_dict_2 = defaultdict(set)
+    for list_idx, group_idx in enumerate(group_idx_list_2):
+        group_idx_dict_2[group_idx].add(list_idx)
     ##
-    Ns = np.ndarray((len(group_idx_dict_1.keys()),len(group_idx_dict_2.keys())))
-    for key1,value1 in group_idx_dict_1.iteritems():
-        for key2,value2 in group_idx_dict_2.iteritems():
-            Ns[key1,key2] = count_dict_overlap(value1,value2)
+    array_dim = (len(group_idx_dict_1), len(group_idx_dict_2))
+    Ns = np.ndarray(array_dim)
+    for idx_1, value1 in enumerate(group_idx_dict_1.values()):
+        for idx_2, value2 in enumerate(group_idx_dict_2.values()):
+            Ns[idx_1, idx_2] = len(value1.intersection(value2))
     As = Ns.sum(axis=1)
     Bs = Ns.sum(axis=0)
-    return Ns,As,Bs
+    return Ns, As, Bs
 
 class Timer(object):
     def __init__(self, task='action', verbose=False):
