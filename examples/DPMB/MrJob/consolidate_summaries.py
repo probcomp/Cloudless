@@ -51,9 +51,17 @@ def get_summary_tuples(data_dir, init_filename=default_init_filename):
 
 num_workers = cpu_count() / 2
 #
+get_score_name = lambda summary_name: re.sub('^summary_', 'score_', summary_name)
 def read_tuple(in_tuple):
-    full_filename, iter_num = in_tuple
-    summary = rf.unpickle(full_filename)
+    summary_full_filename, iter_num = in_tuple
+    dir, summary_filename = os.path.split(summary_full_filename)
+    score_filename = get_score_name(summary_filename)
+    summary = rf.unpickle(summary_filename, dir=dir)
+    score_dict = rf.unpickle(score_filename, dir=dir)
+    for field in ['test_lls', 'ari', 'score']:
+        value = summary.get(field, None)
+        if value is None:
+            summary[field] = score_dict.get(field, None)
     return summary, iter_num
 #
 def score_tuple(in_tuple):
