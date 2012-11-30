@@ -9,19 +9,12 @@ from mrjob.job import MRJob
 from mrjob.protocol import PickleProtocol, RawValueProtocol
 #
 import Cloudless.examples.DPMB.remote_functions as rf
-reload(rf)
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 import Cloudless.examples.DPMB.h5_functions as h5
-reload(h5)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.s3_helper as s3h
-reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
-reload(settings)
 
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
