@@ -282,7 +282,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     print "saved initialization"
     #
     last_valid_zs = transitioner.state.getZIndices()
-    last_valid_list_of_x_indices = transitioner.state.get_list_of_x_indices()
+    last_valid_list_of_x_indices = \
+        transitioner.state.get_suffstats().list_of_x_indices
     last_valid_seed = transitioner.random_state.get_state()
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
     hf.echo_date('rf.infer(): starting inference')
@@ -313,7 +314,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
             last_valid_list_of_x_indices = \
-                transitioner.state.get_list_of_x_indices()
+                transitioner.state.get_suffstats().list_of_x_indices
             last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
         iter_end_dt = datetime.datetime.now()
