@@ -2,6 +2,7 @@
 import sys
 import os
 import datetime
+from collections import namedtuple
 #
 import Cloudless.examples.DPMB.optionally_use_agg as oua
 oua.optionally_use_agg()
@@ -21,6 +22,10 @@ import pdb
 is_power_2 = lambda num: int(np.log2(num)) == np.log2(num)
 is_crp_init_z = lambda init_z: \
     isinstance(init_z, str) and init_z.lower()=='crp'
+suffstats_tuple = namedtuple(
+    'suffstats_tuple',
+    ' num_vectors num_clusters list_of_cluster_suffstats list_of_x_indices '
+    )
 
 class DPMB_State():
     def __init__(self,gen_seed,num_cols,num_rows,init_alpha=None,init_betas=None
@@ -321,23 +326,22 @@ class DPMB_State():
             data.append(vec.data)
         return data
 
-    def get_list_of_x_indices(self):
+    def get_suffstats(self):
+        list_of_cluster_suffstats = []
         list_of_x_indices = []
         for vector_idx, vector in enumerate(self.vector_list):
             vector.idx = vector_idx
-        for cluster_idx, cluster in enumerate(self.cluster_list):
+        for cluster in self.cluster_list:
             x_indices = [vector.idx for vector in cluster.vector_list]
+            cluster_suffstats = (len(cluster.vector_list), cluster.column_sums)
+            #
             list_of_x_indices.append(x_indices)
-        return list_of_x_indices
-
-    def get_suffstats(self):
-        cluster_suffstats = [
-            (len(cluster.vector_list), cluster.column_sums)
-            for cluster in self.cluster_list
-            ]
+            list_of_cluster_suffstats.append(cluster_suffstats)
         num_vectors = len(self.vector_list)
         num_clusters = len(self.cluster_list)
-        suffstats = (num_vectors, num_clusters, cluster_suffstats)
+        suffstats = suffstats_tuple(num_vectors, num_clusters,
+                                    list_of_cluster_suffstats,
+                                    list_of_x_indices)
         return suffstats
 
     def removeAlpha(self,lnPdf):
