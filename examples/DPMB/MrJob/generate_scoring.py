@@ -14,6 +14,8 @@ import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.MrJob.consolidate_summaries as cs
 
 
+data_dir = settings.path.data_dir
+
 get_filename_from_el = lambda el: os.path.split(el.name)[-1]
 def filter_bucket_filenames(bucket, bucket_dir_suffix, filter_func):
     bucket_full_dir = 'tiny_image_summaries/' + bucket_dir_suffix + '/'
@@ -96,7 +98,7 @@ def get_queue_helper(queue_or_queuename):
 
 def verify_file_helper(filename, bucket_dir_suffix,
                        unpickle=False, write_s3=False):
-    local_dir = os.path.join('/tmp', bucket_dir_suffix)
+    local_dir = os.path.join(data_dir, bucket_dir_suffix)
     bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
     s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
     s3.verify_file(filename, write_s3=write_s3)
@@ -133,9 +135,13 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
                                  unpickle=True)
     scored_summary = cs.score_summary(summary, problem)
     # must read in problem : will be building a state, may need m2.2xlarge
-    score_dict = dict(ari=scored_summary['ari'], score=scored_summary['score'])
+    score_dict = dict(
+        ari=scored_summary['ari'],
+        score=scored_summary['score'],
+        test_lls=scored_summary['test_lls'],
+        )
     score_filename = get_score_name(summary_filename)
-    local_dir = os.path.join('/tmp', bucket_dir_suffix)
+    local_dir = os.path.join(data_dir, bucket_dir_suffix)
     rf.pickle(score_dict, score_filename, dir=local_dir)
     verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
     message_deleter()
