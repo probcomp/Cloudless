@@ -97,24 +97,9 @@ def get_queue_helper(queue_or_queuename):
         queuename = queue.name
     return queue, queuename
 
-def verify_file_helper(filename, bucket_dir_suffix,
-                       unpickle=False, write_s3=False):
-    local_dir = os.path.join(data_dir, bucket_dir_suffix)
-    bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
-    s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
-    s3.verify_file(filename, write_s3=write_s3)
-    pkl_contents = None
-    if unpickle:
-        pkl_contents = rf.unpickle(filename, dir=local_dir)
-    return pkl_contents
-def verify_problem_local(bucket_dir_suffix):
-    verify_file_helper('problem.h5', bucket_dir_suffix, unpickle=False)
-    problem = verify_file_helper('problem.pkl.gz', bucket_dir_suffix,
-                                 unpickle=True)
-    return problem 
 def process_file_queue(queue_or_queuename):
     queue, queuename = get_queue_helper(queue_or_queuename)
-    problem = verify_problem_local(queuename)
+    problem = hf.verify_problem_local(queuename)
     filename_tuple_generator = get_queue_iterator(queuename)
     process_summary_helper = partial(
         process_summary, problem=problem, bucket_dir_suffix=queuename)
@@ -132,7 +117,7 @@ def process_file_queue(queue_or_queuename):
 def process_summary(summary_tuple, problem, bucket_dir_suffix):
     summary_filename, message_deleter = summary_tuple
     hf.echo_date(summary_filename)
-    summary = verify_file_helper(summary_filename, bucket_dir_suffix,
+    summary = hf.verify_file_helper(summary_filename, bucket_dir_suffix,
                                  unpickle=True)
     scored_summary = cs.score_summary(summary, problem)
     # must read in problem : will be building a state, may need m2.2xlarge
@@ -144,7 +129,7 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join(data_dir, bucket_dir_suffix)
     rf.pickle(score_dict, score_filename, dir=local_dir)
-    verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
+    hf.verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
     message_deleter()
     return summary_filename
 
@@ -162,7 +147,7 @@ if __name__ == '__main__':
     num_workers = args.num_workers
     if is_controller:
         hf.echo_date('is_controller')
-        verify_problem_local(bucket_dir_suffix)
+        hf.verify_problem_local(bucket_dir_suffix)
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
