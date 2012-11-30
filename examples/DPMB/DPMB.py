@@ -34,8 +34,8 @@ class DPMB():
         logp_list,lnPdf,grid = hf.calc_alpha_conditional(self.state)
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,new_alpha)
-        self.state.timing["alpha"] = hf.delta_since(start_dt)
-        self.state.timing["run_sum"] += self.state.timing["alpha"]
+        self.state.timing['alpha'] = hf.delta_since(start_dt)
+        self.state.timing['run_sum'] += self.state.timing['alpha']
 
     def transition_beta_slice(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
@@ -48,8 +48,8 @@ class DPMB():
             logp_list, lnPdf, grid = hf.calc_beta_conditional(self.state,col_idx)
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,new_beta)
-        self.state.timing["betas"] = hf.delta_since(start_dt)
-        self.state.timing["run_sum"] += self.state.timing["betas"]
+        self.state.timing['betas'] = hf.delta_since(start_dt)
+        self.state.timing['run_sum'] += self.state.timing['betas']
 
     def transition_alpha_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
@@ -62,8 +62,8 @@ class DPMB():
         self.state.removeAlpha(lnPdf)
         self.state.setAlpha(lnPdf,grid[alpha_idx])
         ##
-        self.state.timing["alpha"] = hf.delta_since(start_dt)
-        self.state.timing["run_sum"] += self.state.timing["alpha"]
+        self.state.timing['alpha'] = hf.delta_since(start_dt)
+        self.state.timing['run_sum'] += self.state.timing['alpha']
 
     def transition_beta_discrete_gibbs(self,time_seatbelt=None):
         start_dt = datetime.datetime.now()
@@ -80,49 +80,49 @@ class DPMB():
             self.state.removeBetaD(lnPdf,col_idx)
             self.state.setBetaD(lnPdf,col_idx,grid[beta_idx])
 
-        self.state.timing["betas"] = hf.delta_since(start_dt)
-        self.state.timing["run_sum"] += self.state.timing["betas"]
+        self.state.timing['betas'] = hf.delta_since(start_dt)
+        self.state.timing['run_sum'] += self.state.timing['betas']
 
     def transition_alpha(self,time_seatbelt=None):
         if self.state.verbose:
-            print "PRE transition_alpha score: ",self.state.score
+            print 'PRE transition_alpha score: ',self.state.score
         if self.infer_alpha:
             self.transition_alpha_discrete_gibbs(time_seatbelt=None)
         else:
-            self.state.timing["alpha"] = 0 ##ensure last value not carried forward
+            self.state.timing['alpha'] = 0 ##ensure last value not carried forward
 
     def transition_beta(self,time_seatbelt=None):
         if self.state.verbose:
-            print "PRE transition_beta score: ",self.state.score
+            print 'PRE transition_beta score: ',self.state.score
         if self.infer_beta:
             self.transition_beta_discrete_gibbs(time_seatbelt)
         else:
-            self.state.timing["betas"] = 0 ##ensure last value not carried forward
+            self.state.timing['betas'] = 0 ##ensure last value not carried forward
             
     def transition_z(self,time_seatbelt=None):
         if self.state.verbose:
-            print "PRE transition_z score: ",self.state.score
-        micro_z_timing = {"z_cumulative_time":[],"cluster_counts":[]}
+            print 'PRE transition_z score: ',self.state.score
+        micro_z_timing = {'z_cumulative_time':[],'cluster_counts':[]}
         start_dt = datetime.datetime.now()
         permuted_vectors = self.random_state.permutation(list(self.state.get_all_vectors()))
         for vector in permuted_vectors:
             num_clusters = hf.transition_single_z(vector,self.random_state)
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
-            micro_z_timing["z_cumulative_time"].append(delta_t)
-            micro_z_timing["cluster_counts"].append(num_clusters)
+            micro_z_timing['z_cumulative_time'].append(delta_t)
+            micro_z_timing['cluster_counts'].append(num_clusters)
             if self.check_time_seatbelt(time_seatbelt,delta_t):
                 break
 
         # debug print out states:
         if self.state.verbose:
-            # print " --- " + str(self.state.getZIndices())
-            print "     " + str([len(cluster.vector_list) 
+            # print ' --- ' + str(self.state.getZIndices())
+            print '     ' + str([len(cluster.vector_list) 
                                  for cluster in self.state.cluster_list])
         ##
-        self.state.timing["zs"] = hf.delta_since(start_dt)
+        self.state.timing['zs'] = hf.delta_since(start_dt)
         # FIXME : determine if micro_z_timing should still be kept
-        self.state.timing["micro_z_timing"] = None # micro_z_timing # 
-        self.state.timing["run_sum"] += self.state.timing["zs"]
+        self.state.timing['micro_z_timing'] = None # micro_z_timing # 
+        self.state.timing['run_sum'] += self.state.timing['zs']
         
     def transition_x(self):
         # regenerate new vector values, preserving the exact same clustering
@@ -172,14 +172,14 @@ class DPMB():
             self.check_ari_seatbelt(ari_seatbelt,true_zs)
 
             if self.state.verbose:
-                hf.printTS("Done iteration: ", self.transition_count)
-                print "Cycle end score: ",self.state.score
-                print "alpha: ",self.state.alpha
-                print "mean beta: ",self.state.betas.mean()
+                hf.printTS('Done iteration: ', self.transition_count)
+                print 'Cycle end score: ',self.state.score
+                print 'alpha: ',self.state.alpha
+                print 'mean beta: ',self.state.betas.mean()
 
             if self.ari_seatbelt_hit or self.time_seatbelt_hit:
-                return {"ari_seatbelt_hit":self.ari_seatbelt_hit
-                        ,"time_seatbelt_hit":self.time_seatbelt_hit}
+                return {'ari_seatbelt_hit':self.ari_seatbelt_hit
+                        ,'time_seatbelt_hit':self.time_seatbelt_hit}
 
             self.transition_count += 1
 
@@ -188,7 +188,7 @@ class DPMB():
     def check_time_seatbelt(self,time_seatbelt=None,delta_t=0):
         if time_seatbelt is None:
             return self.time_seatbelt_hit
-        self.time_seatbelt_hit = self.state.timing["run_sum"] \
+        self.time_seatbelt_hit = self.state.timing['run_sum'] \
             + delta_t > time_seatbelt
         return self.time_seatbelt_hit
 
@@ -203,15 +203,15 @@ class DPMB():
                               ,verbose_state=False,test_xs=None):
         
         state_dict = {
-            "alpha":self.state.alpha,
-            "betas":self.state.betas.copy(),
-            "score":self.state.score,
-            "num_clusters":len(self.state.cluster_list),
-            "cluster_counts":[len(cluster.vector_list) 
+            'alpha':self.state.alpha,
+            'betas':self.state.betas.copy(),
+            'score':self.state.score,
+            'num_clusters':len(self.state.cluster_list),
+            'cluster_counts':[len(cluster.vector_list) 
                                for cluster in self.state.cluster_list],
-            "timing":self.state.get_timing(),
-            "inf_seed":self.random_state.get_state(),
-            "suffstats":self.state.get_suffstats(),
+            'timing':self.state.get_timing(),
+            'inf_seed':self.random_state.get_state(),
+            'suffstats':self.state.get_suffstats(),
             }
 
         ari = None
@@ -220,11 +220,11 @@ class DPMB():
         state_dict['ari'] = ari
 
         if verbose_state or send_zs:
-            state_dict["zs"] = self.state.getZIndices()
+            state_dict['zs'] = self.state.getZIndices()
         if verbose_state:
-            state_dict["xs"] = self.state.getXValues()
+            state_dict['xs'] = self.state.getXValues()
 
         if test_xs is not None:
             # FIXME : determine if passing mean breaks anything
-            state_dict["test_lls"] = [np.mean(self.state.score_test_set(test_xs))]
+            state_dict['test_lls'] = [np.mean(self.state.score_test_set(test_xs))]
         return state_dict
