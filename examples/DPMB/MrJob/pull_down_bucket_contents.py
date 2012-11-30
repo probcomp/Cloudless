@@ -3,10 +3,11 @@ import os
 import argparse
 #
 import Cloudless.examples.DPMB.s3_helper as s3h
+import Cloudless.examples.DPMB.settings as S
 
 # settings
 bucket_dir_base = 'tiny_image_summaries'
-local_dir_base = '/tmp'
+local_dir_base = S.path.data_dir
 
 # parse args
 parser = argparse.ArgumentParser()
