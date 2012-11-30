@@ -153,4 +153,5 @@ else
     gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
 fi
 
+sudo chown hadoop /mnt
 echo_time "done bootstrap.sh" >> /home/hadoop/bootstrap_progress

@@ -24,6 +24,7 @@ class CloudlessSetup(ClusterSetup):
           for node in nodes:
                log.info("Installing Cloudless on %s" % node.alias)
                #
+               node.ssh.execute('chown sgeadmin /mnt')
                node.ssh.execute('git clone ' + git_repo)
                node.ssh.execute('rm -rf ' + cloudless_dir)
                node.ssh.execute(
