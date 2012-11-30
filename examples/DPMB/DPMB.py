@@ -203,14 +203,15 @@ class DPMB():
                               ,verbose_state=False,test_xs=None):
         
         state_dict = {
-            "alpha":self.state.alpha
-            ,"betas":self.state.betas.copy()
-            ,"score":self.state.score
-            ,"num_clusters":len(self.state.cluster_list)
-            ,"cluster_counts":[len(cluster.vector_list) 
-                               for cluster in self.state.cluster_list]
-            ,"timing":self.state.get_timing()
-            ,"inf_seed":self.random_state.get_state()
+            "alpha":self.state.alpha,
+            "betas":self.state.betas.copy(),
+            "score":self.state.score,
+            "num_clusters":len(self.state.cluster_list),
+            "cluster_counts":[len(cluster.vector_list) 
+                               for cluster in self.state.cluster_list],
+            "timing":self.state.get_timing(),
+            "inf_seed":self.random_state.get_state(),
+            "suffstats":self.state.get_suffstats(),
             }
 
         ari = None
