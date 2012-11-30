@@ -101,7 +101,7 @@ class MRSeedInferer(MRJob):
 
     def init(self, key, run_key):
         start_dt = datetime.datetime.now()
-        master_infer_seed = int(run_key)
+        master_inf_seed = int(run_key)
         num_nodes = self.num_nodes
         run_dir = self.run_dir
         problem_file = self.problem_file
@@ -132,7 +132,7 @@ class MRSeedInferer(MRJob):
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
-                    infer_seed=master_infer_seed,
+                    infer_seed=master_inf_seed,
                     num_iters=0 # no inference, just init
                    )
                 # FIXME: should I pass permute=False here?
@@ -167,7 +167,6 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         # master_inf_seed = summary['inf_seed'] # FIXME: set above so retain?
-        master_inf_seed = master_infer_seed # FIXME: don't switch names, at least not so slightly?
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
