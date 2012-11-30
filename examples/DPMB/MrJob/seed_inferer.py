@@ -105,23 +105,14 @@ class MRSeedInferer(MRJob):
         run_bucket_dir = self.run_bucket_dir
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        if not os.path.isfile(problem_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
+        s3h.verify_problem_local(run_dir, problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
-                resume_full_file = os.path.join(run_full_dir, resume_file)
-                if not os.path.isfile(resume_full_file):
-                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                       local_dir=run_full_dir)
-                    s3.verify_file(resume_file)
-                summary = rf.unpickle(resume_file, dir=run_full_dir)
+                summary = s3h.verify_file_helper(resume_file, run_dir,
+                                                 unpickle=True)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
@@ -228,13 +219,7 @@ class MRSeedInferer(MRJob):
         # FIXME : look to 80MM TinyImages reader
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        h5_full_file = h5.get_h5_name_from_pkl_name(problem_file)
-        if not os.path.isfile(problem_full_file) or not os.path.isfile(h5_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
+        s3h.verify_problem_local(run_dir, problem_file)
         sub_problem_xs = rf.get_xs_subset_from_h5(
             problem_file, x_indices, dir=run_full_dir)
         hf.echo_date('infer(): read problem')
@@ -354,14 +339,8 @@ class MRSeedInferer(MRJob):
         hf.echo_date('canonicalized zs')
         #
         run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        if not os.path.isfile(problem_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
-
-        problem = rf.unpickle(problem_file, dir=run_full_dir)
+        # FIXME: this should not be unpickled when suffstats-only version done
+        problem = s3h.verify_problem_local(run_dir, problem_file, unpickle=True)
         init_x = numpy.array(problem['xs'], dtype=numpy.int32)
         true_zs, test_xs = None, None
         if not postpone_scoring:
