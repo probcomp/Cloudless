@@ -16,7 +16,7 @@ from numpy.random import RandomState
 #
 import DPMB_State as ds
 import pyx_functions as pf
-import Cloudless.examples.DPMB.s3_helper as s3h
+
 
 def transition_single_z(vector,random_state):
     cluster = vector.cluster
@@ -447,20 +447,3 @@ def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha
 def echo_date(in_str, outfile='/tmp/steps'):
     cmd_str = 'echo "`date` :: ' + in_str + '" >> ' + outfile
     os.system(cmd_str)
-
-def verify_file_helper(filename, bucket_dir_suffix,
-                       unpickle=False, write_s3=False):
-    local_dir = os.path.join(data_dir, bucket_dir_suffix)
-    bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
-    s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
-    s3.verify_file(filename, write_s3=write_s3)
-    pkl_contents = None
-    if unpickle:
-        pkl_contents = rf.unpickle(filename, dir=local_dir)
-    return pkl_contents
-
-def verify_problem_local(bucket_dir_suffix):
-    verify_file_helper('problem.h5', bucket_dir_suffix, unpickle=False)
-    problem = verify_file_helper('problem.pkl.gz', bucket_dir_suffix,
-                                 unpickle=True)
-    return problem 

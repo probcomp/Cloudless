@@ -5,7 +5,6 @@ import argparse
 import boto
 #
 import Cloudless.examples.DPMB.settings as settings
-reload(settings)
 import Cloudless.examples.DPMB.helper_functions as hf
 
 class S3_helper():
@@ -79,6 +78,23 @@ def ensure_dir(dir):
             os.makedirs(dir)
         except Exception, e:
             pass
+
+def verify_file_helper(filename, bucket_dir_suffix,
+                       unpickle=False, write_s3=False):
+    local_dir = os.path.join(data_dir, bucket_dir_suffix)
+    bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
+    s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
+    s3.verify_file(filename, write_s3=write_s3)
+    pkl_contents = None
+    if unpickle:
+        pkl_contents = rf.unpickle(filename, dir=local_dir)
+    return pkl_contents
+
+def verify_problem_local(bucket_dir_suffix):
+    verify_file_helper('problem.h5', bucket_dir_suffix, unpickle=False)
+    problem = verify_file_helper('problem.pkl.gz', bucket_dir_suffix,
+                                 unpickle=True)
+    return problem 
 
 def main():
     parser = argparse.ArgumentParser('s3_helper')

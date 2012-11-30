@@ -99,7 +99,7 @@ def get_queue_helper(queue_or_queuename):
 
 def process_file_queue(queue_or_queuename):
     queue, queuename = get_queue_helper(queue_or_queuename)
-    problem = hf.verify_problem_local(queuename)
+    problem = s3h.verify_problem_local(queuename)
     filename_tuple_generator = get_queue_iterator(queuename)
     process_summary_helper = partial(
         process_summary, problem=problem, bucket_dir_suffix=queuename)
@@ -117,7 +117,7 @@ def process_file_queue(queue_or_queuename):
 def process_summary(summary_tuple, problem, bucket_dir_suffix):
     summary_filename, message_deleter = summary_tuple
     hf.echo_date(summary_filename)
-    summary = hf.verify_file_helper(summary_filename, bucket_dir_suffix,
+    summary = s3h.verify_file_helper(summary_filename, bucket_dir_suffix,
                                  unpickle=True)
     scored_summary = cs.score_summary(summary, problem)
     # must read in problem : will be building a state, may need m2.2xlarge
@@ -129,7 +129,7 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join(data_dir, bucket_dir_suffix)
     rf.pickle(score_dict, score_filename, dir=local_dir)
-    hf.verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
+    s3h.verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
     message_deleter()
     return summary_filename
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     num_workers = args.num_workers
     if is_controller:
         hf.echo_date('is_controller')
-        hf.verify_problem_local(bucket_dir_suffix)
+        s3h.verify_problem_local(bucket_dir_suffix)
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
