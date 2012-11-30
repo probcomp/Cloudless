@@ -91,11 +91,12 @@ def verify_file_helper(filename, bucket_dir_suffix,
         pkl_contents = rf.unpickle(filename, dir=local_dir)
     return pkl_contents
 
-def verify_problem_local(bucket_dir_suffix, problem_filename='problem.pkl.gz'):
+def verify_problem_local(bucket_dir_suffix, problem_filename='problem.pkl.gz',
+                         unpickle=False):
     h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
     verify_file_helper(h5_filename, bucket_dir_suffix, unpickle=False)
     problem = verify_file_helper(problem_filename, bucket_dir_suffix,
-                                 unpickle=True)
+                                 unpickle=unpickle)
     return problem 
 
 def main():
