@@ -6,6 +6,7 @@ import boto
 #
 import Cloudless.examples.DPMB.settings as settings
 import Cloudless.examples.DPMB.helper_functions as hf
+import Cloudless.examples.DPMB.h5_functions as h5
 
 class S3_helper():
 
@@ -90,9 +91,10 @@ def verify_file_helper(filename, bucket_dir_suffix,
         pkl_contents = rf.unpickle(filename, dir=local_dir)
     return pkl_contents
 
-def verify_problem_local(bucket_dir_suffix):
-    verify_file_helper('problem.h5', bucket_dir_suffix, unpickle=False)
-    problem = verify_file_helper('problem.pkl.gz', bucket_dir_suffix,
+def verify_problem_local(bucket_dir_suffix, problem_filename='problem.pkl.gz'):
+    h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
+    verify_file_helper(h5_filename, bucket_dir_suffix, unpickle=False)
+    problem = verify_file_helper(problem_filename, bucket_dir_suffix,
                                  unpickle=True)
     return problem 
 
