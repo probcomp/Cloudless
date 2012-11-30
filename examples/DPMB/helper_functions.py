@@ -350,7 +350,7 @@ def get_matched_subset(list_1, list_2, seed, count):
     num_vectors = len(list_1)
     subset_indices = random_state.permutation(xrange(num_vectors))[:count]
     # subset_indices = random_state.randint(low=0, high=num_vectors, count)
-    return list_1[subset_indices], list_2[subset_indices]
+    return numpy.array(list_1)[subset_indices], numpy.array(list_2)[subset_indices]
 
 def calc_ari(group_idx_list_1, group_idx_list_2, seed=0, count=10000):
     ##https://en.wikipedia.org/wiki/Rand_index#The_contingency_table
