@@ -330,6 +330,16 @@ class DPMB_State():
             list_of_x_indices.append(x_indices)
         return list_of_x_indices
 
+    def get_suffstats(self):
+        cluster_suffstats = [
+            (len(cluster.vector_list), cluster.column_sums)
+            for cluster in self.cluster_list
+            ]
+        num_vectors = len(self.vector_list)
+        num_clusters = len(self.cluster_list)
+        suffstats = (num_vectors, num_clusters, cluster_suffstats)
+        return suffstats
+
     def removeAlpha(self,lnPdf):
         scoreDelta = lnPdf(self.alpha)
         self.score += -scoreDelta
