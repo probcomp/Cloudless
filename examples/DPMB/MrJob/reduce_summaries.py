@@ -45,8 +45,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('')
     parser.add_argument('--top_dir', default='.', type=str)
     parser.add_argument('--data_dir_prefix', default='programmatic_', type=str)
+    parser.add_argument('--pkl_name', default='reduced_summaries_dict.pkl.gz',
+                        type=str)
+
     args = parser.parse_args()
     top_dir = args.top_dir
     data_dir_prefix = args.data_dir_prefix
-
+    pkl_name = args.pkl_name
+    #
     reduced_summaries_dict = reduce_summaries(top_dir, data_dir_prefix)
+    rf.pickle(reduced_summaries_dict, pkl_name)
