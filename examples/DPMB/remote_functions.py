@@ -17,25 +17,15 @@ from numpy import array
 from scipy.stats import linregress
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.h5_functions as h5
-reload(h5)
 import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 import Cloudless.examples.DPMB.PDPMB_State as pds
-reload(pds)
 import Cloudless.examples.DPMB.PDPMB as pdm
-reload(pdm)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.s3_helper as s3h
-reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
-reload(settings)
 import pyx_functions as pf
-reload(pf)
 import Cloudless
-reload(Cloudless)
 
 
 # takes in a dataset spec
