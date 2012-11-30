@@ -49,7 +49,7 @@ def deleter_factory(queue, message):
         hf.echo_date('deleter_factory: ' + str(message))
         queue.delete_message(message)
     return deleter
-def get_queue_iterator(queue_or_queuename, visibility_timeout=1800):
+def get_queue_iterator(queue_or_queuename, visibility_timeout=600):
     queue, queuename = get_queue_helper(queue_or_queuename)
     message = queue.read(visibility_timeout=visibility_timeout)
     while message is not None:
