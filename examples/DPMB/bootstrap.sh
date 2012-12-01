@@ -155,3 +155,6 @@ fi
 
 sudo chown hadoop /mnt
 echo_time "done bootstrap.sh" >> /home/hadoop/bootstrap_progress
+
+# hadoop_full_path="s3://${bucketname}/tiny_image_summaries/tiny_images_1MM/"
+# hadoop fs -get "${hadoop_full_path}" "/tmp/"
