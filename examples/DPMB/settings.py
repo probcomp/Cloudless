@@ -24,7 +24,7 @@ class path():
         env.is_aws = True
     #
     # data_dir = os.path.join(base_dir,"Data")
-    data_dir = '/tmp/'
+    data_dir = '/mnt/'
     output_dir = os.path.join(base_dir,"Output")
 
 class files():
