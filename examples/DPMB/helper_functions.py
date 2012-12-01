@@ -447,3 +447,16 @@ def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha
 def echo_date(in_str, outfile='/tmp/steps'):
     cmd_str = 'echo "`date` :: ' + in_str + '" >> ' + outfile
     os.system(cmd_str)
+
+def consolidate_suffstats(suffstats_list):
+    num_vectors = sum([suffstats.num_vectors for suffstats in suffstats_list])
+    num_clusters = sum([suffstats.num_clusters for suffstats in suffstats_list])
+    list_of_cluster_suffstats = []
+    list_of_x_indices = []
+    for suffstats in suffstats_list:
+        list_of_cluster_suffstats.extend(suffstats.list_of_cluster_suffstats)
+        list_of_x_indices.append(suffstats.list_of_x_indices)
+    master_suffstats = ds.suffstats_tuple(num_vectors, num_clusters,
+                                          list_of_cluster_suffstats,
+                                          list_of_x_indices)
+    return master_suffstats
