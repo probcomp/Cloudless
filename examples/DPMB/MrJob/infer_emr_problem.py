@@ -57,21 +57,24 @@ s3h.ensure_dir(os.path.join(data_dir, run_dir))
 seed_full_filename = os.path.join(data_dir, run_dir, seed_filename)
 os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
+data_dir = S.path.data_dir
 create_hadoop_get = lambda run_dir, filename: "".join([
         "/home/hadoop/bin/hadoop fs -get s3://mitpcp-dpmb/tiny_image_summaries/",
-        run_dir, "/", filename, " /tmp/", run_dir, "/"])
+        run_dir, "/", filename, " ", data_dir, "/", run_dir, "/"])
 here_cmd = 'echo "`date`: pulled down ' + run_dir + '" >> /tmp/steps'
+conf_str='printf "runners:\n  local:\n    base_tmp_dir: /mnt/\n" > ~/.mrjob.conf'
 hadoop_cmds = [
-    'mkdir /tmp/' + run_dir,
+    'mkdir ' + os.path.join(data_dir, run_dir),
     create_hadoop_get(run_dir, "problem.h5"),
     create_hadoop_get(run_dir, "problem.pkl.gz"),
     here_cmd,
+    conf_str,
     ]
 hadoop_cmd = '; '.join(hadoop_cmds)
 
 # helper functions
 def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
-    emr_args = ['-r', 'emr', '--verbose']
+    emr_args = ['-r', 'emr', '--verbose', '--jobconf', 'base_tmp_dir=' + data_dir]
     if push_to_s3:
         emr_args.extend(['--push_to_s3'])
     if job_flow_id is not None:
