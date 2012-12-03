@@ -26,14 +26,15 @@ reload(pu)
 
 
 # helper functions
-is_summary = lambda x : x[:8] == 'summary_'
+is_summary = lambda x : x.startswith('summary_')
+is_score = lambda x : x.startswith('score_')
 split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
 
 default_init_filename = S.files.gibbs_init_filename
 def get_summary_tuples(data_dir, init_filename=default_init_filename):
     data_files = os.listdir(data_dir)
-    summary_files = filter(is_summary,data_files)
+    summary_files = filter(is_score,data_files)
     #
     init_full_filename = os.path.join(data_dir, init_filename)
     defaultfactory = list
