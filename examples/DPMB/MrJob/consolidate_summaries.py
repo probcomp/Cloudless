@@ -249,7 +249,7 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
 
 def score_summary(summary, problem):
     # pull out parameters
-    true_zs = problem['true_zs']
+    true_zs = problem.get('true_zs', None)
     test_xs = problem['test_xs']
     init_x = problem['xs']
     num_rows = len(init_x)
@@ -344,10 +344,10 @@ def plot_summaries(summaries_dict, problem=None,
     fh_list = []
     gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
-        gen_test_lls = numpy.mean(problem['test_lls'])
-        gen_score = problem['gen_score']
-        gen_beta = problem['beta_d']
-        true_num_clusters = problem['num_clusters']
+        gen_test_lls = numpy.mean(problem.get('test_lls', [numpy.nan]))
+        gen_score = problem.get('gen_score', None)
+        gen_beta = problem.get('beta_d', None)
+        true_num_clusters = problem.get('num_clusters', None)
 
     figname = 'test_lls.pdf'
     plot_tuples = [

@@ -143,21 +143,23 @@ class MRSeedInferer(MRJob):
                 summary = rf.infer(
                     run_spec, problem, init_save_str=init_save_str)[-1]
                 problem_hexdigest = get_hexdigest(problem)
+                # FIXME : infer will pickle over this
+                if gibbs_init_file is None:
+                    gibbs_init_file = create_pickle_file_str(
+                        num_nodes, run_key, str(-1), hypers_every_N)
+                # FIXME: should only pickle if it wasn't read
+                rf.pickle(summary, gibbs_init_file, dir=run_full_dir)
+                if self.push_to_s3:
+                    s3 = s3h.S3_helper(
+                        bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+                    s3.put_s3(gibbs_init_file)
+
         summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'].update({
             'start_time':start_dt,
             'infer_problem_delta_t':init_resume_timer.elapsed_secs,
             })
         #
-        # FIXME : infer will pickle over this
-        if gibbs_init_file is None:
-            gibbs_init_file = create_pickle_file_str(num_nodes, run_key, str(-1),
-                                                     hypers_every_N)
-        # FIXME: should only pickle if it wasn't read
-        rf.pickle(summary, gibbs_init_file, dir=run_full_dir)
-        if self.push_to_s3:
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.put_s3(gibbs_init_file)
         #
         # pull out the values to pass on
         list_of_x_indices = summary.get('list_of_x_indices', None)
