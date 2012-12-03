@@ -39,7 +39,8 @@ def reorder_per_cifar(image_str_data):
 def save_image(image_str_data, image_name, dir='', im_type='png'):
     image = Image.fromstring('RGB', (sx,sx), image_str_data)
     image = image.transpose(Image.ROTATE_270)
-    image.save(str(image_name) + '.' + im_type, im_type)
+    image_full_name = os.path.join(dir, str(image_name) + '.' + im_type)
+    image.save(image_full_name, im_type)
     
 def read_images(n_images,seed=0,image_indices=None,
                 save_images=False,per_cifar=True, return_images_for_rendering=False):
