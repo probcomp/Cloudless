@@ -56,12 +56,22 @@ def read_tuple(in_tuple):
     summary_full_filename, iter_num = in_tuple
     dir, summary_filename = os.path.split(summary_full_filename)
     score_filename = get_score_name(summary_filename)
-    summary = rf.unpickle(summary_filename, dir=dir)
-    score_dict = rf.unpickle(score_filename, dir=dir)
-    for field in ['test_lls', 'ari', 'score']:
-        value = summary.get(field, None)
-        if value is None:
-            summary[field] = score_dict.get(field, None)
+    # summary = rf.unpickle(summary_filename, dir=dir)
+    # score_dict = rf.unpickle(score_filename, dir=dir)
+    # for field in ['test_lls', 'ari', 'score']:
+    #     value = summary.get(field, None)
+    #     if value is None:
+    #         summary[field] = score_dict.get(field, None)
+    summary = rf.unpickle(score_filename, dir=dir)
+    summary = dict(
+        alpha=summary['alpha'],
+        betas=summary['betas'],
+        num_clusters=summary['num_clusters'],
+        ari=summary['ari'],
+        score=summary['score'],
+        test_lls=summary['test_lls'],
+        timing=summary['timing'],
+        )
     return summary, iter_num
 #
 def score_tuple(in_tuple):
