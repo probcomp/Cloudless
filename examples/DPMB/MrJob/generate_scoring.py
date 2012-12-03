@@ -140,6 +140,10 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
         ari=scored_summary['ari'],
         score=scored_summary['score'],
         test_lls=scored_summary['test_lls'],
+        alpha=summary['alpha'],
+        betas=summary['betas'],
+        num_clusters=summary['num_clusters'],
+        timing=summary['timing'],
         )
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join(data_dir, bucket_dir_suffix)
