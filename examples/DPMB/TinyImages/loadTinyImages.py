@@ -6,7 +6,7 @@ import numpy
 #
 
 
-filename = '/media/VonNeumann/tiny_images.bin'
+images_full_filename = '/media/VonNeumann/tiny_images.bin'
 sx = 32
 num_channels = 3
 nbytesPerChannel = sx*sx
@@ -36,13 +36,19 @@ def reorder_per_cifar(image_str_data):
         image_data_reordered.extend(current_color_reordered)
     return numpy.array(image_data_reordered)
 
+def save_image(image_str_data, image_name, dir='', im_type='png'):
+    image = Image.fromstring('RGB', (sx,sx), image_str_data)
+    image = image.transpose(Image.ROTATE_270)
+    image.save(str(image_name) + '.' + im_type, im_type)
+    
 def read_images(n_images,seed=0,image_indices=None,
-                save_images=False,per_cifar=True):
+                save_images=False,per_cifar=True, return_images_for_rendering=False):
     if image_indices is None:
         random.seed(seed)
         image_indices = random.sample(xrange(total_num_images),n_images)
     image_list = [None for x in image_indices]
-    with open(filename) as fh:
+    image_for_rendering_list = [None for x in image_indices]
+    with open(images_full_filename) as fh:
         arg_indices = numpy.argsort(image_indices)
         prior_index = -1
         for list_idx in arg_indices:
@@ -56,19 +62,21 @@ def read_images(n_images,seed=0,image_indices=None,
             raw_image_int_data = [ord(x) for x in raw_image_str_data]
             # if you don't do this, the data is different as determined by min,max
             image_str_data = reorder_image_bytes(raw_image_str_data)
+            image_for_rendering_list[list_idx] = image_str_data
             #
             if save_images:
-                image = Image.fromstring('RGB',(sx,sx),image_str_data).transpose(
-                    Image.ROTATE_270)
-                image.save(str(image_idx)+'.png','PNG')
+                save_image(image_str_data, str(image_idx))
             #
             data = reorder_per_cifar(image_str_data) \
                 if per_cifar else image_str_data
             image_list[list_idx] = data
             prior_index = image_idx
-    return image_list,image_indices
+    if return_images_for_rendering:
+        return image_list, image_indices, image_for_rendering_list
+    else:
+        return image_list, image_indices
 
-def main():
+if __name__ == '__main__':
     import csv
     import argparse
     import random
@@ -120,9 +128,6 @@ def main():
         except AssertionError,e:
             'Failed on cifar index: ' + str(cifar_indices[index])
             'Corresponding tiny_images index: ' + str(tiny_image_indices[index])
-
-if __name__ == '__main__':
-    main()
 
 # import Cloudless.examples.DPMB.TinyImages.loadTinyImage as lti
 # import Cloudless.examples.DPMB.remote_functions as rf
