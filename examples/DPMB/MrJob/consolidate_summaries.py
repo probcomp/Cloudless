@@ -239,7 +239,7 @@ def plot_cluster_counts(summary, new_fig=True, log_x=False):
 
 def score_summary(summary, problem):
     # pull out parameters
-    true_zs = problem['true_zs']
+    true_zs = problem.get('true_zs', None)
     test_xs = problem['test_xs']
     init_x = problem['xs']
     num_rows = len(init_x)
