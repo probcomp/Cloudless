@@ -149,20 +149,25 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
     return summary_filename
 
 bucket_dir_suffix = 'programmatic_mrjob_a36e808195'
-# queue = create_file_queue(bucket_dir_suffix)
-# temp = process_file_queue(bucket_dir_suffix)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('bucket_dir_suffix', type=str)
     parser.add_argument('--is_controller', action='store_true')
     parser.add_argument('--num_workers', type=int, default=cpu_count())
+    parser.add_argument('--do_create_queue', action='store_true')
     args = parser.parse_args()
+    #
     bucket_dir_suffix = args.bucket_dir_suffix
     is_controller = args.is_controller
     num_workers = args.num_workers
+    do_create_queue = args.do_create_queue
+    #
     if is_controller:
         hf.echo_date('is_controller')
         verify_problem_local(bucket_dir_suffix)
+        sqs = boto.connect_sqs()
+        if do_create_queue or not sqs.get_queue(bucket_dir_suffix):
+            create_file_queue(bucket_dir_suffix)
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
