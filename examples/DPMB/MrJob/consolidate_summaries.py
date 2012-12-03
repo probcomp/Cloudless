@@ -32,9 +32,9 @@ split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
 
 default_init_filename = S.files.gibbs_init_filename
-def get_summary_tuples(data_dir, init_filename=default_init_filename):
+def get_summary_tuples(data_dir, init_filename=default_init_filename, filter_func=is_score):
     data_files = os.listdir(data_dir)
-    summary_files = filter(is_score,data_files)
+    summary_files = filter(filter_func,data_files)
     #
     init_full_filename = os.path.join(data_dir, init_filename)
     defaultfactory = list
@@ -56,14 +56,14 @@ get_score_name = lambda summary_name: re.sub('^summary_', 'score_', summary_name
 def read_tuple(in_tuple):
     summary_full_filename, iter_num = in_tuple
     dir, summary_filename = os.path.split(summary_full_filename)
-    score_filename = get_score_name(summary_filename)
+    # score_filename = get_score_name(summary_filename)
     # summary = rf.unpickle(summary_filename, dir=dir)
     # score_dict = rf.unpickle(score_filename, dir=dir)
     # for field in ['test_lls', 'ari', 'score']:
     #     value = summary.get(field, None)
     #     if value is None:
     #         summary[field] = score_dict.get(field, None)
-    summary = rf.unpickle(score_filename, dir=dir)
+    summary = rf.unpickle(summary_filename, dir=dir)
     summary = dict(
         alpha=summary['alpha'],
         betas=summary['betas'],
