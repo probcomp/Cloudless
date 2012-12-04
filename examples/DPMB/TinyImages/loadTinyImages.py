@@ -1,4 +1,5 @@
 #!python
+import os
 from PIL import Image
 import random
 #
