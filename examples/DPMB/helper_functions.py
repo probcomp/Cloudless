@@ -537,3 +537,17 @@ def gibbs_on_superclusters(lol_of_x_indices, mus, alpha, seed):
     lol_of_x_indices_out, random_state = \
         supercluster_sampler.gibbs_sample_all_clusters(seed)
     return lol_of_x_indices_out, random_state
+
+def crp_init_superclusters(alpha, mus, seed, n_draws):
+    random_state = generate_random_state(seed)
+    super_seed = random_state.randint(sys.maxint)
+    super_draws, super_counts = pf.sample_from_dirichlet_multinomial(
+        alpha, mus, seed, n_draws)
+    super_list = []
+    for mu, super_count in zip(mus, super_counts):
+        child_alpha = mu * alpha
+        child_seed = random_state.randint(sys.maxint)
+        child_draws, child_counts = pf.sample_from_crp(
+            child_alpha, child_seed, super_count)
+        super_list.append(child_counts)
+    return super_list
