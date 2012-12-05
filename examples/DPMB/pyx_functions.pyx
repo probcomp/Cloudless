@@ -94,6 +94,31 @@ def sample_from_crp(
     return draws, counts
 
 @cython.boundscheck(False)
+def sample_from_dirichlet_multinomial(
+    np.float64_t alpha,
+    np.ndarray[np.float64_t,ndim=1] mus,
+    np.int_t random_seed,
+    np.int_t num_draws,
+    ):
+    #
+    random_state = np.random.RandomState(random_seed)
+    counts = [0] * len(mus)
+    cdef np.int_t sum_counts_int = 0
+    draws = []
+    #
+    for draw_idx in xrange(num_draws):
+        random_draw = random_state.uniform()
+        draw = sample_unnormalized_with_partition(
+	    counts + (mus * alpha),
+            sum_counts_int + alpha,
+            random_draw,
+            )
+        draws.append(draw)
+        counts[draw] += 1
+        sum_counts_int += 1
+    return draws, counts
+
+@cython.boundscheck(False)
 def calculate_cluster_conditional(state,vector,randv):
     ##vector should be unassigned
 
