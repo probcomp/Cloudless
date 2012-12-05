@@ -449,3 +449,99 @@ def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha
 def echo_date(in_str, outfile='/tmp/steps'):
     cmd_str = 'echo "`date` :: ' + in_str + '" >> ' + outfile
     os.system(cmd_str)
+
+def gibbs_on_superclusters(lol_of_x_indices, mus, alpha, seed):
+    class _cluster():
+        def __init__(self, weight, x_indices, supercluster=None):
+            self.weight = weight
+            self.x_indices = x_indices
+            self.supercluster = supercluster
+        def remove_self(self):
+            supercluster = self.supercluster
+            supercluster.remove(self)
+    class _supercluster():
+        def __init__(self, list_of_x_indices, mu):
+            self.cluster_set = set()
+            self.weight = 0
+            self.mu = mu
+            for x_indices in list_of_x_indices:
+                weight = len(x_indices)
+                cluster = _cluster(weight, x_indices)
+                self.add(cluster)
+        def remove(self, cluster):
+            self.cluster_set.remove(cluster)
+            self.weight -= cluster.weight
+            cluster.supercluster = None
+        def add(self, cluster):
+            self.cluster_set.add(cluster)
+            self.weight += cluster.weight
+            cluster.supercluster = self
+        def get_list_of_x_indices(self):
+            return [cluster.x_indices for cluster in self.cluster_set]
+    class _supercluster_sampler():
+        def __init__(self, list_of_list_of_x_indices, mus, alpha):
+            self.supercluster_list = [
+                _supercluster(list_of_x_indices, mu)
+                for list_of_x_indices, mu in zip(lol_of_x_indices, mus)
+                ]
+            self.alpha = alpha
+            self.sum_weights = sum([
+                    supercluster.weight
+                    for supercluster in self.supercluster_list
+                    ])
+        def get_cluster_list(self):
+            supercluster_list = self.supercluster_list
+            #
+            cluster_list = []
+            for supercluster in supercluster_list:
+                cluster_list.extend(list(supercluster.cluster_set))
+            return cluster_list
+        def remove(self, cluster):
+            supercluster = cluster.supercluster
+            supercluster.remove(cluster)
+            self.sum_weights -= cluster.weight
+        def add(self, cluster, supercluster):
+            supercluster.add(cluster)
+            self.sum_weights += cluster.weight
+        def get_die_weights(self):
+            alpha = self.alpha
+            sum_weights = self.sum_weights
+            supercluster_list = self.supercluster_list
+            #
+            denominator = alpha + sum_weights
+            die_weights = [
+                (alpha * supercluster.mu + supercluster.weight) / denominator
+                for supercluster in supercluster_list
+                ]
+            return die_weights
+        def gibbs_sample_cluster(self, cluster, rand_draw):
+            supercluster_list = self.supercluster_list
+            #
+            self.remove(cluster)
+            die_weights = self.get_die_weights()
+            which_supercluster_idx = pf.sample_unnormalized_with_partition(
+                numpy.array(die_weights), 1.0, rand_draw)
+            which_supercluster = supercluster_list[which_supercluster_idx]
+            import pdb
+            print die_weights
+            print which_supercluster_idx
+            pdb.set_trace()
+            self.add(cluster, which_supercluster)
+        def get_lol_of_x_indices(self):
+            return [
+                supercluster.get_list_of_x_indices()
+                for supercluster in self.supercluster_list
+                ]
+        def gibbs_sample_all_clusters(self, seed):
+            random_state = generate_random_state(seed)
+            cluster_list = self.get_cluster_list()
+            cluster_list = random_state.permutation(cluster_list)            
+            for cluster in cluster_list:
+                rand_draw = random_state.uniform()
+                supercluster_sampler.gibbs_sample_cluster(cluster, rand_draw)
+            return self.get_lol_of_x_indices(), random_state
+    #
+    supercluster_sampler = _supercluster_sampler(lol_of_x_indices, mus, alpha)
+    lol_of_x_indices_out, random_state = \
+        supercluster_sampler.gibbs_sample_all_clusters(seed)
+    return lol_of_x_indices_out, random_state
