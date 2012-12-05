@@ -9,16 +9,17 @@ def makedirs(dir):
     except Exception,e:
         pass
 
-def render_problem_image_indices(problem_image_indices, problem, dir=''):
+def render_problem_image_indices(problem_image_indices, problem, dir=None):
     original_image_indices = [
         problem['train_indices'][problem_image_idx]
         for problem_image_idx in problem_image_indices
         ]
     image_list, image_indices, image_for_rendering_list = lti.read_images(
         0,image_indices=original_image_indices,return_images_for_rendering=True)
-    for image_idx_idx, image_for_rendering in enumerate(image_for_rendering_list):
-        original_image_index = original_image_indices[image_idx_idx]
-        lti.save_image(image_for_rendering, original_image_index, dir=dir)
+    if dir:
+        for image_idx_idx, image_for_rendering in enumerate(image_for_rendering_list):
+            original_image_index = original_image_indices[image_idx_idx]
+            lti.save_image(image_for_rendering, original_image_index, dir=dir)
     return image_list, image_indices, image_for_rendering_list
 
 def gen_cluster_images(which_cluster):
