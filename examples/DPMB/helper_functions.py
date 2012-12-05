@@ -543,11 +543,18 @@ def crp_init_superclusters(alpha, mus, seed, n_draws):
     super_seed = random_state.randint(sys.maxint)
     super_draws, super_counts = pf.sample_from_dirichlet_multinomial(
         alpha, mus, seed, n_draws)
-    super_list = []
-    for mu, super_count in zip(mus, super_counts):
+    list_of_super_indices = [[] for super_count in super_counts]
+    for x_index, super_draw in enumerate(super_draws):
+        list_of_super_indices[super_draw].append(x_index)
+    #
+    list_of_list_of_x_indices = []
+    for mu, super_count, super_indices in zip(mus, super_counts, list_of_super_indices):
         child_alpha = mu * alpha
         child_seed = random_state.randint(sys.maxint)
         child_draws, child_counts = pf.sample_from_crp(
             child_alpha, child_seed, super_count)
-        super_list.append(child_counts)
-    return super_list
+        list_of_x_indices = [[] for child_count in child_counts]
+        for x_index, child_draw in zip(super_indices, child_draws):
+            list_of_x_indices[child_draw].append(x_index)
+        list_of_list_of_x_indices.append(list_of_x_indices)
+    return list_of_list_of_x_indices
