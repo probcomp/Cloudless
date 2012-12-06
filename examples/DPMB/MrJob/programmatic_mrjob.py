@@ -111,7 +111,7 @@ if not os.path.isfile(gibbs_init_full_filename):
     gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
     init_num_iters = 0
     init_num_nodes = 1
-    gibbs_init_args.extend(create_args(init_num_iters, init_num_iters))
+    gibbs_init_args.extend(create_args(init_num_iters, init_num_nodes))
     mr_job = si.MRSeedInferer(args=gibbs_init_args)
     with mr_job.make_runner() as runner:
         runner.run()
