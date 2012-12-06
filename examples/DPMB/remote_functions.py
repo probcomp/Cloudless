@@ -17,25 +17,15 @@ from numpy import array
 from scipy.stats import linregress
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.h5_functions as h5
-reload(h5)
 import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 import Cloudless.examples.DPMB.PDPMB_State as pds
-reload(pds)
 import Cloudless.examples.DPMB.PDPMB as pdm
-reload(pdm)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.s3_helper as s3h
-reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
-reload(settings)
 import pyx_functions as pf
-reload(pf)
 import Cloudless
-reload(Cloudless)
 
 
 # takes in a dataset spec
@@ -117,19 +107,11 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
     xs, zs, test_xs, test_lls, state = None, None, None, None, None
     data_dir = dataset_spec.get('data_dir', settings.data_dir)
     if "pkl_file" in dataset_spec:
-        # make sure the file is local
-        pkl_file = dataset_spec['pkl_file']
-        pkl_full_file = os.path.join(data_dir, pkl_file)
         permute = False # presume data is already permuted
                         # repermuting now makes tracking ground truth hard
-        if not os.path.isfile(pkl_full_file):
-            bucket_dir = settings.s3.problem_bucket_dir
-            s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=data_dir)
-            have_file = s3.verify_file(pkl_file)
-            if not have_file:
-                exception_str = 'gen_problem couldn\'t get pkl_file: ' + pkl_file
-                raise Exception(exception_str)
-        pkl_data = unpickle(pkl_full_file)
+        # make sure the file is local
+        pkl_file = dataset_spec['pkl_file']
+        pkl_data = s3h.verify_file_helper(pkl_file, '', unpickle=True)
         # set problem variables
         xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
@@ -292,7 +274,8 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
     print "saved initialization"
     #
     last_valid_zs = transitioner.state.getZIndices()
-    last_valid_list_of_x_indices = transitioner.state.get_list_of_x_indices()
+    last_valid_list_of_x_indices = \
+        transitioner.state.get_suffstats().list_of_x_indices
     last_valid_seed = transitioner.random_state.get_state()
     decanon_indices = transitioner.state.get_decanonicalizing_indices()
     hf.echo_date('rf.infer(): starting inference')
@@ -323,7 +306,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
         if hasattr(transitioner.state,"getZIndices"):
             last_valid_zs = transitioner.state.getZIndices()
             last_valid_list_of_x_indices = \
-                transitioner.state.get_list_of_x_indices()
+                transitioner.state.get_suffstats().list_of_x_indices
             last_valid_seed = transitioner.random_state.get_state()
             decanon_indices = transitioner.state.get_decanonicalizing_indices()
         iter_end_dt = datetime.datetime.now()
