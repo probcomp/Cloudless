@@ -95,7 +95,7 @@ os.system('printf "' + str(infer_seed) + '\n" > ' + seed_full_filename)
 
 # helper functions
 create_args = lambda num_iters, num_nodes: [
-    '--jobconf', 'mapred.map.tasks=' + str(num_nodes + 1),
+    '--jobconf', 'mapred.map.tasks=' + str(int(1.35 * num_nodes) + 1),
     # may need to specify mapred.map.tasks greater than num_nodes
     '--num-iters', str(num_iters),
     '--num-iters-per-step', str(num_iters_per_step),
