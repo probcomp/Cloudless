@@ -9,19 +9,13 @@ from mrjob.job import MRJob
 from mrjob.protocol import PickleProtocol, RawValueProtocol
 #
 import Cloudless.examples.DPMB.remote_functions as rf
-reload(rf)
+import Cloudless.examples.DPMB.pyx_functions as pf
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 import Cloudless.examples.DPMB.h5_functions as h5
-reload(h5)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.s3_helper as s3h
-reload(s3h)
 import Cloudless.examples.DPMB.settings as settings
-reload(settings)
 
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
@@ -47,12 +41,12 @@ def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
 get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
 master_state_tuple = namedtuple(
     'master_state_tuple',
-    ' list_of_list_of_x_indices last_valid_zs '
+    ' master_suffstats list_of_list_of_x_indices last_valid_zs '
     ' master_alpha betas master_inf_seed iter_num '
     )
 child_state_tuple = namedtuple(
     'child_state_tuple',
-    'list_of_x_indices x_indices zs '
+    ' child_suffstats list_of_x_indices x_indices zs '
     ' master_alpha betas master_inf_seed iter_num '
     ' child_inf_seed child_gen_seed child_counter '
     ' iter_start_dt '
@@ -101,7 +95,7 @@ class MRSeedInferer(MRJob):
 
     def init(self, key, run_key):
         start_dt = datetime.datetime.now()
-        master_infer_seed = int(run_key)
+        master_inf_seed = int(run_key)
         num_nodes = self.num_nodes
         run_dir = self.run_dir
         problem_file = self.problem_file
@@ -112,27 +106,18 @@ class MRSeedInferer(MRJob):
         run_bucket_dir = self.run_bucket_dir
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        if not os.path.isfile(problem_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
+        s3h.verify_problem_local(run_dir, problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
-                resume_full_file = os.path.join(run_full_dir, resume_file)
-                if not os.path.isfile(resume_full_file):
-                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                       local_dir=run_full_dir)
-                    s3.verify_file(resume_file)
-                summary = rf.unpickle(resume_file, dir=run_full_dir)
+                summary = sh3.verify_file_helper(resume_file, run_dir,
+                                                 unpickle=True)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
-                    infer_seed=master_infer_seed,
+                    infer_seed=master_inf_seed,
                     num_iters=0 # no inference, just init
                    )
                 # FIXME: should I pass permute=False here?
@@ -168,11 +153,11 @@ class MRSeedInferer(MRJob):
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
         master_alpha = summary['alpha']
         betas = summary['betas']
-        # master_inf_seed = summary['inf_seed'] # FIXME: set above so retain?
-        master_inf_seed = master_infer_seed # FIXME: don't switch names, at least not so slightly?
+        master_suffstats = summary['suffstats']
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
-            list_of_x_indices, last_valid_zs, master_alpha, betas,
+            master_suffstats, list_of_list_of_x_indices, last_valid_zs,
+            master_alpha, betas,
             master_inf_seed, iter_num,
             )
         yield run_key, master_state
@@ -187,7 +172,11 @@ class MRSeedInferer(MRJob):
         master_inf_seed = master_state.master_inf_seed
         iter_num = master_state.iter_num
         #
+        mus = numpy.repeat(1./num_nodes, num_nodes)
         master_inf_seed = hf.generate_random_state(master_inf_seed)
+        # GIBBS SAMPLE SUPERCLUSTERS WITH DIRICHLET MULTINOMIAL
+        lol_of_x_indices, master_inf_seed = hf.gibbs_on_superclusters(
+            lol_of_x_indices, mus, master_alpha, master_inf_seed)
         #
         # generate child state info
         gen_seed_list = map(int, random_state.tomaxint(num_nodes))
@@ -200,8 +189,10 @@ class MRSeedInferer(MRJob):
                 node_info_tuple
             xs, zs = rf.list_of_x_indices_to_xs_and_zs(child_list_of_x_indices)
             #
+            # child inference builds own state, don't need suffstats, just zs
+            child_suffstats_out = None
             child_state = child_state_tuple(
-                child_list_of_x_indices, xs, zs,
+                child_suffstats_out, child_list_of_x_indices, xs, zs,
                 master_alpha, betas, master_inf_seed, iter_num,
                 child_inf_seed, child_gen_seed, child_counter,
                 iter_start_dt)
@@ -235,6 +226,7 @@ class MRSeedInferer(MRJob):
             zs, master_alpha, betas, child_inf_seed, child_gen_seed,
             num_iters_per_step, num_nodes)
 
+        run_full_dir = os.path.join(data_dir, run_dir)
         s3h.verify_problem_local(run_dir, problem_file)
         sub_problem_xs = rf.get_xs_subset_from_h5(
             problem_file, x_indices, dir=run_full_dir)
@@ -284,9 +276,10 @@ class MRSeedInferer(MRJob):
             [x_indices[idx] for idx in cluster_indices]
             for cluster_indices in last_valid_list_of_x_indices
             ]
+        child_suffstats_out = child_summaries[-1]['suffstats']
         new_iter_num = iter_num + 1
         child_state_out = child_state_tuple(
-            list_of_x_indices, x_indices, last_valid_zs,
+            child_suffstats_out, list_of_x_indices, x_indices, last_valid_zs,
             master_alpha, betas, master_inf_seed, new_iter_num,
             None, None, None, iter_start_dt
             )
@@ -305,14 +298,16 @@ class MRSeedInferer(MRJob):
 
         zs_list = []
         x_indices_list = []
-        list_of_x_indices = []
+        list_of_list_of_x_indices = []
+        child_suffstats_list = []
         #
         # consolidate data from child states
         child_state_counter = 0
         for child_state_out in child_infer_output_generator:
+            child_suffstats_list.append(child_state_out.suffstats)
              zs_list.append(child_state_out.zs)
              x_indices_list.append(child_state_out.x_indices)
-             list_of_x_indices.extend(child_state_out.list_of_x_indices)
+             list_of_list_of_x_indices.extend(child_state_out.list_of_x_indices)
              child_state_counter += 1
         hf.echo_date('received ' + str(child_state_counter) + ' child states')
 
@@ -322,61 +317,35 @@ class MRSeedInferer(MRJob):
         master_inf_seed = child_state_out.master_inf_seed
         iter_num = child_state_out.iter_num
         iter_start_dt = child_state_out.iter_start_dt
+        master_suffstats = hf.consolidate_suffstats(child_suffstats_list)
 
-        # format for use in singular state generation 
-        jumbled_zs = rf.consolidate_zs(zs_list)
-        x_indices = [y for x in x_indices_list for y in x]
-        zs = [
-            jumbled_zs[reorder_index]
-            for reorder_index in numpy.argsort(x_indices)
-            ]
-        zs, cluster_idx = hf.canonicalize_list(zs)
-        hf.echo_date('canonicalized zs')
-        #
-        run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        if not os.path.isfile(problem_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
-
-        problem = rf.unpickle(problem_file, dir=run_full_dir)
-        init_x = numpy.array(problem['xs'], dtype=numpy.int32)
-        true_zs, test_xs = None, None
-        if not postpone_scoring:
-            if 'true_zs' in problem:
-                true_zs = problem['true_zs']
-                true_zs, cluster_idx = hf.canonicalize_list(true_zs)
-            test_xs = numpy.array(problem['test_xs'], dtype=numpy.int32)
-        hf.echo_date('read problem')
-
-        # create singleton state
-        consolidated_state = ds.DPMB_State(
-            gen_seed=0, # FIXME : random variate from master_inf_seed?
-            num_cols=len(betas),
-            num_rows=len(zs),
-            init_alpha=master_alpha,
-            init_betas=betas,
-            init_z=zs,
-            init_x=init_x
-            )
-        consolidate_delta = hf.delta_since(start_dt)
-        hf.echo_date('done creating consolidated state')
-        #
-        # run hyper inference
-        transitioner = dm.DPMB(master_inf_seed, consolidated_state,
-                               infer_alpha=True, infer_beta=True)
-        # FIXME: is this right?
-        random_state = hf.generate_random_state(master_inf_seed)
-        transition_types = [
-            transitioner.transition_beta, transitioner.transition_alpha]
-        for transition_type in random_state.permutation(transition_types):
-            transition_type_str = str(transition_type)
-            hf.echo_date('transitioning type: ' + transition_type_str)
-            transition_type()
+        dummy_state = ds.DPMB_State(0, 10, 10)
+        alpha_grid = dummy_state.get_alpha_grid()
+        beta_grid = dummy_state.get_beta_grid()
+        # sample alpha
+        alpha_logps, alpha_lnPdf, alpha_grid = \
+            hf.calc_alpha_conditional_suffstats(master_suffstats, alpha_grid)
+        master_inf_seed = hf.generate_random_state(master_inf_seed)
+        alpha_randv = master_inf_seed.uniform()
+        alpha_draw_idx = pf.renormalize_and_sample(alpha_logps, alpha_randv)
+        alpha_draw = alpha_grid[alpha_draw_idx] #!!!!
+        # sample betas
+        beta_draws = []
+        for col_idx in range(len(betas)):
+            SR_array = numpy.array([
+                (cs.column_sums[col_idx], cs.num_vectors-cs.column_sums[col_idx])
+                for cs in master_suffstats
+                ])
+            S_array = SR_array[:, 0]
+            R_array = SR_array[:, 1]
+            beta_logps = pf.calc_beta_conditional_suffstat_helper(
+                S_array, R_array, beta_grid)
+            beta_randv = master_inf_seed.uniform()
+            beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
+            beta_draw = beta_grid[beta_draw_idx]
+            beta_draws.append(beta_draw)
+        
         hf.echo_date('done transitioning')
-        #
 
         # extract summary
         with hf.Timer('score_delta') as score_delta_timer:
@@ -395,19 +364,6 @@ class MRSeedInferer(MRJob):
         iter_end_dt = datetime.datetime.now()
         summary['timing']['iter_start_dt'] = iter_start_dt
         summary['timing']['iter_end_dt'] = iter_end_dt
-
-        hf.echo_date('faking plotting')
-        #
-        # save intermediate state plots
-        # save_str_base = '_'.join([
-        #         'infer_state',
-        #         'numnodes', str(num_nodes),
-        #         'iter', str(iter_num)
-        #         ])
-        # save_str = os.path.join(run_full_dir, save_str_base)
-        # consolidated_state.plot(save_str=save_str)
-        # save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
-        # consolidated_state.plot(save_str=save_str, which_plots=['just_data'])
 
         #
         # save pkl'ed summary locally, push to s3 if appropriate
