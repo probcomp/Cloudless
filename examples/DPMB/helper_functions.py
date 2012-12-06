@@ -183,19 +183,17 @@ def sample_betas_suffstats(suffstats, beta_grid, random_state):
     num_cols = len(suffstats.list_of_cluster_suffstats[0].column_sums)
     beta_draws = []
     for col_idx in range(num_cols):
-            SR_array = numpy.array([
+        SR_array = numpy.array([
                 (cs.column_sums[col_idx], cs.num_vectors-cs.column_sums[col_idx])
                 for cs in master_suffstats.list_of_cluster_suffstats
                 ])
-            S_array = SR_array[:, 0]
-            R_array = SR_array[:, 1]
-            beta_logps = pf.calc_beta_conditional_suffstat_helper(
-                S_array, R_array, beta_grid)
-            beta_randv = random_state.uniform()
-            beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
-            beta_draw = beta_grid[beta_draw_idx]
-            beta_draws.append(beta_draw)
-        
+        S_array = SR_array[:, 0]
+        R_array = SR_array[:, 1]
+        beta_logps = pf.calc_beta_conditional_suffstat_helper(
+            S_array, R_array, beta_grid)
+        beta_randv = random_state.uniform()
+        beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
+        beta_draw = beta_grid[beta_draw_idx]
         beta_draws.append(beta_draw)
     return beta_draws
 
@@ -618,3 +616,5 @@ def consolidate_suffstats(suffstats_list):
                                           list_of_x_indices)
     return master_suffstats
 
+def flatten(list_of_list):
+    return [el for el_list in list_of_list for el in el_list]
