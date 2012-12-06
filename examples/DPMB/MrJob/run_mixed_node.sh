@@ -12,7 +12,7 @@ num_nodes_list="2 4"
 #
 num_rows=16384
 infer_seed_list="0 1 2 3"
-other_options="--push_to_s3"
+other_options= #"--push_to_s3"
 
 function get_logbase {
     infer_seed=$1
