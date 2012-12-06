@@ -136,7 +136,7 @@ def process_timing(summaries):
     return delta_ts
 
 get_format_extract = lambda field, formatter: \
-    (lambda summaries: map(formatter, [summary[field] for summary in summaries]))
+    (lambda summaries: map(formatter, [summary.get(field, None) for summary in summaries]))
 extract_score = get_format_extract('score', None)
 extract_ari = get_format_extract('ari', None)
 extract_log10_alpha = get_format_extract('alpha', numpy.log10)
