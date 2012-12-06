@@ -97,21 +97,6 @@ def get_queue_helper(queue_or_queuename):
         queuename = queue.name
     return queue, queuename
 
-# def verify_file_helper(filename, bucket_dir_suffix,
-#                        unpickle=False, write_s3=False):
-#     local_dir = os.path.join(data_dir, bucket_dir_suffix)
-#     bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
-#     s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
-#     s3.verify_file(filename, write_s3=write_s3)
-#     pkl_contents = None
-#     if unpickle:
-#         pkl_contents = rf.unpickle(filename, dir=local_dir)
-#     return pkl_contents
-# def verify_problem_local(bucket_dir_suffix):
-#     verify_file_helper('problem.h5', bucket_dir_suffix, unpickle=False)
-#     problem = verify_file_helper('problem.pkl.gz', bucket_dir_suffix,
-#                                  unpickle=True)
-#     return problem 
 def process_file_queue(queue_or_queuename):
     queue, queuename = get_queue_helper(queue_or_queuename)
     problem = rf.verify_problem_helper(queuename)
@@ -129,7 +114,19 @@ def process_file_queue(queue_or_queuename):
     # p.join()
     return result
 
-def process_summary(summary_tuple, problem, bucket_dir_suffix):
+def process_all_local(bucket_dir_suffix):
+    local_dir = os.path.join(data_dir, bucket_dir_suffix)
+    problem = rf.unpickle('problem.pkl.gz', dir=local_dir)
+    filename_tuple_generator = filter(is_summary, os.listdir(local_dir))
+    num_files = len(filename_tuple_generator)
+    dummy_deleter = lambda : 1
+    filename_tuple_generator = zip(filename_tuple_generator, [dummy_deleter] * num_files)
+    process_summary_helper = partial(
+        process_summary, problem=problem, bucket_dir_suffix=bucket_dir_suffix, write_s3=False)
+    result = map(process_summary_helper, filename_tuple_generator)
+    return result
+
+def process_summary(summary_tuple, problem, bucket_dir_suffix, write_s3):
     summary_filename, message_deleter = summary_tuple
     hf.echo_date(summary_filename)
     summary = rf.verify_file_helper(summary_filename, bucket_dir_suffix,
@@ -148,7 +145,7 @@ def process_summary(summary_tuple, problem, bucket_dir_suffix):
     score_filename = get_score_name(summary_filename)
     local_dir = os.path.join(data_dir, bucket_dir_suffix)
     rf.pickle(score_dict, score_filename, dir=local_dir)
-    rf.verify_file_helper(score_filename, bucket_dir_suffix, write_s3=True)
+    rf.verify_file_helper(score_filename, bucket_dir_suffix, write_s3=write_s3)
     message_deleter()
     return summary_filename
 
