@@ -7,17 +7,11 @@ import matplotlib
 matplotlib.use('Agg')
 #
 import Cloudless.examples.DPMB.settings as S
-reload(S)
 import Cloudless.examples.DPMB.MrJob.seed_inferer as si
-reload(si)
 import Cloudless.examples.DPMB.Tests.create_synthetic_data as csd
-reload(csd)
 import Cloudless.examples.DPMB.MrJob.consolidate_summaries as cs
-reload(cs)
 import Cloudless.examples.DPMB.remote_functions as rf
-reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 
 
 # non passable settings
@@ -128,7 +122,7 @@ except Exception, e:
 
 num_nodes = num_nodes_list[0]
 print 'starting num_nodes = ' + str(num_nodes)
-infer_args = ['--resume-file', gibbs_init_filename]
+infer_args = [] # ['--resume-file', gibbs_init_filename]
 infer_args.extend(create_args(num_iters, num_nodes))
 mr_job = si.MRSeedInferer(args=infer_args)
 
