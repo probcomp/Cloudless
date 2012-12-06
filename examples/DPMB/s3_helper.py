@@ -80,25 +80,6 @@ def ensure_dir(dir):
         except Exception, e:
             pass
 
-def verify_file_helper(filename, bucket_dir_suffix,
-                       unpickle=False, write_s3=False):
-    local_dir = os.path.join(data_dir, bucket_dir_suffix)
-    bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
-    s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
-    s3.verify_file(filename, write_s3=write_s3)
-    pkl_contents = None
-    if unpickle:
-        pkl_contents = rf.unpickle(filename, dir=local_dir)
-    return pkl_contents
-
-def verify_problem_local(bucket_dir_suffix, problem_filename='problem.pkl.gz',
-                         unpickle=False):
-    h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
-    verify_file_helper(h5_filename, bucket_dir_suffix, unpickle=False)
-    problem = verify_file_helper(problem_filename, bucket_dir_suffix,
-                                 unpickle=unpickle)
-    return problem 
-
 def main():
     parser = argparse.ArgumentParser('s3_helper')
     parser.add_argument('filenames',nargs='+',type=str)

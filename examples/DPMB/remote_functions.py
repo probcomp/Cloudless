@@ -111,7 +111,8 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
                         # repermuting now makes tracking ground truth hard
         # make sure the file is local
         pkl_file = dataset_spec['pkl_file']
-        pkl_data = s3h.verify_file_helper(pkl_file, '', unpickle=True)
+        pkl_file = os.path.join(dataset_spec['data_dir'], pkl_file)
+        pkl_data = verify_file_helper(pkl_file, '', do_unpickle=True)
         # set problem variables
         xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
@@ -973,3 +974,23 @@ def consolidate_zs(zs_list):
         max_zs = max(temp_zs)
         cluster_idx += max_zs + 1
     return zs
+
+def verify_file_helper(filename, bucket_dir_suffix,
+                       do_unpickle=False, write_s3=False):
+    data_dir = settings.path.data_dir
+    local_dir = os.path.join(data_dir, bucket_dir_suffix)
+    bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
+    s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
+    s3.verify_file(filename, write_s3=write_s3)
+    pkl_contents = None
+    if do_unpickle:
+        pkl_contents = unpickle(filename, dir=local_dir)
+    return pkl_contents
+
+def verify_problem_helper(bucket_dir_suffix, problem_filename='problem.pkl.gz',
+                         do_unpickle=False):
+    h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
+    verify_file_helper(h5_filename, bucket_dir_suffix, do_unpickle=False)
+    problem = verify_file_helper(problem_filename, bucket_dir_suffix,
+                                 do_unpickle=do_unpickle)
+    return problem 
