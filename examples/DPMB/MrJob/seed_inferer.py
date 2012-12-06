@@ -47,7 +47,7 @@ def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
 get_hexdigest = lambda variable: hashlib.sha224(str(variable)).hexdigest()
 master_state_tuple = namedtuple(
     'master_state_tuple',
-    ' list_of_x_indices last_valid_zs '
+    ' list_of_list_of_x_indices last_valid_zs '
     ' master_alpha betas master_inf_seed iter_num '
     )
 child_state_tuple = namedtuple(
@@ -179,26 +179,25 @@ class MRSeedInferer(MRJob):
 
     def distribute_data(self, run_key, master_state):
         iter_start_dt = datetime.datetime.now()
-        child_counter = 0
         num_nodes = self.num_nodes
         # pull variables out of master_state
-        list_of_x_indices = master_state.list_of_x_indices
-        init_z = master_state.last_valid_zs
+        lol_of_x_indices = master_state.list_of_list_of_x_indices
         master_alpha = master_state.master_alpha
         betas = master_state.betas
         master_inf_seed = master_state.master_inf_seed
         iter_num = master_state.iter_num
         #
+        master_inf_seed = hf.generate_random_state(master_inf_seed)
+        #
         # generate child state info
-        num_clusters = len(list_of_x_indices)
-        node_info_tuples, random_state = rf.gen_cluster_dest_nodes(
-            master_inf_seed, num_nodes, num_clusters)
+        gen_seed_list = map(int, random_state.tomaxint(num_nodes))
+        inf_seed_list = map(int, random_state.tomaxint(num_nodes))
+        node_info_tuples = zip(gen_seed_list, inf_seed_list, lol_of_x_indices)
         #
         # actually distribute
-        for child_counter, node_info in enumerate(node_info_tuples):
-            cluster_indices, child_inf_seed, child_gen_seed = node_info
-            child_list_of_x_indices = \
-                [list_of_x_indices[idx] for idx in cluster_indices]
+        for child_counter, node_info_tuple in enumerate(node_info_tuples):
+            (child_gen_seed, child_inf_seed, child_list_of_x_indices) = \
+                node_info_tuple
             xs, zs = rf.list_of_x_indices_to_xs_and_zs(child_list_of_x_indices)
             #
             child_state = child_state_tuple(
@@ -220,6 +219,7 @@ class MRSeedInferer(MRJob):
         problem_file = self.problem_file
         num_iters_per_step = self.num_iters_per_step
         run_bucket_dir = self.run_bucket_dir
+        #
         x_indices = child_state_in.x_indices
         zs = child_state_in.zs
         master_alpha = child_state_in.master_alpha
@@ -234,17 +234,8 @@ class MRSeedInferer(MRJob):
         run_spec = rf.run_spec_from_child_state_info(
             zs, master_alpha, betas, child_inf_seed, child_gen_seed,
             num_iters_per_step, num_nodes)
-        # FIXME : write a new routine to read only those xs necessary
-        # FIXME : look to 80MM TinyImages reader
 
-        run_full_dir = os.path.join(data_dir, run_dir)
-        problem_full_file = os.path.join(run_full_dir, problem_file)
-        h5_full_file = h5.get_h5_name_from_pkl_name(problem_file)
-        if not os.path.isfile(problem_full_file) or not os.path.isfile(h5_full_file):
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-            s3.verify_file(problem_file)
-            h5_file = h5.get_h5_name_from_pkl_name(problem_file)
-            s3.verify_file(h5_file)
+        s3h.verify_problem_local(run_dir, problem_file)
         sub_problem_xs = rf.get_xs_subset_from_h5(
             problem_file, x_indices, dir=run_full_dir)
         hf.echo_date('infer(): read problem')
@@ -277,31 +268,10 @@ class MRSeedInferer(MRJob):
                     s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
                                        local_dir=run_full_dir)
                     s3.put_s3(pkl_file)
-                    # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
-                state.plot()
-                save_str_base = '_'.join([
-                        'infer_state',
-                        'numnodes', str(num_nodes),
-                        'child0',
-                        'iter', str(iter_num)
-                        ])
-                save_str = os.path.join(run_full_dir, save_str_base)
-                state.plot(save_str=save_str)
-                save_str = os.path.join(run_full_dir, 'just_state_' + save_str_base)
-                state.plot(save_str=save_str,
-                                        which_plots=['just_data'])
-            #
             child_summaries = rf.infer(
                 run_spec, sub_problem, send_zs=True,
                 post_infer_func=single_node_post_infer_func)
-            # # FIXME: for now, pickle after the fact
-            # for child_iter_num, child_summary in enumerate(child_summaries):
-            #     pkl_file = get_child_pkl_file(child_iter_num)
-            #     rf.pickle(child_summary, pkl_file, dir=data_dir)
-            #     if self.push_to_s3:
-            #         s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         else:
-            # FIXME : to robustify, should be checking for failure conditions
             hf.echo_date('infer(): entering rf.infer()')
             child_summaries = rf.infer(run_spec, sub_problem)
 
@@ -463,38 +433,13 @@ class MRSeedInferer(MRJob):
         hf.echo_date('exit consolidate')
         yield run_key, master_state
 
-    def s3_push_step(self, run_key, master_state_in):
-        problem_file = self.problem_file
-        run_dir = self.run_dir
-        num_nodes = self.num_nodes
-        hypers_every_N = self.num_iters_per_step
-        run_bucket_dir = self.run_bucket_dir
-        iter_num = master_state_in.iter_num
-        seed_str = run_key
-        run_full_dir = os.path.join(data_dir, run_dir)
-        #
-        # FIXME: presuming that s3 path is only one dir
-        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-        for iter_num in numpy.append(-1, range(1, iter_num + 1)):
-            pkl_filename = create_pickle_file_str(
-                num_nodes, seed_str, iter_num, hypers_every_N=hypers_every_N)
-            pkl_full_filename = os.path.join(run_full_dir, pkl_filename)
-            if os.path.isfile(pkl_full_filename):
-                s3.put_s3(pkl_filename)
-        # who pushes up problem, run_parameters?
-        # whoever created them and set data_dir
-        yield run_key, master_state_in
-
     def steps(self):
         step_list = [self.mr(self.init)]
         infer_step = [
             self.mr(self.distribute_data),
             self.mr(self.infer, self.consolidate_data),
-            # self.mr(self.fake_infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
-        # if self.push_to_s3:
-        #     step_list.extend([self.mr(self.s3_push_step)])
         return step_list
 
 if __name__ == '__main__':
