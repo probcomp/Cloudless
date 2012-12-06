@@ -15,9 +15,7 @@ import scipy.special as ss
 from numpy.random import RandomState
 #
 import DPMB_State as ds
-# reload(ds) # reloading this causes an import loop of some sort
 import pyx_functions as pf
-reload(pf)
 
 
 def transition_single_z(vector,random_state):
@@ -558,3 +556,16 @@ def crp_init_superclusters(alpha, mus, seed, n_draws):
             list_of_x_indices[child_draw].append(x_index)
         list_of_list_of_x_indices.append(list_of_x_indices)
     return list_of_list_of_x_indices
+
+def consolidate_suffstats(suffstats_list):
+    num_vectors = sum([suffstats.num_vectors for suffstats in suffstats_list])
+    num_clusters = sum([suffstats.num_clusters for suffstats in suffstats_list])
+    list_of_cluster_suffstats = []
+    list_of_x_indices = []
+    for suffstats in suffstats_list:
+        list_of_cluster_suffstats.extend(suffstats.list_of_cluster_suffstats)
+        list_of_x_indices.append(suffstats.list_of_x_indices)
+    master_suffstats = ds.suffstats_tuple(num_vectors, num_clusters,
+                                          list_of_cluster_suffstats,
+                                          list_of_x_indices)
+    return master_suffstats
