@@ -122,10 +122,39 @@ class MRSeedInferer(MRJob):
                 # FIXME: should I pass permute=False here?
                 run_spec['dataset_spec']['data_dir'] = run_full_dir
                 problem = rf.gen_problem(run_spec['dataset_spec'])
-                init_save_str = 'gibbs_init_state'
-                init_save_str = os.path.join(run_full_dir, init_save_str)
-                summary = rf.infer(
-                    run_spec, problem, init_save_str=init_save_str)[-1]
+                # gen dummy state to get alphas, betas
+                dummy_state = ds.DPMB_State(
+                    gen_seed=run_spec['dataset_spec']['gen_seed'],
+                    num_cols=10, num_rows=10)
+                init_alpha = dummy_state.alpha
+                init_betas = dummy_state.betas
+                n_draws = len(problem['xs'])
+                mus = numpy.repeat(1./num_nodes, num_nodes)
+                lol_of_x_indices, random_state = hf.crp_init_superclusters(
+                    init_alpha, mus, dummy_state.random_state, n_draws)
+                flat_lol_of_x_indices = hf.flatten(lol_of_x_indices)
+                num_clusters = len(flat_lol_of_x_indices)
+                cluster_counts = map(len, flat_lol_of_x_indices)
+                flat_x_indices, zs = rf.list_of_x_indices_to_xs_and_zs(
+                    flat_lol_of_x_indices)
+                timing = {
+                    'alpha':0, 'betas':0, 'zs':0,'run_sum':0,
+                    'timestamp':datetime.datetime.now(),
+                    'iter_start_dt':datetime.datetime.now(),
+                    'iter_end_dt':datetime.datetime.now(),
+                    }
+                # supercluster_CRP_INIT HERE
+                # gen suffstats from supercluster here
+                summary = {
+                    'alpha':init_alpha,
+                    'betas':init_betas,
+                    'num_clusters':num_clusters,
+                    'cluster_counts':cluster_counts,
+                    'timing':timing,
+                    'inf_seed':master_inf_seed,
+                    'suffstats':None, # do I need to build this here?
+                    'lol_of_x_indices':lol_of_x_indices,
+                    }
                 problem_hexdigest = get_hexdigest(problem)
                 # FIXME : infer will pickle over this
                 if gibbs_init_file is None:
@@ -146,16 +175,14 @@ class MRSeedInferer(MRJob):
         #
         #
         # pull out the values to pass on
-        list_of_x_indices = summary.get('list_of_x_indices', None)
-        list_of_x_indices = summary.get('last_valid_list_of_x_indices',
-                                        list_of_x_indices)
+        lol_of_x_indices = summary.get('lol_of_x_indices', None)
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
         master_alpha = summary['alpha']
         betas = summary['betas']
-        master_suffstats = summary['suffstats']
+        master_suffstats = None
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
-            master_suffstats, list_of_list_of_x_indices, last_valid_zs,
+            master_suffstats, lol_of_x_indices, last_valid_zs,
             master_alpha, betas,
             master_inf_seed, iter_num,
             )
@@ -172,10 +199,10 @@ class MRSeedInferer(MRJob):
         iter_num = master_state.iter_num
         #
         mus = numpy.repeat(1./num_nodes, num_nodes)
-        master_inf_seed = hf.generate_random_state(master_inf_seed)
+        random_state = hf.generate_random_state(master_inf_seed)
         # GIBBS SAMPLE SUPERCLUSTERS WITH DIRICHLET MULTINOMIAL
-        lol_of_x_indices, master_inf_seed = hf.gibbs_on_superclusters(
-            lol_of_x_indices, mus, master_alpha, master_inf_seed)
+        lol_of_x_indices, random_state = hf.gibbs_on_superclusters(
+            lol_of_x_indices, mus, master_alpha, random_state)
         #
         # generate child state info
         gen_seed_list = map(int, random_state.tomaxint(num_nodes))
@@ -192,7 +219,7 @@ class MRSeedInferer(MRJob):
             child_suffstats_out = None
             child_state = child_state_tuple(
                 child_suffstats_out, child_list_of_x_indices, xs, zs,
-                master_alpha, betas, master_inf_seed, iter_num,
+                master_alpha, betas, random_state, iter_num,
                 child_inf_seed, child_gen_seed, child_counter,
                 iter_start_dt)
             yield run_key, child_state
