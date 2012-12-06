@@ -11,11 +11,8 @@ import pylab
 from collections import OrderedDict as od
 #
 import DPMB as dm
-reload(dm)
 import helper_functions as hf
-reload(hf)
 import pyx_functions as pf
-reload(pf)
 ##
 import pdb
 
