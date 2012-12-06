@@ -171,6 +171,34 @@ def calc_alpha_conditional_suffstats(suffstats, alpha_grid):
         logp_list.append(logp)
     return np.array(logp_list), lnPdf, alpha_grid
 
+def sample_alpha_suffstats(suffstats, alpha_grid, random_state):
+    alpha_logps, alpha_lnPdf, alpha_grid = \
+        calc_alpha_conditional_suffstats(suffstats, alpha_grid)
+    alpha_randv = random_state.uniform()
+    alpha_draw_idx = pf.renormalize_and_sample(alpha_logps, alpha_randv)
+    alpha_draw = alpha_grid[alpha_draw_idx]
+    return alpha_draw, random_state
+
+def sample_betas_suffstats(suffstats, beta_grid, random_state):
+    num_cols = len(suffstats.list_of_cluster_suffstats[0].column_sums)
+    beta_draws = []
+    for col_idx in range(num_cols):
+            SR_array = numpy.array([
+                (cs.column_sums[col_idx], cs.num_vectors-cs.column_sums[col_idx])
+                for cs in master_suffstats.list_of_cluster_suffstats
+                ])
+            S_array = SR_array[:, 0]
+            R_array = SR_array[:, 1]
+            beta_logps = pf.calc_beta_conditional_suffstat_helper(
+                S_array, R_array, beta_grid)
+            beta_randv = random_state.uniform()
+            beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
+            beta_draw = beta_grid[beta_draw_idx]
+            beta_draws.append(beta_draw)
+        
+        beta_draws.append(beta_draw)
+    return beta_draws
+
 def calc_beta_conditional(state,col_idx):
     original_beta = state.betas[col_idx]
     ##
@@ -589,3 +617,4 @@ def consolidate_suffstats(suffstats_list):
                                           list_of_cluster_suffstats,
                                           list_of_x_indices)
     return master_suffstats
+
