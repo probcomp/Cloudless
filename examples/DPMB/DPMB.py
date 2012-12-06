@@ -6,11 +6,8 @@ import numpy as np
 import scipy.special as ss
 #
 import DPMB_State as ds
-reload(ds)
 import helper_functions as hf
-reload(hf)
 import pyx_functions as pf
-reload(pf)
 ##
 import pdb
 
