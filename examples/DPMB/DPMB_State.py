@@ -22,6 +22,10 @@ import pdb
 is_power_2 = lambda num: int(np.log2(num)) == np.log2(num)
 is_crp_init_z = lambda init_z: \
     isinstance(init_z, str) and init_z.lower()=='crp'
+cluster_suffstats_tuple = namedtuple(
+    'cluster_suffstats_tuple',
+    ' num_vectors column_sums '
+    )
 suffstats_tuple = namedtuple(
     'suffstats_tuple',
     ' num_vectors num_clusters list_of_cluster_suffstats list_of_x_indices '
@@ -333,7 +337,8 @@ class DPMB_State():
             vector.idx = vector_idx
         for cluster in self.cluster_list:
             x_indices = [vector.idx for vector in cluster.vector_list]
-            cluster_suffstats = (len(cluster.vector_list), cluster.column_sums)
+            cluster_suffstats = cluster_suffstats_tuple(
+                len(cluster.vector_list), cluster.column_sums)
             #
             list_of_x_indices.append(x_indices)
             list_of_cluster_suffstats.append(cluster_suffstats)
