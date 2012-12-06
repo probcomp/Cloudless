@@ -157,7 +157,7 @@ def calc_alpha_conditional_suffstats(suffstats, alpha_grid):
         for cluster_suffstats in suffstats.list_of_cluster_suffstats
         ]
     assert suffstats.num_clusters == len(suffstats.list_of_cluster_suffstats)
-    num_clusters = len(suffstats.num_clusters)
+    num_clusters = suffstats.num_clusters
     num_vectors = suffstats.num_vectors
     lnProdGammas = sum([ss.gammaln(cluster_len) for cluster_len in cluster_lens])
     #
@@ -185,17 +185,17 @@ def sample_betas_suffstats(suffstats, beta_grid, random_state):
     for col_idx in range(num_cols):
         SR_array = numpy.array([
                 (cs.column_sums[col_idx], cs.num_vectors-cs.column_sums[col_idx])
-                for cs in master_suffstats.list_of_cluster_suffstats
+                for cs in suffstats.list_of_cluster_suffstats
                 ])
         S_array = SR_array[:, 0]
         R_array = SR_array[:, 1]
-        beta_logps = pf.calc_beta_conditional_suffstat_helper(
-            S_array, R_array, beta_grid)
+        beta_logps = pf.calc_beta_conditional_suffstats_helper(
+            S_array, R_array, beta_grid).flatten()
         beta_randv = random_state.uniform()
-        beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
+        beta_draw_idx = pf.renormalize_and_sample(beta_logps, beta_randv)
         beta_draw = beta_grid[beta_draw_idx]
         beta_draws.append(beta_draw)
-    return beta_draws
+    return beta_draws, random_state
 
 def calc_beta_conditional(state,col_idx):
     original_beta = state.betas[col_idx]
