@@ -97,11 +97,10 @@ def sample_from_crp(
 def sample_from_dirichlet_multinomial(
     np.float64_t alpha,
     np.ndarray[np.float64_t,ndim=1] mus,
-    np.int_t random_seed,
+    random_state,
     np.int_t num_draws,
     ):
     #
-    random_state = np.random.RandomState(random_seed)
     counts = [0] * len(mus)
     cdef np.int_t sum_counts_int = 0
     draws = []
@@ -247,7 +246,7 @@ def calc_beta_conditional_suffstats_helper(
     #
     if prior_func is None:
         prior_func = lambda x: 0 # essentially a nop
-    cdef int num_clusters = len(S)
+    cdef int num_clusters = len(S_array)
     cdef int grid_len = grid.shape[0]
     cdef int S, R, N
     cdef double curr_score, test_beta
@@ -260,7 +259,7 @@ def calc_beta_conditional_suffstats_helper(
         curr_score = 0.0
         for cluster_idx from 0 <= cluster_idx < num_clusters:
             S = S_array[cluster_idx]
-	    R = R_array[cluster_idx]
+            R = R_array[cluster_idx]
             N = S + R
             curr_score += lgamma(2*test_beta) \
                 - 2*lgamma(test_beta) \
