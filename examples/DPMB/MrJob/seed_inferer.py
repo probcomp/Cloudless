@@ -305,10 +305,10 @@ class MRSeedInferer(MRJob):
         child_state_counter = 0
         for child_state_out in child_infer_output_generator:
             child_suffstats_list.append(child_state_out.suffstats)
-             zs_list.append(child_state_out.zs)
-             x_indices_list.append(child_state_out.x_indices)
-             list_of_list_of_x_indices.extend(child_state_out.list_of_x_indices)
-             child_state_counter += 1
+            zs_list.append(child_state_out.zs)
+            x_indices_list.append(child_state_out.x_indices)
+            list_of_list_of_x_indices.extend(child_state_out.list_of_x_indices)
+            child_state_counter += 1
         hf.echo_date('received ' + str(child_state_counter) + ' child states')
 
         # all master_alpha, betas, master_inf_seed are all the same, use last
