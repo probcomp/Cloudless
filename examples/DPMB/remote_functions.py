@@ -969,26 +969,6 @@ class Bunch:
     def __init__(self, **kwds):
         self.__dict__.update(kwds)
 
-def gen_cluster_dest_nodes(inf_seed, num_nodes, num_clusters):
-    random_state = hf.generate_random_state(inf_seed)
-    mus = np.repeat(1.0/num_nodes, num_nodes)
-    # determine node choices in bulk
-    bulk_counts = random_state.multinomial(num_clusters,mus)
-    permuted_cluster_indices = random_state.permutation(range(num_clusters))
-    inf_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-    gen_seed_list = [int(x) for x in random_state.tomaxint(num_nodes)]
-    cluster_dest_nodes = []
-    for cluster_count in bulk_counts:
-        front = permuted_cluster_indices[:cluster_count]
-        back = permuted_cluster_indices[cluster_count:]
-        #
-        cluster_dest_nodes.append(front)
-        permuted_cluster_indices = back
-    node_info_tuples = zip(cluster_dest_nodes, inf_seed_list, gen_seed_list)
-    is_nonempty_node = lambda x: len(x[0]) != 0
-    node_info_tuples = filter(is_nonempty_node, node_info_tuples)
-    return node_info_tuples, random_state
-
 def list_of_x_indices_to_xs_and_zs(list_of_x_indices):
     xs = []
     zs = []
