@@ -9,13 +9,9 @@ import numpy
 import pylab
 #
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.remote_functions as rf
-reload(rf)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.settings as S
-reload(S)
 
 
 def gen_data(gen_seed, num_clusters, num_cols, num_rows, beta_d, N_test=None):
