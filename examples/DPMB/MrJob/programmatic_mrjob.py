@@ -105,9 +105,10 @@ create_args = lambda num_iters, num_nodes: [
     seed_full_filename,
     ]
 
-filename_parts = os.path.splitext(gibbs_init_filename)
+basename, outer_ext = os.path.splitext(gibbs_init_filename)
+basename, inner_ext = os.path.splitext(basename)
 # FIXME: NOT REALLY GIBBS INIT, INIT FROM PRIOR!
-get_gibbs_filename = lambda num_nodes: filename_parts[0] + '_numnodes' + str(num_nodes) + filename_parts[1]
+get_gibbs_filename = lambda num_nodes: basename + '_numnodes' + str(num_nodes) + '_infseed' + str(infer_seed) + inner_ext + outer_ext
 for num_nodes in num_nodes_list:
     gibbs_init_filename = get_gibbs_filename(num_nodes)
     gibbs_init_full_filename = os.path.join(run_full_dir, gibbs_init_filename)
