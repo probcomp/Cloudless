@@ -239,8 +239,8 @@ def calc_beta_conditional_helper(
 
 @cython.boundscheck(False)
 def calc_beta_conditional_suffstats_helper(
-    np.ndarray[np.int_t, ndim=1] S_array,
-    np.ndarray[np.int_t, ndim=1] R_array,
+    np.ndarray[np.float64_t, ndim=1] S_array,
+    np.ndarray[np.float64_t, ndim=1] R_array,
     np.ndarray[np.float64_t,ndim=1] grid,
     prior_func=None):
     #
@@ -248,7 +248,7 @@ def calc_beta_conditional_suffstats_helper(
         prior_func = lambda x: 0 # essentially a nop
     cdef int num_clusters = len(S_array)
     cdef int grid_len = grid.shape[0]
-    cdef int S, R, N
+    cdef double S, R, N
     cdef double curr_score, test_beta
     cdef np.ndarray ret_arr = np.zeros([1, grid_len], dtype=np.float64)
     cdef int grid_idx
