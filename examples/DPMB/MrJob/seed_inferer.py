@@ -26,7 +26,6 @@ data_dir = settings.path.data_dir
 # problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = settings.files.problem_filename
 default_resume_file = None
-postpone_scoring = True
 
 def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
     file_str = '_'.join([
@@ -106,14 +105,14 @@ class MRSeedInferer(MRJob):
         run_bucket_dir = self.run_bucket_dir
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        s3h.verify_problem_local(run_dir, problem_file)
+        rf.verify_problem_helper(run_dir, problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
-                summary = sh3.verify_file_helper(resume_file, run_dir,
-                                                 unpickle=True)
+                summary = rf.verify_file_helper(resume_file, run_dir,
+                                                 do_unpickle=True)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
@@ -227,7 +226,7 @@ class MRSeedInferer(MRJob):
             num_iters_per_step, num_nodes)
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        s3h.verify_problem_local(run_dir, problem_file)
+        rf.verify_problem_helper(run_dir, problem_file)
         sub_problem_xs = rf.get_xs_subset_from_h5(
             problem_file, x_indices, dir=run_full_dir)
         hf.echo_date('infer(): read problem')
@@ -237,19 +236,10 @@ class MRSeedInferer(MRJob):
             num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
         child_summaries = None
         if num_nodes == 1:
-            true_zs, test_xs = None, None
-            if not postpone_scoring:
-                orig_problem = rf.unpickle(
-                    problem_file, dir=run_full_dir, check_hdf5=False)
-                true_zs = orig_problem.get('true_zs', None)
-                if true_zs is not None:
-                    true_zs = [true_zs[x_index] for x_index in x_indices]
-                test_xs = numpy.array(orig_problem['test_xs'], dtype=numpy.int32)
-            sub_problem['true_zs'] = true_zs
-            sub_problem['test_xs'] = test_xs
+            sub_problem['true_zs'] = None
+            sub_problem['test_xs'] = None
             run_spec['infer_do_alpha_inference'] = True
             run_spec['infer_do_betas_inference'] = True
-            #
             # set up for intermediate results to be pickled on the fly
             def single_node_post_infer_func(iter_idx, state, last_summary,
                                             data_dir=run_full_dir):
@@ -322,67 +312,60 @@ class MRSeedInferer(MRJob):
         dummy_state = ds.DPMB_State(0, 10, 10)
         alpha_grid = dummy_state.get_alpha_grid()
         beta_grid = dummy_state.get_beta_grid()
+        random_state = hf.generate_random_state(master_inf_seed)
         # sample alpha
-        alpha_logps, alpha_lnPdf, alpha_grid = \
-            hf.calc_alpha_conditional_suffstats(master_suffstats, alpha_grid)
-        master_inf_seed = hf.generate_random_state(master_inf_seed)
-        alpha_randv = master_inf_seed.uniform()
-        alpha_draw_idx = pf.renormalize_and_sample(alpha_logps, alpha_randv)
-        alpha_draw = alpha_grid[alpha_draw_idx] #!!!!
-        # sample betas
-        beta_draws = []
-        for col_idx in range(len(betas)):
-            SR_array = numpy.array([
-                (cs.column_sums[col_idx], cs.num_vectors-cs.column_sums[col_idx])
-                for cs in master_suffstats
-                ])
-            S_array = SR_array[:, 0]
-            R_array = SR_array[:, 1]
-            beta_logps = pf.calc_beta_conditional_suffstat_helper(
-                S_array, R_array, beta_grid)
-            beta_randv = master_inf_seed.uniform()
-            beta_draw_dix = pf.renormalize_and_sample(beta_logs, beta_randv)
-            beta_draw = beta_grid[beta_draw_idx]
-            beta_draws.append(beta_draw)
         
+        with hf.Timer('alpha_inference') as alpha_inference_timer:
+            alpha_draw, random_state = hf.sample_alpha_suffstats(
+                master_suffstats, alpha_grid, random_state)
+        # sample betas
+        with hf.Timer('beta_inference') as beta_inference_timer:
+            beta_draws, random_state = hf.sample_beta_suffstats(
+                master_suffstats, beta_grid, random_state)
         hf.echo_date('done transitioning')
 
+        # FIXME : NEED TO CREATE PSUEDO SUMMARY HERE
+        # FIXME : NEED TO CREATE PSUEDO SUMMARY HERE
+        # FIXME : NEED TO CREATE PSUEDO SUMMARY HERE
+        
         # extract summary
-        with hf.Timer('score_delta') as score_delta_timer:
-            summary = transitioner.extract_state_summary(
-                true_zs=true_zs,
-                test_xs=test_xs,
-                )
+        summary = {
+            'alpha':alpha,
+            'betas':numpy.array(betas),
+            'num_clusters':len(master_suffstats.list_of_cluster_suffstats),
+            'cluster_counts':[cs.num_vectors for cs in
+                              master_suffstats.list_of_cluster_suffstats],
+            'timing':{
+                'alpha':alpha_inference_time.elapsed_seconds,
+                'betas':beta_inference_time.elapsed_seconds,
+                'zs':0,'run_sum':0,
+                },
+            'inf_seed':random_state,
+            'suffstats':master_suffstats,
+            }
+        # FIXME : need to flatten list_of_list_of_x_indices
         summary['last_valid_zs'] = transitioner.state.getZIndices()
         summary['list_of_x_indices'] = transitioner.state.get_list_of_x_indices()
-        summary['timing'].update({
-            'timestamp':datetime.datetime.now(),
-            'consolidate_delta':consolidate_delta,
-            'score_delta':score_delta_timer.elapsed_secs,
-            })
+        summary['timing']['timestamp'] = datetime.datetime.now()
         summary['iter_num'] = iter_num
         iter_end_dt = datetime.datetime.now()
         summary['timing']['iter_start_dt'] = iter_start_dt
         summary['timing']['iter_end_dt'] = iter_end_dt
-
         #
         # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
                                           hypers_every_N=hypers_every_N)
-        with hf.Timer('pickling summary', verbose=True):
-            rf.pickle(summary, pkl_file, dir=run_full_dir)
+        rf.pickle(summary, pkl_file, dir=run_full_dir)
         if self.push_to_s3:
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
             s3.put_s3(pkl_file)
-            # s3h.S3_helper(bucket_dir=summary_bucket_dir).put_s3(pkl_file)
         hf.echo_date('done pickling summary')
-
         #
         # format summary to pass out 
         last_valid_zs = summary['last_valid_zs']
         master_alpha = summary['alpha']
         betas = summary['betas']
-        master_inf_seed = summary['inf_seed']
+        master_inf_seed = random_state
         master_state = master_state_tuple(
             list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
