@@ -125,7 +125,7 @@ class MRSeedInferer(MRJob):
                 # gen dummy state to get alphas, betas
                 dummy_state = ds.DPMB_State(
                     gen_seed=run_spec['dataset_spec']['gen_seed'],
-                    num_cols=10, num_rows=10)
+                    num_cols=run_spec['dataset_spec']['num_cols'], num_rows=10)
                 init_alpha = dummy_state.alpha
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
@@ -248,60 +248,75 @@ class MRSeedInferer(MRJob):
         child_counter = child_state_in.child_counter
         iter_start_dt = child_state_in.iter_start_dt
         #
-        run_spec = rf.run_spec_from_child_state_info(
-            zs, master_alpha, betas, child_inf_seed, child_gen_seed,
-            num_iters_per_step, num_nodes)
-
-        run_full_dir = os.path.join(data_dir, run_dir)
-        rf.verify_problem_helper(run_dir, problem_file)
-        sub_problem_xs = rf.get_xs_subset_from_h5(
-            problem_file, x_indices, dir=run_full_dir)
-        hf.echo_date('infer(): read problem')
-        sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
-        # actually infer
-        get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
-            num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
-        child_summaries = None
-        if num_nodes == 1:
-            sub_problem['true_zs'] = None
-            sub_problem['test_xs'] = None
-            run_spec['infer_do_alpha_inference'] = True
-            run_spec['infer_do_betas_inference'] = True
-            # set up for intermediate results to be pickled on the fly
-            def single_node_post_infer_func(iter_idx, state, last_summary,
-                                            data_dir=run_full_dir):
-                iter_num = iter_idx + 1
-                pkl_file = get_child_pkl_file(iter_num)
-                rf.pickle(last_summary, pkl_file, dir=run_full_dir)
-                if self.push_to_s3:
-                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                       local_dir=run_full_dir)
-                    s3.put_s3(pkl_file)
-            child_summaries = rf.infer(
-                run_spec, sub_problem, send_zs=True,
-                post_infer_func=single_node_post_infer_func)
+        if len(x_indices) == 0:
+            hf.echo_date('!!!empty child!!!')
+            new_iter_num = iter_num + 1
+            last_valid_zs = []
+            x_indices = []
+            list_of_x_indices = []
+            child_suffstats_out = ds.suffstats_tuple(0,0,[],[])
+            child_state_out = child_state_tuple(
+                child_suffstats_out, list_of_x_indices, x_indices, last_valid_zs,
+                master_alpha, betas, master_inf_seed, new_iter_num,
+                None, None, None, iter_start_dt
+                )
+            hf.echo_date('exit infer')
+            yield run_key, child_state_out
         else:
-            hf.echo_date('infer(): entering rf.infer()')
-            child_summaries = rf.infer(run_spec, sub_problem)
+            run_spec = rf.run_spec_from_child_state_info(
+                zs, master_alpha, betas, child_inf_seed, child_gen_seed,
+                num_iters_per_step, num_nodes)
 
-        hf.echo_date('infer(): done rf.infer')
-        last_valid_zs = child_summaries[-1]['last_valid_zs']
-        last_valid_list_of_x_indices = \
-            child_summaries[-1]['last_valid_list_of_x_indices']
-        list_of_x_indices = child_state_in.list_of_x_indices
-        list_of_x_indices = [
-            [x_indices[idx] for idx in cluster_indices]
-            for cluster_indices in last_valid_list_of_x_indices
-            ]
-        child_suffstats_out = child_summaries[-1]['suffstats']
-        new_iter_num = iter_num + 1
-        child_state_out = child_state_tuple(
-            child_suffstats_out, list_of_x_indices, x_indices, last_valid_zs,
-            master_alpha, betas, master_inf_seed, new_iter_num,
-            None, None, None, iter_start_dt
-            )
-        hf.echo_date('exit infer')
-        yield run_key, child_state_out
+            run_full_dir = os.path.join(data_dir, run_dir)
+            rf.verify_problem_helper(run_dir, problem_file)
+            sub_problem_xs = rf.get_xs_subset_from_h5(
+                problem_file, x_indices, dir=run_full_dir)
+            hf.echo_date('infer(): read problem')
+            sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
+            # actually infer
+            get_child_pkl_file = lambda child_iter_num: create_pickle_file_str(
+                num_nodes, run_key+'_child'+str(child_counter), child_iter_num)
+            child_summaries = None
+            if num_nodes == 1:
+                sub_problem['true_zs'] = None
+                sub_problem['test_xs'] = None
+                run_spec['infer_do_alpha_inference'] = True
+                run_spec['infer_do_betas_inference'] = True
+                # set up for intermediate results to be pickled on the fly
+                def single_node_post_infer_func(iter_idx, state, last_summary,
+                                                data_dir=run_full_dir):
+                    iter_num = iter_idx + 1
+                    pkl_file = get_child_pkl_file(iter_num)
+                    rf.pickle(last_summary, pkl_file, dir=run_full_dir)
+                    if self.push_to_s3:
+                        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
+                                           local_dir=run_full_dir)
+                        s3.put_s3(pkl_file)
+                child_summaries = rf.infer(
+                    run_spec, sub_problem, send_zs=True,
+                    post_infer_func=single_node_post_infer_func)
+            else:
+                hf.echo_date('infer(): entering rf.infer()')
+                child_summaries = rf.infer(run_spec, sub_problem)
+
+            hf.echo_date('infer(): done rf.infer')
+            last_valid_zs = child_summaries[-1]['last_valid_zs']
+            last_valid_list_of_x_indices = \
+                child_summaries[-1]['last_valid_list_of_x_indices']
+            list_of_x_indices = child_state_in.list_of_x_indices
+            list_of_x_indices = [
+                [x_indices[idx] for idx in cluster_indices]
+                for cluster_indices in last_valid_list_of_x_indices
+                ]
+            child_suffstats_out = child_summaries[-1]['suffstats']
+            new_iter_num = iter_num + 1
+            child_state_out = child_state_tuple(
+                child_suffstats_out, list_of_x_indices, x_indices, last_valid_zs,
+                master_alpha, betas, master_inf_seed, new_iter_num,
+                None, None, None, iter_start_dt
+                )
+            hf.echo_date('exit infer')
+            yield run_key, child_state_out
 
     def consolidate_data(self, run_key, child_infer_output_generator):
         hf.echo_date('enter consolidate')
@@ -314,17 +329,15 @@ class MRSeedInferer(MRJob):
         run_bucket_dir = self.run_bucket_dir
 
         zs_list = []
-        x_indices_list = []
         list_of_list_of_x_indices = []
         child_suffstats_list = []
         #
         # consolidate data from child states
         child_state_counter = 0
         for child_state_out in child_infer_output_generator:
-            child_suffstats_list.append(child_state_out.suffstats)
+            child_suffstats_list.append(child_state_out.child_suffstats)
             zs_list.append(child_state_out.zs)
-            x_indices_list.append(child_state_out.x_indices)
-            list_of_list_of_x_indices.extend(child_state_out.list_of_x_indices)
+            list_of_list_of_x_indices.append(child_state_out.list_of_x_indices)
             child_state_counter += 1
         hf.echo_date('received ' + str(child_state_counter) + ' child states')
 
@@ -347,7 +360,7 @@ class MRSeedInferer(MRJob):
                 master_suffstats, alpha_grid, random_state)
         # sample betas
         with hf.Timer('beta_inference') as beta_inference_timer:
-            beta_draws, random_state = hf.sample_beta_suffstats(
+            beta_draws, random_state = hf.sample_betas_suffstats(
                 master_suffstats, beta_grid, random_state)
         hf.echo_date('done transitioning')
 
@@ -357,22 +370,29 @@ class MRSeedInferer(MRJob):
         
         # extract summary
         summary = {
-            'alpha':alpha,
-            'betas':numpy.array(betas),
+            'alpha':alpha_draw,
+            'betas':numpy.array(beta_draws),
             'num_clusters':len(master_suffstats.list_of_cluster_suffstats),
             'cluster_counts':[cs.num_vectors for cs in
                               master_suffstats.list_of_cluster_suffstats],
             'timing':{
-                'alpha':alpha_inference_time.elapsed_seconds,
-                'betas':beta_inference_time.elapsed_seconds,
+                'alpha':alpha_inference_timer.elapsed_secs,
+                'betas':beta_inference_timer.elapsed_secs,
                 'zs':0,'run_sum':0,
                 },
             'inf_seed':random_state,
             'suffstats':master_suffstats,
             }
         # FIXME : need to flatten list_of_list_of_x_indices
-        summary['last_valid_zs'] = transitioner.state.getZIndices()
-        summary['list_of_x_indices'] = transitioner.state.get_list_of_x_indices()
+        flat_lol_of_x_indices = hf.flatten(list_of_list_of_x_indices)
+        num_clusters = len(flat_lol_of_x_indices)
+        cluster_counts = map(len, flat_lol_of_x_indices)
+        flat_x_indices, zs = rf.list_of_x_indices_to_xs_and_zs(
+            flat_lol_of_x_indices)
+
+        summary['last_valid_zs'] = zs
+        summary['list_of_x_indices'] = flat_lol_of_x_indices
+        summary['lol_x_indices'] = list_of_list_of_x_indices
         summary['timing']['timestamp'] = datetime.datetime.now()
         summary['iter_num'] = iter_num
         iter_end_dt = datetime.datetime.now()
@@ -382,6 +402,7 @@ class MRSeedInferer(MRJob):
         # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
                                           hypers_every_N=hypers_every_N)
+        run_full_dir = os.path.join(data_dir, run_dir)
         rf.pickle(summary, pkl_file, dir=run_full_dir)
         if self.push_to_s3:
             s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
@@ -393,8 +414,9 @@ class MRSeedInferer(MRJob):
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_inf_seed = random_state
+        master_suffstats = None
         master_state = master_state_tuple(
-            list_of_x_indices, last_valid_zs, master_alpha, betas,
+            master_suffstats, list_of_list_of_x_indices, last_valid_zs, master_alpha, betas,
             master_inf_seed=master_inf_seed, iter_num=iter_num)
         hf.echo_date('exit consolidate')
         yield run_key, master_state
