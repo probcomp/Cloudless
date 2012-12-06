@@ -130,29 +130,6 @@ gen_seed_str = str(gen_seed)
 init_yielder = mr_job.init(gen_seed_str, gen_seed_str)
 run_key, consolidated_data = init_yielder.next()
 
-flatten = lambda data: [y for x in data for y in x]
-
-import scipy.special as ss
-import numpy as np
-import pylab
-def create_alpha_lnPdf(list_of_x_indices):
-    # Note : this is extraneous work for relative probabilities
-    #      : but necessary to determine true distribution probabilities
-    lnProdGammas = sum([ss.gammaln(len(x_indices))
-                        for x_indices in list_of_x_indices])
-    num_vectors = sum(map(len, list_of_x_indices))
-    lnPdf = lambda alpha: ss.gammaln(alpha) \
-        + len(list_of_x_indices)*np.log(alpha) \
-        - ss.gammaln(alpha+num_vectors) \
-        + lnProdGammas
-    return lnPdf
-temp_pdf = create_alpha_lnPdf(consolidated_data.list_of_x_indices)
-temp_alphas = 10.0**np.linspace(np.log10(1E-2), np.log10(1E6), 99)
-temp_log_probs = map(temp_pdf, temp_alphas)
-temp_norm_log_probs = temp_log_probs - reduce(np.logaddexp, temp_log_probs)
-pylab.plot(temp_alphas, np.exp(temp_norm_log_probs))
-pylab.savefig('temp')
-
 for iter_idx in range(num_iters):
     # distribute
     distribute_yielder = mr_job.distribute_data(run_key, consolidated_data)
@@ -177,13 +154,3 @@ cs.plot_summaries(summaries_dict, problem=problem,
 reduced_summaries_dict = cs.extract_reduced_summaries(
     summaries_dict, cs.reduced_summary_extract_func_tuples)
 rf.pickle(reduced_summaries_dict, reduced_summaries_name, dir=run_full_dir)
-
-
-# flatten = lambda data: [y for x in data for y in x]
-# temp_zs = hf.list_of_x_indices_to_zs(summary['list_of_x_indices'])
-# temp_xs = problem['xs'][flatten(summary['list_of_x_indices'])]
-# num_cols = len(temp_xs[0])
-# num_rows = len(temp_xs)
-# temp_state = ds.DPMB_State(gen_seed=0, num_cols=num_cols, num_rows=num_rows, init_alpha=master_alpha, init_betas=betas, init_z=temp_zs, init_x=temp_xs)
-# numpy.mean(temp_state.score_test_set(problem['test_xs']))
-
