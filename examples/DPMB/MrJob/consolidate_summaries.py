@@ -12,17 +12,11 @@ import numpy
 import scipy
 #
 import Cloudless.examples.DPMB.remote_functions as rf
-reload(rf)
 import Cloudless.examples.DPMB.DPMB_State as ds
-reload(ds)
 import Cloudless.examples.DPMB.DPMB as dm
-reload(dm)
 import Cloudless.examples.DPMB.helper_functions as hf
-reload(hf)
 import Cloudless.examples.DPMB.settings as S
-reload(S)
 import Cloudless.examples.DPMB.plot_utils as pu
-reload(pu)
 
 
 # helper functions
