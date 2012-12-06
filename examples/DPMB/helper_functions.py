@@ -601,7 +601,7 @@ def crp_init_superclusters(alpha, mus, seed, n_draws):
         for x_index, child_draw in zip(super_indices, child_draws):
             list_of_x_indices[child_draw].append(x_index)
         list_of_list_of_x_indices.append(list_of_x_indices)
-    return list_of_list_of_x_indices
+    return list_of_list_of_x_indices, random_state
 
 def consolidate_suffstats(suffstats_list):
     num_vectors = sum([suffstats.num_vectors for suffstats in suffstats_list])
