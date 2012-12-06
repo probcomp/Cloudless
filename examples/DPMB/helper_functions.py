@@ -151,6 +151,26 @@ def calc_alpha_conditional(state):
     state.setAlpha(lnPdf,original_alpha)
     return np.array(logp_list)-base_score,lnPdf,grid
 
+def calc_alpha_conditional_suffstats(suffstats, alpha_grid):
+    cluster_lens = [
+        cluster_suffstats.num_vectors
+        for cluster_suffstats in suffstats.list_of_cluster_suffstats
+        ]
+    assert suffstats.num_clusters == len(suffstats.list_of_cluster_suffstats)
+    num_clusters = len(suffstats.num_clusters)
+    num_vectors = suffstats.num_vectors
+    lnProdGammas = sum([ss.gammaln(cluster_len) for cluster_len in cluster_lens])
+    #
+    lnPdf = lambda alpha: ss.gammaln(alpha) \
+        + num_clusters * np.log(alpha) \
+        - ss.gammaln(alpha + num_vectors) \
+        + lnProdGammas
+    logp_list = []
+    for test_alpha in alpha_grid:
+        logp = lnPdf(test_alpha)
+        logp_list.append(logp)
+    return np.array(logp_list), lnPdf, alpha_grid
+
 def calc_beta_conditional(state,col_idx):
     original_beta = state.betas[col_idx]
     ##
