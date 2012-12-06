@@ -105,18 +105,23 @@ create_args = lambda num_iters, num_nodes: [
     seed_full_filename,
     ]
 
-gibbs_init_full_filename = os.path.join(run_full_dir, gibbs_init_filename)
-if not os.path.isfile(gibbs_init_full_filename):
-    # gibbs init to be used by all subsequent inference
-    gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
-    init_num_iters = 0
-    init_num_nodes = 1
-    gibbs_init_args.extend(create_args(init_num_iters, init_num_nodes))
-    mr_job = si.MRSeedInferer(args=gibbs_init_args)
-    with mr_job.make_runner() as runner:
-        runner.run()
-else:
-    print '!!!using prior gibbs_init!!!'
+filename_parts = os.path.splitext(gibbs_init_filename)
+# FIXME: NOT REALLY GIBBS INIT, INIT FROM PRIOR!
+get_gibbs_filename = lambda num_nodes: filename_parts[0] + '_numnodes' + str(num_nodes) + filename_parts[1]
+for num_nodes in num_nodes_list:
+    gibbs_init_filename = get_gibbs_filename(num_nodes)
+    gibbs_init_full_filename = os.path.join(run_full_dir, gibbs_init_filename)
+    if True or not os.path.isfile(gibbs_init_full_filename):
+        # gibbs init to be used by all subsequent inference
+        gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
+        init_num_iters = 0
+        init_num_nodes = num_nodes
+        gibbs_init_args.extend(create_args(init_num_iters, init_num_nodes))
+        mr_job = si.MRSeedInferer(args=gibbs_init_args)
+        with mr_job.make_runner() as runner:
+            runner.run()
+    else:
+        print '!!!using prior gibbs_init!!!'
 
 # save the initial parameters
 parameters = vars(args)
@@ -138,6 +143,7 @@ if push_to_s3:
 # now run for each num_nodes
 for num_nodes in num_nodes_list:
     print 'starting num_nodes = ' + str(num_nodes)
+    gibbs_init_filename = get_gibbs_filename(num_nodes)
     infer_args = ['--resume-file', gibbs_init_filename]
     if push_to_s3:
         infer_args.extend(['--push_to_s3'])
