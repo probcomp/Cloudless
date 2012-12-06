@@ -519,15 +519,18 @@ class _supercluster():
         return [cluster.x_indices for cluster in self.cluster_set]
 class _supercluster_sampler():
     def __init__(self, lol_of_x_indices, mus, alpha):
-        self.supercluster_list = [
-            _supercluster(list_of_x_indices, mu)
-            for list_of_x_indices, mu in zip(lol_of_x_indices, mus)
-            ]
-        self.alpha = alpha
-        self.sum_weights = sum([
+        supercluster_list = []
+        for list_of_x_indices, mu in zip(lol_of_x_indices, mus):
+            supercluster = _supercluster(list_of_x_indices, mu)
+            supercluster_list.append(supercluster)
+        sum_weights = sum([
                 supercluster.weight
-                for supercluster in self.supercluster_list
+                for supercluster in supercluster_list
                 ])
+        #
+        self.alpha = alpha
+        self.sum_weights = sum_weights
+        self.supercluster_list = supercluster_list
     def get_cluster_list(self):
         supercluster_list = self.supercluster_list
         #
@@ -548,10 +551,10 @@ class _supercluster_sampler():
         supercluster_list = self.supercluster_list
         #
         denominator = alpha + sum_weights
-        die_weights = [
-            (alpha * supercluster.mu + supercluster.weight) / denominator
-            for supercluster in supercluster_list
-            ]
+        die_weights = []
+        for supercluster in supercluster_list:
+            die_weight = (alpha * supercluster.mu + supercluster.weight) / denominator
+            die_weights.append(die_weight)
         return die_weights
     def gibbs_sample_cluster(self, cluster, rand_draw):
         supercluster_list = self.supercluster_list
