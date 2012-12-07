@@ -6,7 +6,7 @@ num_cols=256
 gen_seed=0
 beta_d=2.0
 num_iters=10
-num_clusters=64
+num_clusters_list="128 256 512"
 num_iters_per_step_list="1 4"
 num_nodes_list="2 4"
 #
@@ -24,14 +24,16 @@ function get_logbase {
     echo "seed${infer_seed}_n${num_nodes}_he${num_iters_per_step}"
 }
 
-for infer_seed in ${infer_seed_list[*]}; do
-    for num_iters_per_step in ${num_iters_per_step_list[*]}; do
-	for num_nodes in ${num_nodes_list[*]}; do
-	    logbase=$(get_logbase $infer_seed $num_nodes $num_iters_per_step)
-	    python programmatic_mrjob.py --infer_seed $infer_seed --num_iters_per_step $num_iters_per_step \
-		$gen_seed $num_rows $num_cols $num_clusters $beta_d $num_iters $num_nodes \
-		$other_options \
-		> "${logbase}.out" 2> "${logbase}.err"
+for num_clusters in ${num_clusters_list[*]}; do
+    for infer_seed in ${infer_seed_list[*]}; do
+	for num_iters_per_step in ${num_iters_per_step_list[*]}; do
+	    for num_nodes in ${num_nodes_list[*]}; do
+		logbase=$(get_logbase $infer_seed $num_nodes $num_iters_per_step)
+		python programmatic_mrjob.py --infer_seed $infer_seed --num_iters_per_step $num_iters_per_step \
+		    $gen_seed $num_rows $num_cols $num_clusters $beta_d $num_iters $num_nodes \
+		    $other_options \
+		    > "${logbase}.out" 2> "${logbase}.err"
+	    done
 	done
     done
 done
