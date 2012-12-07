@@ -32,7 +32,7 @@ class files():
     problem_filename = 'problem.pkl.gz'
     gen_state_image_save_str = 'mrjob_problem_gen_state'
     gibbs_init_filename = 'gibbs_init.pkl.gz'
-    run_dir_prefix = 'programmatic_mrjob_'
+    run_dir_prefix = 'new_programmatic_mrjob_'
     parameters_filename = 'run_parameters.txt'
     reduced_summaries_name = 'reduced_summaries.pkl.gz'
     
