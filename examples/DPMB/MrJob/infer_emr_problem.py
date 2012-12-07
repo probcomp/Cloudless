@@ -114,7 +114,7 @@ def create_args(num_iters, num_nodes, push_to_s3=True, job_flow_id=None):
         '--num-iters-per-step', str(num_iters_per_step),
         '--num-nodes', str(num_nodes),
         '--problem-file', problem_filename,
-        '--resume-file', gibbs_init_filename,
+        # '--resume-file', gibbs_init_filename,
         '--run_dir', run_dir,
         seed_full_filename,
         ]
