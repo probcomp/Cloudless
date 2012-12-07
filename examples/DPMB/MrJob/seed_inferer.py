@@ -126,7 +126,8 @@ class MRSeedInferer(MRJob):
                 dummy_state = ds.DPMB_State(
                     gen_seed=run_spec['dataset_spec']['gen_seed'],
                     num_cols=run_spec['dataset_spec']['num_cols'], num_rows=10)
-                init_alpha = dummy_state.alpha
+                # init_alpha = dummy_state.alpha
+                init_alpha = 10 # FIXME : hard wired
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
                 mus = numpy.repeat(1./num_nodes, num_nodes)
