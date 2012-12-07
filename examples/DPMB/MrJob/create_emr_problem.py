@@ -89,19 +89,19 @@ problem, problem_filename = csd.pkl_mrjob_problem(
     problem_filename=problem_filename,
     image_save_str=image_save_str, dir=run_full_dir)
 
-# actually create the inference problem init state
-os.system('printf "' + str(gen_seed) + '\n" > ' + seed_full_filename)
-if not os.path.isfile(init_full_filename):
-    # gibbs init to be used by all subsequent inference
-    init_args = ['--gibbs-init-file', init_filename]
-    init_num_iters = 0
-    init_num_nodes = 1
-    init_args.extend(create_args(init_num_iters, init_num_iters))
-    mr_job = si.MRSeedInferer(args=init_args)
-    with mr_job.make_runner() as runner:
-        runner.run()
-else:
-    print '!!!using prior init!!!'
+# # actually create the inference problem init state
+# os.system('printf "' + str(gen_seed) + '\n" > ' + seed_full_filename)
+# if not os.path.isfile(init_full_filename):
+#     # gibbs init to be used by all subsequent inference
+#     init_args = ['--gibbs-init-file', init_filename]
+#     init_num_iters = 0
+#     init_num_nodes = 1
+#     init_args.extend(create_args(init_num_iters, init_num_iters))
+#     mr_job = si.MRSeedInferer(args=init_args)
+#     with mr_job.make_runner() as runner:
+#         runner.run()
+# else:
+#     print '!!!using prior init!!!'
 
 # save the initial parameters
 with open(parameters_full_filename, 'w') as fh:
@@ -111,7 +111,7 @@ with open(parameters_full_filename, 'w') as fh:
 
 if push_to_s3:
     s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
-    s3.put_s3(init_filename)
+    # s3.put_s3(init_filename)
     s3.put_s3(parameters_filename)
     s3.put_s3(problem_filename)
     s3.put_s3(h5_filename)
