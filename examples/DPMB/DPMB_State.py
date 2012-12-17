@@ -4,10 +4,10 @@ import os
 import datetime
 from collections import namedtuple
 #
-import Cloudless.examples.DPMB.optionally_use_agg as oua
-oua.optionally_use_agg()
+# import Cloudless.examples.DPMB.optionally_use_agg as oua
+# oua.optionally_use_agg()
+# import pylab
 import numpy as np
-import pylab
 from collections import OrderedDict as od
 #
 import DPMB as dm

@@ -6,9 +6,9 @@ import pdb
 from timeit import default_timer
 from collections import defaultdict
 #
-import pylab
-# import pandas # imported below only in case actually used
-import matplotlib
+# import pylab
+# # import pandas # imported below only in case actually used
+# import matplotlib
 import numpy as np
 import numpy
 import scipy.special as ss
@@ -490,7 +490,8 @@ def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha
     for clusters,points_per_cluster,mle in mle_vals:
         pylab.text(clusters,points_per_cluster,str(int(mle)),color='red')
 
-def echo_date(in_str, outfile='/tmp/steps'):
+# def echo_date(in_str, outfile='/tmp/steps'):
+def echo_date(in_str, outfile='steps'):
     cmd_str = 'echo "`date` :: ' + in_str + '" >> ' + outfile
     os.system(cmd_str)
 

@@ -105,14 +105,13 @@ class MRSeedInferer(MRJob):
         run_bucket_dir = self.run_bucket_dir
 
         run_full_dir = os.path.join(data_dir, run_dir)
-        rf.verify_problem_helper(run_dir, problem_file)
+        # rf.verify_problem_helper(run_dir, problem_file)
         #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
-                summary = rf.verify_file_helper(resume_file, run_dir,
-                                                 do_unpickle=True)
+                summary = rf.unpickle(resume_file)
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
@@ -162,10 +161,9 @@ class MRSeedInferer(MRJob):
                     gibbs_init_file = create_pickle_file_str(
                         num_nodes, run_key, str(-1), hypers_every_N)
                 # FIXME: should only pickle if it wasn't read
-                rf.pickle(summary, gibbs_init_file, dir=run_full_dir)
+                rf.pickle(summary, gibbs_init_file, dir='')
                 if self.push_to_s3:
-                    s3 = s3h.S3_helper(
-                        bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='')
                     s3.put_s3(gibbs_init_file)
 
         summary['problem_hexdigest'] = problem_hexdigest
@@ -269,9 +267,9 @@ class MRSeedInferer(MRJob):
                 num_iters_per_step, num_nodes)
 
             run_full_dir = os.path.join(data_dir, run_dir)
-            rf.verify_problem_helper(run_dir, problem_file)
+            # rf.verify_problem_helper(run_dir, problem_file)
             sub_problem_xs = rf.get_xs_subset_from_h5(
-                problem_file, x_indices, dir=run_full_dir)
+                problem_file, x_indices, dir='')
             hf.echo_date('infer(): read problem')
             sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
             # actually infer
@@ -285,13 +283,13 @@ class MRSeedInferer(MRJob):
                 run_spec['infer_do_betas_inference'] = True
                 # set up for intermediate results to be pickled on the fly
                 def single_node_post_infer_func(iter_idx, state, last_summary,
-                                                data_dir=run_full_dir):
+                                                data_dir=''):
                     iter_num = iter_idx + 1
                     pkl_file = get_child_pkl_file(iter_num)
-                    rf.pickle(last_summary, pkl_file, dir=run_full_dir)
+                    rf.pickle(last_summary, pkl_file, dir='')
                     if self.push_to_s3:
                         s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                           local_dir=run_full_dir)
+                                           local_dir='')
                         s3.put_s3(pkl_file)
                 child_summaries = rf.infer(
                     run_spec, sub_problem, send_zs=True,
@@ -404,9 +402,10 @@ class MRSeedInferer(MRJob):
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
                                           hypers_every_N=hypers_every_N)
         run_full_dir = os.path.join(data_dir, run_dir)
-        rf.pickle(summary, pkl_file, dir=run_full_dir)
+        master_suffstats = summary.pop('suffstats')
+        rf.pickle(summary, pkl_file, dir='')
         if self.push_to_s3:
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_full_dir)
+            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='')
             s3.put_s3(pkl_file)
         hf.echo_date('done pickling summary')
         #

@@ -4,8 +4,8 @@ from collections import namedtuple
 import hashlib
 import argparse
 #
-import matplotlib
-matplotlib.use('Agg')
+# import matplotlib
+# matplotlib.use('Agg')
 #
 import Cloudless.examples.DPMB.settings as S
 reload(S)

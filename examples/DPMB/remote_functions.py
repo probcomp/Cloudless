@@ -9,18 +9,16 @@ import sets
 import time
 from threading import Thread
 ##
-import Cloudless.examples.DPMB.optionally_use_agg as oua
-oua.optionally_use_agg()
+# import Cloudless.examples.DPMB.optionally_use_agg as oua
+# oua.optionally_use_agg()
+# import pylab
 import numpy as np
-import pylab
 from numpy import array
 from scipy.stats import linregress
 ##
 import Cloudless.examples.DPMB.DPMB_State as ds
 import Cloudless.examples.DPMB.h5_functions as h5
 import Cloudless.examples.DPMB.DPMB as dm
-import Cloudless.examples.DPMB.PDPMB_State as pds
-import Cloudless.examples.DPMB.PDPMB as pdm
 import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.s3_helper as s3h
 import Cloudless.examples.DPMB.settings as settings
@@ -112,7 +110,8 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
         # make sure the file is local
         pkl_file = dataset_spec['pkl_file']
         pkl_file = os.path.join(dataset_spec['data_dir'], pkl_file)
-        pkl_data = verify_file_helper(pkl_file, '', do_unpickle=True)
+        # pkl_data = verify_file_helper(pkl_file, '', do_unpickle=True)
+        pkl_data = unpickle(os.path.split(pkl_file)[-1])
         # set problem variables
         xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
