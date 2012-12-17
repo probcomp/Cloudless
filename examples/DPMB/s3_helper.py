@@ -24,7 +24,7 @@ class S3_helper():
         self.bucket_dir = bucket_dir
         self.local_dir = local_dir
         #
-        self.bucket = boto.connect_s3(*boto_credentials).get_bucket(self.bucket_str)
+        self.bucket = boto.connect_s3(**boto_credentials).get_bucket(self.bucket_str)
 
     def is_local(self,filename):
         full_filename = os.path.join(self.local_dir,filename)
