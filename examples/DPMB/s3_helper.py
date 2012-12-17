@@ -10,19 +10,21 @@ import Cloudless.examples.DPMB.h5_functions as h5
 
 class S3_helper():
 
-    def __init__(self,bucket_str=None,bucket_dir=None,local_dir=None):
+    def __init__(self,bucket_str=None,bucket_dir=None,local_dir=None, boto_credentials=None):
         if bucket_str is None:
             bucket_str = settings.s3.bucket_str
         if bucket_dir is None:
             bucket_dir = settings.s3.bucket_dir
         if local_dir is None:
             local_dir = settings.data_dir
+        if boto_credentials is None:
+            boto_credentials = hf.get_boto_credentials()
         #
         self.bucket_str = bucket_str
         self.bucket_dir = bucket_dir
         self.local_dir = local_dir
         #
-        self.bucket = boto.connect_s3().get_bucket(self.bucket_str)
+        self.bucket = boto.connect_s3(*boto_credentials).get_bucket(self.bucket_str)
 
     def is_local(self,filename):
         full_filename = os.path.join(self.local_dir,filename)
