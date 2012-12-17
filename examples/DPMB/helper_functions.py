@@ -1,3 +1,4 @@
+import ConfigParser
 import datetime
 import os
 import re 
@@ -622,3 +623,15 @@ def consolidate_suffstats(suffstats_list):
 
 def flatten(list_of_list):
     return [el for el_list in list_of_list for el in el_list]
+
+def get_boto_credentials(credentials_file=None):
+    boto_credentials = dict()
+    if credentials_file is None:
+        for credentials_file in [os.path.expanduser('~/.boto'), './.boto']:
+            if os.path.isfile(credentials_file):
+                cp = ConfigParser.SafeConfigParser()
+                with open(credentials_file) as fh:
+                    cp.readfp(fh)
+                    boto_credentials = dict(cp.items('Credentials'))
+                    break
+    return boto_credentials
