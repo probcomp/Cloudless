@@ -269,7 +269,7 @@ class MRSeedInferer(MRJob):
             run_full_dir = os.path.join(data_dir, run_dir)
             # rf.verify_problem_helper(run_dir, problem_file)
             sub_problem_xs = rf.get_xs_subset_from_h5(
-                problem_file, x_indices, dir='')
+                problem_file, x_indices, dir=run_full_dir)
             hf.echo_date('infer(): read problem')
             sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
             # actually infer
