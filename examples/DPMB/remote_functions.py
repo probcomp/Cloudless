@@ -482,20 +482,26 @@ def unpickle(file_str, dir='', check_hdf5=True):
 
 def get_xs_subset_from_h5(filename, x_indices, dir=''):
     hdf5_filename = h5.get_h5_name_from_pkl_name(filename)
+    hdf5_full_filename = os.path.join(dir, hdf5_filename)
     xs = None
     sorted_x_indices = np.sort(x_indices)
     inverse_indices = np.argsort(np.argsort(x_indices))
-    with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
-        xs = my_h5['xs'].value[sorted_x_indices]
-        xs = xs[inverse_indices]
+    import h5py
+    f = h5py.File(hdf5_full_filename, 'r')
+    xs = f['xs'].value[sorted_x_indices]
+    xs = xs[inverse_indices]
+    f.close()
     return xs
 
 def fill_dict_from_hdf5(in_dict, pkl_file_str, dir=''):
     hdf5_filename = h5.get_h5_name_from_pkl_name(pkl_file_str)
+    hdf5_full_filename = os.path.join(dir, hdf5_filename)
     varnames = in_dict['hdf5_vars']
-    with h5.h5_context(hdf5_filename, dir=dir) as my_h5:
-        for varname in varnames:
-            in_dict[varname] = h5.unh5ify(varname, my_h5)
+    import h5py
+    f = h5py.File(hdf5_full_filename, 'r')
+    for varname in varnames:
+        in_dict[varname] = h5.unh5ify(varname, f)
+    f.close()
     return in_dict
 
 def pickle_asyncmemoize(asyncmemo,file_str):
