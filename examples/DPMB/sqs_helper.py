@@ -57,8 +57,6 @@ def push_str_list_to_queue(in_list, queue_name):
 def count_and_delete(queue_or_queuename):
     q_iter = get_queue_iterator(queue_or_queuename)
     q_els = [el for el in q_iter]
-    import pdb
-    pdb.set_trace()
     message_list = [el[0] for el in q_els]
     [el[1]() for el in q_els]
     return Counter(message_list)
