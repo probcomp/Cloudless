@@ -110,8 +110,7 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
         # make sure the file is local
         pkl_file = dataset_spec['pkl_file']
         pkl_file = os.path.join(dataset_spec['data_dir'], pkl_file)
-        # pkl_data = verify_file_helper(pkl_file, '', do_unpickle=True)
-        pkl_data = unpickle(os.path.split(pkl_file)[-1])
+        pkl_data = unpickle(pkl_file)
         # set problem variables
         xs = np.array(pkl_data["xs"],dtype=np.int32)
         if 'zs' in pkl_data:
