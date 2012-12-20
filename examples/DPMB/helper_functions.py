@@ -626,12 +626,13 @@ def flatten(list_of_list):
 
 def get_boto_credentials(credentials_file=None):
     boto_credentials = dict()
-    if credentials_file is None:
-        for credentials_file in [os.path.expanduser('~/.boto'), './.boto']:
-            if os.path.isfile(credentials_file):
-                cp = ConfigParser.SafeConfigParser()
-                with open(credentials_file) as fh:
-                    cp.readfp(fh)
-                    boto_credentials = dict(cp.items('Credentials'))
-                    break
+    credentials_files = [credentials_file, os.path.expanduser('~/.boto'), './.boto']
+    credentials_files = filter(None, credentials_files)
+    for credentials_file in credentials_files:
+        if os.path.isfile(credentials_file):
+            cp = ConfigParser.SafeConfigParser()
+            with open(credentials_file) as fh:
+                cp.readfp(fh)
+                boto_credentials = dict(cp.items('Credentials'))
+                break
     return boto_credentials
