@@ -56,7 +56,6 @@ class CloudlessSetup(ClusterSetup):
                                                    filename + '_for_hadoop')
                     dest_filename = os.path.join(dest_dir, filename)
                     cmd_str = ' '.join(['cp', source_filename, dest_filename])
-                    print cmd_str
                     node.ssh.execute(cmd_str)
                #
                node.ssh.put(settings.s3.ec2_credentials_file,remote_home_dir)
