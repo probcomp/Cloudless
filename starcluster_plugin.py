@@ -61,4 +61,3 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.put(settings.s3.ec2_credentials_file,remote_home_dir)
                node.ssh.execute(
                     'chmod -R ugo+rwx ' + os.path.join(remote_home_dir,'.boto'))
-
