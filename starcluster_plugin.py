@@ -58,9 +58,10 @@ class CloudlessSetup(ClusterSetup):
                     cmd_str = ' '.join(['cp', source_filename, dest_filename])
                     node.ssh.execute(cmd_str)
                #
-               core_site = os.path.join(cloudless_dir, 'update_core_site.py')
-               cmd_str = ' '.join(['python', core_site])
-               node.ssh.execute(cmd_str)
+               boto_full_file = os.path.join(remote_home_dir,'.boto')
                node.ssh.put(settings.s3.ec2_credentials_file,remote_home_dir)
-               node.ssh.execute(
-                    'chmod -R ugo+rwx ' + os.path.join(remote_home_dir,'.boto'))
+               node.ssh.execute('chmod -R ugo+rwx ' + boto_full_file)
+               #
+               core_site = os.path.join(cloudless_dir, 'update_core_site.py')
+               cmd_str = ' '.join(['python', core_site, '--boto_file', boto_full_file])
+               node.ssh.execute(cmd_str)
