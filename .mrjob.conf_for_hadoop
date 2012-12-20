@@ -1,0 +1,4 @@
+runners:
+  hadoop:
+    hadoop_home: /usr/lib/hadoop
+    upload_files: ["~/.boto"]

@@ -7,6 +7,8 @@ import Cloudless.examples.DPMB.settings as settings
 
 cloudless_dir = '/usr/local/lib/python2.7/dist-packages/Cloudless'
 git_repo = 'git://github.com/mit-probabilistic-computing-project/Cloudless.git'
+hadoop_dir = '/etc/hadoop-0.20/conf/'
+remote_home_dir = '/home/sgeadmin/'
 
 class CloudlessSetup(ClusterSetup):
      def __init__(self):
@@ -46,7 +48,17 @@ class CloudlessSetup(ClusterSetup):
                                 'then mkdir /mnt/TinyImages ; fi')
                node.ssh.execute('chown sgeadmin /mnt/TinyImages')
                #
-               remote_home_dir = '/home/sgeadmin/'
+               filename_tuples = [(hadoop_dir, 'core-site.xml'),
+                                  (hadoop_dir, 'mapred-site.xml'),
+                                  (remote_home_dir, '.mrjob.conf')]
+               for dest_dir, filename in filename_tuples:
+                    source_filename = os.path.join(cloudless_dir,
+                                                   filename + '_for_hadoop')
+                    dest_filename = os.path.join(dest_dir, filename)
+                    cmd_str = ' '.join(['cp', source_filename, dest_filename])
+                    print cmd_str
+                    node.ssh.execute(cmd_str)
+               #
                node.ssh.put(settings.s3.ec2_credentials_file,remote_home_dir)
                node.ssh.execute(
                     'chmod -R ugo+rwx ' + os.path.join(remote_home_dir,'.boto'))
