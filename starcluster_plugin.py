@@ -35,25 +35,13 @@ class CloudlessSetup(ClusterSetup):
                ##
                node.ssh.execute(
                     'cd ' + cloudless_dir + ' && git checkout mrjobify')
+               node.ssh.execute('chmod -R ugo+rwx ' + cloudless_dir)
                #
                # start swap creation ASAP
                log.info("Starting swap creation on %s" % node.alias)
                node.ssh.execute('chown sgeadmin /mnt')
                node.ssh.execute_async(
                     'bash ' + os.path.join(cloudless_dir,'make_swap.sh'))
-               #
-          for node in nodes:
-               log.info("Installing Cloudless (part 2) on %s" % node.alias)
-               node.ssh.execute('easy_install scikits.learn')
-               node.ssh.execute('apt-get install -y python-h5py')
-               node.ssh.execute(
-                    'python -c \'import Cloudless.examples.DPMB.settings\'')
-               node.ssh.execute('python -c \'import matplotlib\'')
-               node.ssh.execute('chmod -R ugo+rwx ' + cloudless_dir)
-               node.ssh.execute('if [ ! -d /mnt/TinyImages ] ; '
-                                'then mkdir /mnt/TinyImages ; fi')
-               node.ssh.execute('chown sgeadmin /mnt/TinyImages')
-               #
                filename_tuples = [(hadoop_dir, 'core-site.xml'),
                                   (hadoop_dir, 'mapred-site.xml'),
                                   (remote_home_dir, '.mrjob.conf')]
@@ -64,6 +52,17 @@ class CloudlessSetup(ClusterSetup):
                     cmd_str = ' '.join(['cp', source_filename, dest_filename])
                     node.ssh.execute(cmd_str)
                #
+          for node in nodes:
+               log.info("Installing Cloudless (part 2) on %s" % node.alias)
+               node.ssh.execute('easy_install scikits.learn')
+               node.ssh.execute('apt-get install -y python-h5py')
+               node.ssh.execute(
+                    'python -c \'import Cloudless.examples.DPMB.settings\'')
+               node.ssh.execute('python -c \'import matplotlib\'')
+               # update_core_site requires helper_functions which requires pyx
                core_site = os.path.join(cloudless_dir, 'update_core_site.py')
                cmd_str = ' '.join(['python', core_site, '--boto_file', boto_full_file])
                node.ssh.execute(cmd_str)
+               # node.ssh.execute('if [ ! -d /mnt/TinyImages ] ; '
+               #                  'then mkdir /mnt/TinyImages ; fi')
+               # node.ssh.execute('chown sgeadmin /mnt/TinyImages')
