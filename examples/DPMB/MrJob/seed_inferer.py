@@ -44,10 +44,13 @@ child_state_tuple = namedtuple(
     ' iter_start_dt '
     )
 
-def get_hadoop_fs_cmd(filename, dest_dir='/user/sgeadmin/', which='put'):
+def get_hadoop_fs_cmd(filename, dest_dir_prefix='/user/sgeadmin/', dest_dir_suffix='', which='put'):
     which = '-' + which
-    hadoop_fs_cmd = ' '.join(['hadoop', 'fs', which, filename, dest_dir])
-    return hadoop_fs_cmd
+    dest_full_dir = os.path.join(dest_dir_prefix, dest_dir_suffix)
+    dest_full_file = os.path.join(dest_full_dir, filename)
+    hadoop_fs_cmd_1 = ' '.join(['hadoop', 'fs', '-mkdir', dest_full_dir])
+    hadoop_fs_cmd_2 = ' '.join(['hadoop', 'fs', which, filename, dest_full_file])
+    return hadoop_fs_cmd_1, hadoop_fs_cmd_2
 
 class MRSeedInferer(MRJob):
 
@@ -156,8 +159,10 @@ class MRSeedInferer(MRJob):
                         num_nodes, run_key, str(-1), hypers_every_N)
                 # FIXME: should only pickle if it wasn't read
                 rf.pickle(summary, gibbs_init_file, dir='')
-                hadoop_cmd = get_hadoop_fs_cmd(gibbs_init_file)
-                os.system(hadoop_cmd)
+                hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
+                    gibbs_init_file, dest_dir_suffix=run_dir)
+                os.system(hadoop_cmd_1)
+                os.system(hadoop_cmd_2)
 
         summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'].update({
@@ -278,8 +283,10 @@ class MRSeedInferer(MRJob):
                     iter_num = iter_idx + 1
                     pkl_file = get_child_pkl_file(iter_num)
                     rf.pickle(last_summary, pkl_file, dir='')
-                    hadoop_cmd = get_hadoop_fs_cmd(pkl_file)
-                    os.system(hadoop_cmd)
+                    hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
+                        pkl_file, dest_dir_suffix=run_dir)
+                    os.system(hadoop_cmd_1)
+                    os.system(hadoop_cmd_2)
                 child_summaries = rf.infer(
                     run_spec, sub_problem, send_zs=True,
                     post_infer_func=single_node_post_infer_func)
@@ -392,8 +399,10 @@ class MRSeedInferer(MRJob):
                                           hypers_every_N=hypers_every_N)
         master_suffstats = summary.pop('suffstats')
         rf.pickle(summary, pkl_file, dir='')
-        hadoop_cmd = get_hadoop_fs_cmd(pkl_file)
-        os.system(hadoop_cmd)
+        hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
+            pkl_file, dest_dir_suffix=run_dir)
+        os.system(hadoop_cmd_1)
+        os.system(hadoop_cmd_2)
         hf.echo_date('done pickling summary')
         #
         # format summary to pass out 
