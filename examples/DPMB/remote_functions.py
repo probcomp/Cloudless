@@ -979,10 +979,11 @@ def consolidate_zs(zs_list):
         cluster_idx += max_zs + 1
     return zs
 
-def verify_file_helper(filename, bucket_dir_suffix,
+def verify_file_helper(filename, bucket_dir_suffix, local_dir=None,
                        do_unpickle=False, write_s3=False):
-    data_dir = settings.path.data_dir
-    local_dir = os.path.join(data_dir, bucket_dir_suffix)
+    if local_dir is None:
+        data_dir = settings.path.data_dir
+        local_dir = os.path.join(data_dir, bucket_dir_suffix)
     bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
     s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
     s3.verify_file(filename, write_s3=write_s3)
@@ -991,10 +992,11 @@ def verify_file_helper(filename, bucket_dir_suffix,
         pkl_contents = unpickle(filename, dir=local_dir)
     return pkl_contents
 
-def verify_problem_helper(bucket_dir_suffix, problem_filename='problem.pkl.gz',
-                         do_unpickle=False):
+def verify_problem_helper(bucket_dir_suffix, local_dir=None,
+                          problem_filename='problem.pkl.gz', do_unpickle=False):
     h5_filename = h5.get_h5_name_from_pkl_name(problem_filename)
-    verify_file_helper(h5_filename, bucket_dir_suffix, do_unpickle=False)
+    verify_file_helper(h5_filename, bucket_dir_suffix,
+                       local_dir=local_dir, do_unpickle=False)
     problem = verify_file_helper(problem_filename, bucket_dir_suffix,
-                                 do_unpickle=do_unpickle)
+                                 local_dir=local_dir, do_unpickle=do_unpickle)
     return problem 
