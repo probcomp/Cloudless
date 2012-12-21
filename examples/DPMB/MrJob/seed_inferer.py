@@ -9,21 +9,14 @@ from mrjob.job import MRJob
 from mrjob.protocol import PickleProtocol, RawValueProtocol
 #
 import Cloudless.examples.DPMB.remote_functions as rf
-import Cloudless.examples.DPMB.pyx_functions as pf
 import Cloudless.examples.DPMB.DPMB_State as ds
-import Cloudless.examples.DPMB.DPMB as dm
-import Cloudless.examples.DPMB.h5_functions as h5
 import Cloudless.examples.DPMB.helper_functions as hf
-import Cloudless.examples.DPMB.s3_helper as s3h
 import Cloudless.examples.DPMB.settings as settings
 
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
 data_dir = settings.path.data_dir
-#
-# problem_file = settings.tiny_image_problem_file
-# problem_file = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
 default_problem_file = settings.files.problem_filename
 default_resume_file = None
 
@@ -50,6 +43,11 @@ child_state_tuple = namedtuple(
     ' child_inf_seed child_gen_seed child_counter '
     ' iter_start_dt '
     )
+
+def get_hadoop_fs_cmd(filename, dest_dir='/user/sgeadmin/', which='put'):
+    which = '-' + which
+    hadoop_fs_cmd = ' '.join(['hadoop', 'fs', which, filename, dest_dir])
+    return hadoop_fs_cmd
 
 class MRSeedInferer(MRJob):
 
@@ -104,9 +102,6 @@ class MRSeedInferer(MRJob):
         hypers_every_N = self.hypers_every_N
         run_bucket_dir = self.run_bucket_dir
 
-        run_full_dir = os.path.join(data_dir, run_dir)
-        # rf.verify_problem_helper(run_dir, problem_file)
-        #
         # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
@@ -118,15 +113,14 @@ class MRSeedInferer(MRJob):
                     infer_seed=master_inf_seed,
                     num_iters=0 # no inference, just init
                    )
-                # FIXME: should I pass permute=False here?
-                run_spec['dataset_spec']['data_dir'] = run_full_dir
+                run_spec['dataset_spec']['data_dir'] = '.'
                 problem = rf.gen_problem(run_spec['dataset_spec'])
                 # gen dummy state to get alphas, betas
                 dummy_state = ds.DPMB_State(
                     gen_seed=run_spec['dataset_spec']['gen_seed'],
                     num_cols=run_spec['dataset_spec']['num_cols'], num_rows=10)
                 # init_alpha = dummy_state.alpha
-                init_alpha = 10 # FIXME : hard wired
+                init_alpha = 50 # FIXME : hard wired
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
                 mus = numpy.repeat(1./num_nodes, num_nodes)
@@ -162,9 +156,8 @@ class MRSeedInferer(MRJob):
                         num_nodes, run_key, str(-1), hypers_every_N)
                 # FIXME: should only pickle if it wasn't read
                 rf.pickle(summary, gibbs_init_file, dir='')
-                if self.push_to_s3:
-                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='')
-                    s3.put_s3(gibbs_init_file)
+                hadoop_cmd = get_hadoop_fs_cmd(gibbs_init_file)
+                os.system(hadoop_cmd)
 
         summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'].update({
@@ -266,10 +259,8 @@ class MRSeedInferer(MRJob):
                 zs, master_alpha, betas, child_inf_seed, child_gen_seed,
                 num_iters_per_step, num_nodes)
 
-            run_full_dir = os.path.join(data_dir, run_dir)
-            # rf.verify_problem_helper(run_dir, problem_file)
             sub_problem_xs = rf.get_xs_subset_from_h5(
-                problem_file, x_indices, dir=run_full_dir)
+                problem_file, x_indices, dir='.')
             hf.echo_date('infer(): read problem')
             sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
             # actually infer
@@ -287,10 +278,8 @@ class MRSeedInferer(MRJob):
                     iter_num = iter_idx + 1
                     pkl_file = get_child_pkl_file(iter_num)
                     rf.pickle(last_summary, pkl_file, dir='')
-                    if self.push_to_s3:
-                        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir,
-                                           local_dir='')
-                        s3.put_s3(pkl_file)
+                    hadoop_cmd = get_hadoop_fs_cmd(pkl_file)
+                    os.system(hadoop_cmd)
                 child_summaries = rf.infer(
                     run_spec, sub_problem, send_zs=True,
                     post_infer_func=single_node_post_infer_func)
@@ -401,12 +390,10 @@ class MRSeedInferer(MRJob):
         # save pkl'ed summary locally, push to s3 if appropriate
         pkl_file = create_pickle_file_str(num_nodes, run_key, iter_num,
                                           hypers_every_N=hypers_every_N)
-        run_full_dir = os.path.join(data_dir, run_dir)
         master_suffstats = summary.pop('suffstats')
         rf.pickle(summary, pkl_file, dir='')
-        if self.push_to_s3:
-            s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='')
-            s3.put_s3(pkl_file)
+        hadoop_cmd = get_hadoop_fs_cmd(pkl_file)
+        os.system(hadoop_cmd)
         hf.echo_date('done pickling summary')
         #
         # format summary to pass out 
@@ -428,7 +415,25 @@ class MRSeedInferer(MRJob):
             self.mr(self.infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
+        # FIXME : add a copy step that copies from hdfs to s3
         return step_list
 
 if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--run_dir', type=str, default=None)
+    parser.add_argument('--problem-file', type=str, default=default_problem_file)
+    parser.add_argument('--resume-file',type=str, default=None)
+    args, unknown_args = parser.parse_known_args()
+    run_dir = args.run_dir
+    problem_filename = args.problem_file
+    resume_file = args.resume_file
+    #
+    if resume_file is not None:
+        print "resume file not implemented"
+        import sys
+        sys.exit()
+    if run_dir is not None:
+        rf.verify_problem_helper(run_dir, local_dir='',
+                                 problem_filename=problem_filename)
     MRSeedInferer.run()
