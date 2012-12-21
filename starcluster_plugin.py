@@ -26,7 +26,7 @@ class CloudlessSetup(ClusterSetup):
                node.ssh.put(settings.s3.ec2_credentials_file,remote_home_dir)
                node.ssh.execute('chmod -R ugo+rwx ' + boto_full_file)
           for node in nodes:
-               log.info("Installing Cloudless on %s" % node.alias)
+               log.info("Installing Cloudless (part 1) on %s" % node.alias)
                #
                node.ssh.execute('git clone ' + git_repo)
                node.ssh.execute('rm -rf ' + cloudless_dir)
@@ -43,6 +43,7 @@ class CloudlessSetup(ClusterSetup):
                     'bash ' + os.path.join(cloudless_dir,'make_swap.sh'))
                #
           for node in nodes:
+               log.info("Installing Cloudless (part 2) on %s" % node.alias)
                node.ssh.execute('easy_install scikits.learn')
                node.ssh.execute('apt-get install -y python-h5py')
                node.ssh.execute(
