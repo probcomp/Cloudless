@@ -154,6 +154,9 @@ class MRSeedInferer(MRJob):
                     'suffstats':None, # do I need to build this here?
                     'lolo_x_indices':lolo_x_indices,
                     }
+                summary['last_valid_zs'] = zs
+                summary['list_of_x_indices'] = flat_lolo_x_indices
+                #
                 problem_hexdigest = get_hexdigest(problem)
                 # FIXME : infer will pickle over this
                 if gibbs_init_file is None:
