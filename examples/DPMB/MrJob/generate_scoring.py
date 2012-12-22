@@ -103,7 +103,7 @@ def process_file_queue(queue_or_queuename):
     problem = rf.verify_problem_helper(queuename, do_unpickle=True)
     filename_tuple_generator = get_queue_iterator(queuename)
     process_summary_helper = partial(
-        process_summary, problem=problem, bucket_dir_suffix=queuename)
+        process_summary, problem=problem, bucket_dir_suffix=queuename, write_s3=True)
     result = map(process_summary_helper, filename_tuple_generator)
     #
     # can't seem to get this to work
