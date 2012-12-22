@@ -127,13 +127,13 @@ class MRSeedInferer(MRJob):
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
                 mus = numpy.repeat(1./num_nodes, num_nodes)
-                lol_of_x_indices, random_state = hf.crp_init_superclusters(
+                lolo_x_indices, random_state = hf.crp_init_superclusters(
                     init_alpha, mus, dummy_state.random_state, n_draws)
-                flat_lol_of_x_indices = hf.flatten(lol_of_x_indices)
-                num_clusters = len(flat_lol_of_x_indices)
-                cluster_counts = map(len, flat_lol_of_x_indices)
+                flat_lolo_x_indices = hf.flatten(lolo_x_indices)
+                num_clusters = len(flat_lolo_x_indices)
+                cluster_counts = map(len, flat_lolo_x_indices)
                 flat_x_indices, zs = rf.list_of_x_indices_to_xs_and_zs(
-                    flat_lol_of_x_indices)
+                    flat_lolo_x_indices)
                 timing = {
                     'alpha':0, 'betas':0, 'zs':0,'run_sum':0,
                     'timestamp':datetime.datetime.now(),
@@ -150,7 +150,7 @@ class MRSeedInferer(MRJob):
                     'timing':timing,
                     'inf_seed':master_inf_seed,
                     'suffstats':None, # do I need to build this here?
-                    'lol_of_x_indices':lol_of_x_indices,
+                    'lolo_x_indices':lolo_x_indices,
                     }
                 problem_hexdigest = get_hexdigest(problem)
                 # FIXME : infer will pickle over this
@@ -172,14 +172,14 @@ class MRSeedInferer(MRJob):
         #
         #
         # pull out the values to pass on
-        lol_of_x_indices = summary.get('lol_of_x_indices', None)
+        lolo_x_indices = summary.get('lolo_x_indices', None)
         last_valid_zs = summary.get('last_valid_zs', summary.get('zs', None))
         master_alpha = summary['alpha']
         betas = summary['betas']
         master_suffstats = None
         iter_num = summary.get('iter_num', 0)
         master_state = master_state_tuple(
-            master_suffstats, lol_of_x_indices, last_valid_zs,
+            master_suffstats, lolo_x_indices, last_valid_zs,
             master_alpha, betas,
             master_inf_seed, iter_num,
             )
@@ -189,7 +189,7 @@ class MRSeedInferer(MRJob):
         iter_start_dt = datetime.datetime.now()
         num_nodes = self.num_nodes
         # pull variables out of master_state
-        lol_of_x_indices = master_state.list_of_list_of_x_indices
+        lolo_x_indices = master_state.list_of_list_of_x_indices
         master_alpha = master_state.master_alpha
         betas = master_state.betas
         master_inf_seed = master_state.master_inf_seed
@@ -198,13 +198,13 @@ class MRSeedInferer(MRJob):
         mus = numpy.repeat(1./num_nodes, num_nodes)
         random_state = hf.generate_random_state(master_inf_seed)
         # GIBBS SAMPLE SUPERCLUSTERS WITH DIRICHLET MULTINOMIAL
-        lol_of_x_indices, random_state = hf.gibbs_on_superclusters(
-            lol_of_x_indices, mus, master_alpha, random_state)
+        lolo_x_indices, random_state = hf.gibbs_on_superclusters(
+            lolo_x_indices, mus, master_alpha, random_state)
         #
         # generate child state info
         gen_seed_list = map(int, random_state.tomaxint(num_nodes))
         inf_seed_list = map(int, random_state.tomaxint(num_nodes))
-        node_info_tuples = zip(gen_seed_list, inf_seed_list, lol_of_x_indices)
+        node_info_tuples = zip(gen_seed_list, inf_seed_list, lolo_x_indices)
         #
         # actually distribute
         for child_counter, node_info_tuple in enumerate(node_info_tuples):
@@ -379,15 +379,15 @@ class MRSeedInferer(MRJob):
             'suffstats':master_suffstats,
             }
         # FIXME : need to flatten list_of_list_of_x_indices
-        flat_lol_of_x_indices = hf.flatten(list_of_list_of_x_indices)
-        num_clusters = len(flat_lol_of_x_indices)
-        cluster_counts = map(len, flat_lol_of_x_indices)
+        flat_lolo_x_indices = hf.flatten(list_of_list_of_x_indices)
+        num_clusters = len(flat_lolo_x_indices)
+        cluster_counts = map(len, flat_lolo_x_indices)
         flat_x_indices, zs = rf.list_of_x_indices_to_xs_and_zs(
-            flat_lol_of_x_indices)
+            flat_lolo_x_indices)
 
         summary['last_valid_zs'] = zs
-        summary['list_of_x_indices'] = flat_lol_of_x_indices
-        summary['lol_x_indices'] = list_of_list_of_x_indices
+        summary['list_of_x_indices'] = flat_lolo_x_indices
+        summary['lolo_x_indices'] = list_of_list_of_x_indices
         summary['timing']['timestamp'] = datetime.datetime.now()
         summary['iter_num'] = iter_num
         iter_end_dt = datetime.datetime.now()
