@@ -372,6 +372,7 @@ class DPMB_State():
     def plot(self, which_plots=None, title_append=None,
              save_str=None, beta_idx=0, vector_idx=0,
              **kwargs):
+        import pylab
         if len(self.cluster_list) == 0:
             if save_str is not None:
                 pylab.figure()
