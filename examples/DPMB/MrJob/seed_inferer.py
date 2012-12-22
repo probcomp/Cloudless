@@ -72,7 +72,7 @@ class MRSeedInferer(MRJob):
         self.add_passthrough_option('--problem-file', type='str',
                                     default=default_problem_file)
         self.add_passthrough_option('--resume-file',type='str', default=None)
-        self.add_passthrough_option('--gibbs-init-file',type='str', default=None)
+        self.add_passthrough_option('--init-file',type='str', default=None)
             
 
     def load_options(self, args):
@@ -88,7 +88,7 @@ class MRSeedInferer(MRJob):
         self.run_dir = self.options.run_dir
         self.problem_file = self.options.problem_file
         self.resume_file = self.options.resume_file
-        self.gibbs_init_file = self.options.gibbs_init_file
+        self.init_file = self.options.init_file
         if self.num_nodes == 1 and self.num_iters !=0:
             # override values
             self.num_steps = 1
@@ -102,12 +102,11 @@ class MRSeedInferer(MRJob):
         run_dir = self.run_dir
         problem_file = self.problem_file
         resume_file = self.resume_file
-        gibbs_init_file = self.gibbs_init_file
+        init_file = self.init_file
         num_iters_per_step = self.num_iters_per_step
         hypers_every_N = self.hypers_every_N
         run_bucket_dir = self.run_bucket_dir
 
-        # gibbs init or resume 
         problem_hexdigest = None
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
@@ -159,13 +158,13 @@ class MRSeedInferer(MRJob):
                 #
                 problem_hexdigest = get_hexdigest(problem)
                 # FIXME : infer will pickle over this
-                if gibbs_init_file is None:
-                    gibbs_init_file = create_pickle_file_str(
+                if init_file is None:
+                    init_file = create_pickle_file_str(
                         num_nodes, run_key, str(-1), hypers_every_N)
                 # FIXME: should only pickle if it wasn't read
-                rf.pickle(summary, gibbs_init_file, dir='')
+                rf.pickle(summary, init_file, dir='')
                 hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
-                    gibbs_init_file, dest_dir_suffix=run_dir)
+                    init_file, dest_dir_suffix=run_dir)
                 os.system(hadoop_cmd_1)
                 os.system(hadoop_cmd_2)
 
