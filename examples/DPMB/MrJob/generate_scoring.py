@@ -2,6 +2,7 @@
 import argparse
 import os
 import re
+import time
 from multiprocessing import Pool, cpu_count
 from functools import partial
 #
@@ -99,7 +100,7 @@ def get_queue_helper(queue_or_queuename):
 
 def process_file_queue(queue_or_queuename):
     queue, queuename = get_queue_helper(queue_or_queuename)
-    problem = rf.verify_problem_helper(queuename)
+    problem = rf.verify_problem_helper(queuename, do_unpickle=True)
     filename_tuple_generator = get_queue_iterator(queuename)
     process_summary_helper = partial(
         process_summary, problem=problem, bucket_dir_suffix=queuename)
@@ -169,6 +170,7 @@ if __name__ == '__main__':
         sqs = boto.connect_sqs()
         if do_create_queue or not sqs.get_queue(bucket_dir_suffix):
             create_file_queue(bucket_dir_suffix)
+            time.sleep(10)
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
