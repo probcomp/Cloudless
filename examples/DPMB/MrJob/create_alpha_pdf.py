@@ -27,7 +27,7 @@ pylab.figure()
 mle_alpha_list = []
 for num_clusters, num_rows_per_cluster in \
         itertools.product(num_clusters_list, num_rows_per_cluster_list):
-    mle_alpha, alpha_ps, alphas = hf.mle_alpha(
+    mle_alpha, alpha_ps, alphas = hf.calc_mle_alpha(
         num_clusters, num_rows_per_cluster, alphas=alphas)
     mle_alpha_list.append(mle_alpha)
     norm_alpha_ps = pylab.exp(normalize(alphas, alpha_ps))

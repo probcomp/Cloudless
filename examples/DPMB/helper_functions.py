@@ -232,7 +232,7 @@ def calculate_node_conditional(pstate,cluster):
     conditionals = pstate.mus
     return conditionals
 
-def mle_alpha(clusters,points_per_cluster,max_alpha=100,alphas=None):
+def calc_mle_alpha(clusters,points_per_cluster,max_alpha=100,alphas=None):
     if alphas is None:
         alphas = range(1,max_alpha)
     alpha_ps = [ss.gammaln(alpha) + clusters*np.log(alpha) 
@@ -471,16 +471,21 @@ def get_max_iternum_filenames(dir_str):
     filenames = map(create_filename, max_tuples)
     return filenames
 
-def visualize_mle_alpha(cluster_list=None,points_per_cluster_list=None,max_alpha=None):
+def visualize_mle_alpha(cluster_list=None, points_per_cluster_list=None,
+                        max_alpha=None):
     import pylab
-    cluster_list = cluster_list if cluster_list is not None else 10**numpy.arange(0,4,.5)
-    points_per_cluster_list = points_per_cluster_list if points_per_cluster_list is not None else 10**numpy.arange(0,4,.5)
-    max_alpha = max_alpha if max_alpha is not None else int(1E4)
+    cluster_list = ifnone(cluster_list, 10**numpy.arange(0,4,.5))
+    points_per_cluster_list = ifnone(points_per_cluster_list,
+                                     10**numpy.arange(0,4,.5))
+    max_alpha = ifnone(max_alpha, int(1E4))
     ##
     mle_vals = []
     for clusters in cluster_list:
         for points_per_cluster in points_per_cluster_list:
-            mle_vals.append([clusters,points_per_cluster,dm.mle_alpha(clusters,points_per_cluster,max_alpha=max_alpha)])
+            # FIXME: this is broken b/c of change in calc_mle_alpha
+            mle_alpha = \
+                calc_mle_alpha(clusters, points_per_cluster, max_alpha=max_alpha)
+            mle_vals.append([clusters, points_per_cluster, mle_alpha])
     ##
     mle_vals = numpy.array(mle_vals)
     pylab.figure()
@@ -636,3 +641,8 @@ def get_boto_credentials(credentials_file=None):
                 boto_credentials = dict(cp.items('Credentials'))
                 break
     return boto_credentials
+
+def ifnone(in_val, default):
+    if in_val is None:
+        in_val = default
+    return in_val
