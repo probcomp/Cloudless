@@ -19,6 +19,8 @@ problem_bucket_dir = settings.s3.problem_bucket_dir
 data_dir = settings.path.data_dir
 default_problem_file = settings.files.problem_filename
 default_resume_file = None
+is_summary_file = lambda filename: \
+    filename.startswith('summary') and filename.endswith('.pkl.gz')
 
 def create_pickle_file_str(num_nodes, seed_str, iter_num, hypers_every_N=1):
     file_str = '_'.join([
@@ -433,16 +435,28 @@ if __name__ == '__main__':
     parser.add_argument('--run_dir', type=str, default=None)
     parser.add_argument('--problem-file', type=str, default=default_problem_file)
     parser.add_argument('--resume-file',type=str, default=None)
+    parser.add_argument('--push_to_s3', action='store_true')
     args, unknown_args = parser.parse_known_args()
     run_dir = args.run_dir
     problem_filename = args.problem_file
     resume_file = args.resume_file
+    push_to_s3 = args.push_to_s3
     #
     if resume_file is not None:
-        print "resume file not implemented"
-        import sys
-        sys.exit()
+        rf.verify_file_helper(resume_file, run_dir, local_dir='')
     if run_dir is not None:
         rf.verify_problem_helper(run_dir, local_dir='',
                                  problem_filename=problem_filename)
+    #
     MRSeedInferer.run()
+    if push_to_s3:
+        source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
+        # FIXME: this will break if run_dir already exist
+        hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
+        os.system(hadoop_fs_cmd)
+        run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_dir)
+        filename_list = os.listdir(run_dir)
+        filename_list = filter(is_summary_file, filename_list)
+        for filename in filename_list:
+            s3.put_s3(filename)
