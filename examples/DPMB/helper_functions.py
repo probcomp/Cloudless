@@ -259,6 +259,8 @@ def mhSample(initVal,nSamples,lnPdf,sampler,random_state):
 # UTILITY FUNCTIONS
 def plot_data(data, fh=None, h_lines=None, title_str='',
               interpolation='nearest', linewidth=1, h_line_alpha=0.7, **kwargs):
+    import pylab
+    import matplotlib
     if fh is None:
         fh = pylab.figure()
     pylab.imshow(data, interpolation=interpolation,
@@ -271,6 +273,7 @@ def plot_data(data, fh=None, h_lines=None, title_str='',
     return fh
 
 def bar_helper(x, y, fh=None, v_line=None, title_str='', which_id=0):
+    import pylab
     if fh is None:
         fh = pylab.figure()
     min_delta = min(np.diff(x))
@@ -282,6 +285,8 @@ def bar_helper(x, y, fh=None, v_line=None, title_str='', which_id=0):
     return fh
 
 def zs_to_hlines(zs):
+    import pylab
+    import matplotlib
     is_different = pylab.diff(zs) != 0
     which_different = matplotlib.mlab.find(is_different) + 1
     return which_different
