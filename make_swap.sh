@@ -4,7 +4,7 @@ if [[ -z $swapfile ]] ; then
 fi
 
 if [[ ! -f $swapfile ]] ; then
-    dd if=/dev/zero of=$swapfile bs=1G count=10
+    dd if=/dev/zero of=$swapfile bs=1G count=2
     mkswap $swapfile
     swapon $swapfile
 fi
