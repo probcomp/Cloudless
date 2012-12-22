@@ -152,6 +152,7 @@ class MRSeedInferer(MRJob):
                     'inf_seed':master_inf_seed,
                     'suffstats':None, # do I need to build this here?
                     'lolo_x_indices':lolo_x_indices,
+                    'init_num_nodes':num_nodes,
                     }
                 summary['last_valid_zs'] = zs
                 summary['list_of_x_indices'] = flat_lolo_x_indices
