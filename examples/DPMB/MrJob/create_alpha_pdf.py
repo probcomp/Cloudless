@@ -5,15 +5,17 @@ import pylab
 import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.plot_utils as pu
 
+
+num_clusters_list = [256, 512, 1024]
+num_rows_per_cluster_list = [4, 256, 16384]
+log10_alphas = pylab.arange(.5, 3.1, .001)
+alphas = 10 ** log10_alphas
+
 colors = ['red', 'green', 'blue', 'black', 'orange']
 linestyles = ['-', '--', ':', '-.']
-
+#
 num_clusters_to_color = dict(zip(num_clusters_list, colors))
 num_rows_per_cluster_to_linestyle = dict(zip(num_rows_per_cluster_list, linestyles))
-num_clusters_list = [64, 128, 256, 512, 1024]
-num_rows_per_cluster_list = [16384, 8192, 4096, 2048]
-log10_alphas = pylab.arange(.5, 2.1, .001)
-alphas = 10 ** log10_alphas
 
 config_to_str = lambda num_clusters, num_rows_per_cluster: \
     ' x '.join(map(str, [num_clusters, num_rows_per_cluster]))
@@ -43,7 +45,7 @@ pylab.title(
 pylab.xlabel('LOG10 ALPHA')
 # pylab.xlabel('ALPHA')
 pylab.ylabel('WITHIN GRAPH NORMALIZED PROBABILITY')
-pu.legend_outside(ncol=5, sort=True)
+pu.legend_outside(ncol=len(num_clusters_list), sort=True)
 pylab.ion()
 pylab.show()
 pu.savefig_legend_outside('alpha_pdf_over_configs.pdf')
