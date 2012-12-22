@@ -6,6 +6,7 @@ import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.plot_utils as pu
 
 
+fig_suffix = 'png'
 num_clusters_list = [256, 512, 1024]
 num_rows_per_cluster_list = [4, 256, 16384]
 log10_alphas = pylab.arange(.5, 3.1, .001)
@@ -48,4 +49,4 @@ pylab.ylabel('WITHIN GRAPH NORMALIZED PROBABILITY')
 pu.legend_outside(ncol=len(num_clusters_list), sort=True)
 pylab.ion()
 pylab.show()
-pu.savefig_legend_outside('alpha_pdf_over_configs.pdf')
+pu.savefig_legend_outside('alpha_pdf_over_configs.' + fig_suffix)
