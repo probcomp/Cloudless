@@ -25,6 +25,7 @@ is_score = lambda x : x.startswith('score_')
 split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
 
+default_fig_suffix = 'pdf'
 default_init_filename = S.files.gibbs_init_filename
 def get_summary_tuples(data_dir, init_filename=default_init_filename, filter_func=is_score):
     data_files = os.listdir(data_dir)
@@ -335,7 +336,7 @@ def get_time_plotter(extract_func, **kwargs):
     return plot_func
 def plot_summaries(summaries_dict, problem=None,
                    title='', xlabel='TIME (SECONDS)', plot_dir='',
-                   subset_betas=True):
+                   subset_betas=True, fig_suffix=default_fig_suffix):
     fh_list = []
     gen_test_lls, gen_score, gen_beta, true_num_clusters = None, None, None, None
     if problem is not None:
@@ -344,7 +345,7 @@ def plot_summaries(summaries_dict, problem=None,
         gen_beta = problem.get('beta_d', None)
         true_num_clusters = problem.get('num_clusters', None)
 
-    figname = 'test_lls.pdf'
+    figname = 'test_lls' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
          'TEST SET\nMEAN LOG LIKELIHOOD'),
@@ -355,7 +356,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'score.pdf'
+    figname = 'score' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_score, hline=gen_score),
          'MODEL SCORE'),
@@ -366,7 +367,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'ari.pdf'
+    figname = 'ari' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_ari, hline=1.0),
          'ARI'),
@@ -377,7 +378,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'alpha.pdf'
+    figname = 'alpha' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha),
          'LOG10 ALPHA'),
@@ -388,7 +389,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'num_clusters.pdf'
+    figname = 'num_clusters' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
          'NUM CLUSTERS'),
@@ -399,7 +400,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'test_lls_score.pdf'
+    figname = 'test_lls_score' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
          'TEST SET\nMEAN LOG LIKELIHOOD'),
@@ -412,7 +413,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'ari_score.pdf'
+    figname = 'ari_score' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_ari, hline=1.0),
          'ARI'),
@@ -425,7 +426,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
     
-    figname = 'alpha_num_clusters.pdf'
+    figname = 'alpha_num_clusters' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_log10_alpha),
          'LOG10 ALPHA'),
@@ -447,7 +448,7 @@ def plot_summaries(summaries_dict, problem=None,
     else:
         new_extract_log10_beta = extract_log10_beta
 
-    figname = 'beta.pdf'
+    figname = 'beta' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
          'LOG10 BETA'),
@@ -458,7 +459,7 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
-    figname = 'beta_num_clusters.pdf'
+    figname = 'beta_num_clusters' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
          'LOG10 BETA'),
@@ -495,9 +496,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('consolidate summaries')
     parser.add_argument('data_dirs',nargs='+',type=str)
     parser.add_argument('--init_filename',default=default_init_filename,type=str)
+    parser.add_argument('--fig_suffix',default=default_fig_suffix,type=str)
     args = parser.parse_args()
     data_dirs = args.data_dirs
     init_filename = args.init_filename
+    fig_suffix = args.fig_suffix
     #
     problem_filename = 'problem.pkl.gz'
     parameters_file = 'run_parameters.txt'
@@ -519,7 +522,7 @@ if __name__ == '__main__':
             init_filename=init_filename,
             # problem_filename=problem_filename, # uncomment to rescore
             )
-        plot_summaries(summaries_dict, problem=problem, title=title)
+        plot_summaries(summaries_dict, problem=problem, title=title, fig_suffix=fig_suffix)
 
     # reduced_summaries_name = S.files.reduced_summaries_name
     # reduced_summaries_dict = extract_reduced_summaries(
