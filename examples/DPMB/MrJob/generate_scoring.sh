@@ -17,7 +17,7 @@ function process_single_run_dir() {
     num_workers=$2
     run_dir=$3
     echo "`date` :: starting :: process_single_run_dir $sleep_dur $num_workers $run_dir"
-    python generate_scoring.py $run_dir --is_controller --num_workers 0 --do_create_queue
+    python generate_scoring.py $run_dir --is_controller --num_workers 0 --do_create_queue --do_clear_queue
     sleep $sleep_dur
     for worker_idx in $(seq $num_workers); do
 	python generate_scoring.py $run_dir &
