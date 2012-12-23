@@ -531,6 +531,7 @@ class _supercluster():
         return [cluster.x_indices for cluster in self.cluster_set]
 class _supercluster_sampler():
     def __init__(self, lol_of_x_indices, mus, alpha):
+        assert(len(lol_of_x_indices)==len(mus))
         supercluster_list = []
         for list_of_x_indices, mu in zip(lol_of_x_indices, mus):
             supercluster = _supercluster(list_of_x_indices, mu)
