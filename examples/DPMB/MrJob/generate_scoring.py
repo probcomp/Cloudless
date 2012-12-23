@@ -81,6 +81,8 @@ def create_file_queue(bucket_dir_suffix, bucket_str=None):
     missing_score_filenames = setdiff(target_score_filenames, score_filenames)
     corresponding_summary_filenames = map(
         get_summary_name, missing_score_filenames)
+    is_init = lambda filename: filename.find('-1')!=-1
+    corresponding_summary_filenames = filter(is_init, corresponding_summary_filenames)
     queue = create_queue_from_list(
         corresponding_summary_filenames, bucket_dir_suffix)
     return queue
