@@ -12,6 +12,7 @@ import Cloudless.examples.DPMB.remote_functions as rf
 import Cloudless.examples.DPMB.DPMB_State as ds
 import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.settings as settings
+import Cloudless.examples.DPMB.s3_helper as s3h
 
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
@@ -46,13 +47,23 @@ child_state_tuple = namedtuple(
     ' iter_start_dt '
     )
 
-def get_hadoop_fs_cmd(filename, dest_dir_prefix='/user/sgeadmin/', dest_dir_suffix='', which='put'):
-    which = '-' + which
+def run_hadoop_fs_cmd(filename, dest_dir_prefix='/user/sgeadmin/', dest_dir_suffix='', which='put'):
     dest_full_dir = os.path.join(dest_dir_prefix, dest_dir_suffix)
     dest_full_file = os.path.join(dest_full_dir, filename)
-    hadoop_fs_cmd_1 = ' '.join(['hadoop', 'fs', '-mkdir', dest_full_dir])
-    hadoop_fs_cmd_2 = ' '.join(['hadoop', 'fs', which, filename, dest_full_file])
-    return hadoop_fs_cmd_1, hadoop_fs_cmd_2
+    which = '-' + which
+    if which == '-put':
+        hadoop_fs_cmd_1 = ' '.join(['hadoop', 'fs', '-mkdir', dest_full_dir])
+        hadoop_fs_cmd_2 = ' '.join(['hadoop', 'fs', which, filename,
+                                    dest_full_file])
+        os.system(hadoop_fs_cmd_1)
+        os.system(hadoop_fs_cmd_2)
+    elif which == '-get':
+        os.system('rm ' + filename)
+        hadoop_fs_cmd_1 = ' '.join(['hadoop', 'fs', which, dest_full_file,
+                                    filename])
+        os.system(hadoop_fs_cmd_1)
+    else:
+        pass
 
 class MRSeedInferer(MRJob):
 
@@ -170,10 +181,9 @@ class MRSeedInferer(MRJob):
                         num_nodes, run_key, str(-1), hypers_every_N)
                 # FIXME: should only pickle if it wasn't read
                 rf.pickle(summary, init_file, dir='')
-                hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
-                    init_file, dest_dir_suffix=run_dir)
-                os.system(hadoop_cmd_1)
-                os.system(hadoop_cmd_2)
+                run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+                s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='.')
+                s3.put_s3(init_file, do_print=False)
 
         summary['problem_hexdigest'] = problem_hexdigest
         summary['timing'].update({
@@ -294,10 +304,10 @@ class MRSeedInferer(MRJob):
                     iter_num = iter_idx + 1
                     pkl_file = get_child_pkl_file(iter_num)
                     rf.pickle(last_summary, pkl_file, dir='')
-                    hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
-                        pkl_file, dest_dir_suffix=run_dir)
-                    os.system(hadoop_cmd_1)
-                    os.system(hadoop_cmd_2)
+                    run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+                    s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='.')
+                    s3.put_s3(pkl_file, do_print=False)
+
                 child_summaries = rf.infer(
                     run_spec, sub_problem, send_zs=True,
                     post_infer_func=single_node_post_infer_func)
@@ -410,10 +420,9 @@ class MRSeedInferer(MRJob):
                                           hypers_every_N=hypers_every_N)
         master_suffstats = summary.pop('suffstats')
         rf.pickle(summary, pkl_file, dir='')
-        hadoop_cmd_1, hadoop_cmd_2 = get_hadoop_fs_cmd(
-            pkl_file, dest_dir_suffix=run_dir)
-        os.system(hadoop_cmd_1)
-        os.system(hadoop_cmd_2)
+        run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir='.')
+        s3.put_s3(pkl_file, do_print=False)
         hf.echo_date('done pickling summary')
         #
         # format summary to pass out 
@@ -428,6 +437,22 @@ class MRSeedInferer(MRJob):
         hf.echo_date('exit consolidate')
         yield run_key, master_state
 
+    def push_to_s3_step(self, key, value):
+        run_dir = self.run_dir
+        #
+        source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
+        # FIXME: make sure run_dir doesn't exist, else hadoop fs -get fails
+        os.system(' '.join(['rm -rf', run_dir]))
+        hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
+        os.system(hadoop_fs_cmd)
+        run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
+        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_dir)
+        filename_list = os.listdir(run_dir)
+        filename_list = filter(is_summary_file, filename_list)
+        for filename in filename_list:
+            s3.put_s3(filename, do_print=False)
+        yield key, value
+
     def steps(self):
         step_list = [self.mr(self.init)]
         infer_step = [
@@ -435,7 +460,8 @@ class MRSeedInferer(MRJob):
             self.mr(self.infer, self.consolidate_data),
             ]
         step_list.extend(infer_step * self.num_steps)
-        # FIXME : add a copy step that copies from hdfs to s3
+        # if self.push_to_s3:
+        #     step_list.append(self.mr(self.push_to_s3_step))
         return step_list
 
 if __name__ == '__main__':
@@ -458,16 +484,3 @@ if __name__ == '__main__':
                                  problem_filename=problem_filename)
     #
     MRSeedInferer.run()
-    if push_to_s3:
-        import Cloudless.examples.DPMB.s3_helper as s3h
-        source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
-        # FIXME: this will break if run_dir already exist
-        os.system(' '.join(['mv ',run_dir,run_dir+'.bak']))
-        hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
-        os.system(hadoop_fs_cmd)
-        run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
-        s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_dir)
-        filename_list = os.listdir(run_dir)
-        filename_list = filter(is_summary_file, filename_list)
-        for filename in filename_list:
-            s3.put_s3(filename, do_print=False)
