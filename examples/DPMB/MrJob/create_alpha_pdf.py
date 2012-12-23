@@ -8,7 +8,7 @@ import Cloudless.examples.DPMB.plot_utils as pu
 
 fig_suffix = 'png'
 num_clusters_list = [256, 512, 1024]
-num_rows_per_cluster_list = [4, 256, 16384]
+num_rows_per_cluster_list = [4, 64, 256]
 log10_alphas = pylab.arange(.5, 3.1, .001)
 alphas = 10 ** log10_alphas
 
