@@ -35,8 +35,9 @@ class S3_helper():
         key = self.bucket.get_key(key_str)
         return key is not None
 
-    def put_s3(self,filename):
-        print "putS3('"+filename+"')"
+    def put_s3(self, filename, do_print=True):
+        if do_print:
+            print "putS3('"+filename+"')"
         key_str = os.path.join(self.bucket_dir,filename)
         full_filename = os.path.join(self.local_dir,filename)
         #
@@ -44,10 +45,11 @@ class S3_helper():
         key.set_contents_from_filename(full_filename)
         return True
         
-    def get_s3(self,filename):
-        status_str = "getS3('"+filename+"')"
-        print status_str
-        hf.echo_date(status_str)
+    def get_s3(self,filename, do_print=True):
+        if do_print:
+            status_str = "getS3('"+filename+"')"
+            print status_str
+            hf.echo_date(status_str)
         key_str = os.path.join(self.bucket_dir,filename)
         full_filename = os.path.join(self.local_dir,filename)
         #
