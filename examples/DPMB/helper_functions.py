@@ -597,6 +597,26 @@ def gibbs_on_superclusters(lol_of_x_indices, mus, alpha, seed):
         supercluster_sampler.gibbs_sample_all_clusters(seed)
     return lol_of_x_indices_out, random_state
 
+def reshape_superclusters(lolo_x_indices, num_nodes, alpha, seed):
+    random_state = generate_random_state(seed)
+    # presume uniform mu
+    mus = [1./num_nodes] * num_nodes
+    empty_lolo_x_indices = [[] for idx in range(num_nodes)]
+    #
+    supercluster_sampler = _supercluster_sampler(
+        empty_lolo_x_indices, mus, alpha)
+    supercluster_list = supercluster_sampler.supercluster_list
+    flat_list_of_x_indices = flatten(lolo_x_indices)
+    for x_indices in flat_list_of_x_indices:
+        cluster = _cluster(x_indices)
+        die_weights = supercluster_sampler.get_die_weights()
+        rand_draw = random_state.uniform()
+        which_supercluster_idx = pf.sample_unnormalized_with_partition(
+            numpy.array(die_weights), 1.0, rand_draw)
+        which_supercluster = supercluster_list[which_supercluster_idx]
+        supercluster_sampler.add(cluster, which_supercluster)
+    return supercluster_sampler.get_lol_of_x_indices(), random_state
+
 def crp_init_superclusters(alpha, mus, seed, n_draws):
     random_state = generate_random_state(seed)
     super_seed = random_state.randint(sys.maxint)
