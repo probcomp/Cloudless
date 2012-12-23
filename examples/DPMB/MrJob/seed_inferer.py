@@ -111,6 +111,12 @@ class MRSeedInferer(MRJob):
         with hf.Timer('init/resume') as init_resume_timer:
             if resume_file:
                 summary = rf.unpickle(resume_file)
+                if len(summary['lolo_x_indices']) != num_nodes:
+                    lolo_x_indices = summary['lolo_x_indices']
+                    alpha = summary['alpha']
+                    lolo_x_indices, master_inf_seed = hf.reshape_superclusters(
+                        lol_x_indices, num_nodes, alpha, master_inf_seed)
+                    summary['lolo_x_indices'] = lolo_x_indices
             else:
                 run_spec = rf.gen_default_cifar_run_spec(
                     problem_file=problem_file,
@@ -453,8 +459,10 @@ if __name__ == '__main__':
     #
     MRSeedInferer.run()
     if push_to_s3:
+        import Cloudless.examples.DPMB.s3_helper as s3h
         source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
         # FIXME: this will break if run_dir already exist
+        os.system(' '.join(['mv ',run_dir,run_dir+'.bak']))
         hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
         os.system(hadoop_fs_cmd)
         run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
@@ -462,4 +470,4 @@ if __name__ == '__main__':
         filename_list = os.listdir(run_dir)
         filename_list = filter(is_summary_file, filename_list)
         for filename in filename_list:
-            s3.put_s3(filename)
+            s3.put_s3(filename, do_print=False)
