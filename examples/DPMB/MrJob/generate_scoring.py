@@ -182,13 +182,14 @@ if __name__ == '__main__':
     #
     if is_controller:
         hf.echo_date('is_controller')
-        rf.verify_problem_helper(bucket_dir_suffix)
         sqs = boto.connect_sqs()
-        if do_create_queue or not sqs.get_queue(bucket_dir_suffix):
+        queue = sqs.get_queue(bucket_dir_suffix)
+        if do_clear_queue and queue:
+            clear_queue(bucket_dir_suffix)
+        if do_create_queue or not queue:
             create_file_queue(bucket_dir_suffix)
             time.sleep(10)
-        if do_clear_queue:
-            clear_queue(bucket_dir_suffix)
+        rf.verify_problem_helper(bucket_dir_suffix)
         for worker_idx in range(num_workers):
             os.system('python generate_scoring.py ' + bucket_dir_suffix + ' &')
     else:
