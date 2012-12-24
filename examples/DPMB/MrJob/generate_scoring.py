@@ -1,5 +1,6 @@
 #!python
 import argparse
+import sys
 import os
 import re
 import time
@@ -29,6 +30,11 @@ def filter_bucket_filenames(bucket, bucket_dir_suffix, filter_func):
 
 get_score_name = lambda summary_name: re.sub('^summary_', 'score_', summary_name)
 get_summary_name = lambda score_name: re.sub('^score_', 'summary_', score_name)
+
+def print_all_queues():
+    sqs = boto.connect_sqs()
+    all_queues = sqs.get_all_queues()
+    print ' '.join([queue.name for queue in all_queues])
 
 def clear_queue(queue_or_queuename):
     queue_iterator = get_queue_iterator(queue_or_queuename)
@@ -160,6 +166,7 @@ if __name__ == '__main__':
     parser.add_argument('--num_workers', type=int, default=cpu_count())
     parser.add_argument('--do_create_queue', action='store_true')
     parser.add_argument('--do_clear_queue', action='store_true')
+    parser.add_argument('--do_print_all_queues', action='store_true')
     args = parser.parse_args()
     #
     bucket_dir_suffix = args.bucket_dir_suffix
@@ -167,6 +174,11 @@ if __name__ == '__main__':
     num_workers = args.num_workers
     do_create_queue = args.do_create_queue
     do_clear_queue = args.do_clear_queue
+    do_print_all_queues = args.do_print_all_queues
+    #
+    if do_print_all_queues:
+        print_all_queues()
+        sys.exit()
     #
     if is_controller:
         hf.echo_date('is_controller')
