@@ -9,7 +9,7 @@ fi
 sleep_dur=$1
 num_workers=$2
 base_dir=$3
-run_dir_list=($(ls $base_dir | grep ^new_prog))
+run_dir_list=$(python generate_scoring.py --do_print_all_queues .)
 
 
 function process_single_run_dir() {
