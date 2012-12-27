@@ -1,7 +1,7 @@
 # most changed settings
 num_c1m=4
-hexdigest=4708ce2021
-seed=3
+hexdigest=cc6d7ec1fe
+seed=6
 num_iters=200
 
 # calcalate some other things
@@ -19,7 +19,7 @@ resume_cmd=
 starcluster start -c c1m -s ${num_c1m} $cluster_name
 
 #store keys so automation works
-starcluster listclusters $cluster_name | grep ' ec2-' | awk '{print $NF}' | xargs -I{} ssh -o StrictHostKeyChecking=no -i ~/.ssh/dlovell.pem sgeadmin@{} 'hostname'
+starcluster listclusters $cluster_name | grep ' ec2-' | perl -pe 's/^.*(ec2.*com).*$/$1/' | xargs -I{} ssh -o StrictHostKeyChecking=no -i ~/.ssh/dlovell.pem sgeadmin@{} 'hostname'
 # can have issue if key already exists
 # ssh-keygen -f "/home/dlovell/.ssh/known_hosts" -R ec2-23-22-73-192.compute-1.amazonaws.com
 
