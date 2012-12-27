@@ -450,7 +450,7 @@ def plot_summaries(summaries_dict, problem=None,
 
     figname = 'beta' + '.' + fig_suffix
     plot_tuples = [
-        (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
+        (get_time_plotter(new_extract_log10_beta, hline=numpy.log10(gen_beta), alpha=0.2),
          'LOG10 BETA'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
