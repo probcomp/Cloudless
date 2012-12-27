@@ -8,8 +8,7 @@ fi
 
 sleep_dur=$1
 num_workers=$2
-run_dir_list=$(python generate_scoring.py --do_print_all_queues .)
-
+single_dir=$3
 
 function process_single_run_dir() {
     sleep_dur=$1
@@ -26,6 +25,12 @@ function process_single_run_dir() {
     echo "`date` :: finished :: process_single_run_dir $sleep_dur $num_workers $run_dir"
 }
 
+if [ ! -z $single_dir ]; then
+    process_single_run_dir $sleed_dur $num_workers $single_dir
+    exit
+fi
+
+run_dir_list=$(python generate_scoring.py --do_print_all_queues .)
 while true; do
     for run_dir in ${run_dir_list[*]}; do
 	process_single_run_dir $sleep_dur $num_workers $run_dir
