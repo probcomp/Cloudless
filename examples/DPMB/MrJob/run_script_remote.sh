@@ -1,18 +1,19 @@
 # most changed settings
 num_c1m=4
-hexdigest=b236abc4b9
+hexdigest=4708ce2021
 seed=3
 num_iters=200
 
 # calcalate some other things
 num_nodes=$(expr 2 \* $num_c1m)
-cluster_name=hadoop_on_${num_c1m}_${seed}
+cluster_name=hadoop_on_${num_c1m}_${hexdigest}_${seed}
 seq_end=$(expr $num_c1m - 1)
 task_count=$(expr $num_nodes \* 2)
 code_dir=/usr/local/lib/python2.7/dist-packages/Cloudless/examples/DPMB/MrJob/
 
 # SET BLANK IF NOT RESUME
-resume_cmd="--resume-file summary_numnodes${num_nodes}_seed${seed}_he1_iternum20.pkl.gz"
+# resume_cmd="--resume-file summary_numnodes${num_nodes}_seed${seed}_he1_iternum20.pkl.gz"
+resume_cmd=
 
 # start the cluster
 starcluster start -c c1m -s ${num_c1m} $cluster_name
