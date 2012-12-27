@@ -1,7 +1,7 @@
 # most changed settings
 num_c1m=4
-hexdigest=cc6d7ec1fe
-seed=6
+hexdigest=4708ce2021
+seed=10
 num_iters=200
 
 # calcalate some other things
@@ -31,6 +31,7 @@ done
 xterm -geometry 75x15 -e starcluster sshnode $cluster_name master -u sgeadmin &
 xterm -geometry 75x15 -e starcluster sshnode $cluster_name master -u sgeadmin &
 
-starcluster sshmaster $cluster_name -u sgeadmin "echo $seed > seed_list.txt"
+seed_file=seed_${seed}.txt
+starcluster sshmaster $cluster_name -u sgeadmin "echo $seed > $seed_file"
 
-nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py seed_list.txt -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count --jobconf mapred.task.timeout=60000000 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
+nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py $seed_file -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count --jobconf mapred.task.timeout=60000000 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
