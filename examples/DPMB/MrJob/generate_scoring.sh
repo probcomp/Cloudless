@@ -26,7 +26,7 @@ function process_single_run_dir() {
 }
 
 if [ ! -z $single_dir ]; then
-    process_single_run_dir $sleed_dur $num_workers $single_dir
+    process_single_run_dir $sleep_dur $num_workers $single_dir
     exit
 fi
 
