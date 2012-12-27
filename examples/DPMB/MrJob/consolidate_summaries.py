@@ -461,7 +461,7 @@ def plot_summaries(summaries_dict, problem=None,
 
     figname = 'beta_num_clusters' + '.' + fig_suffix
     plot_tuples = [
-        (get_time_plotter(new_extract_log10_beta, hline=gen_beta, alpha=0.2),
+        (get_time_plotter(new_extract_log10_beta, hline=numpy.log10(gen_beta), alpha=0.2),
          'LOG10 BETA'),
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
          'NUM CLUSTERS'),
