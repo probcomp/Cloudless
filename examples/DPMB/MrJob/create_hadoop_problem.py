@@ -95,10 +95,8 @@ with open(parameters_filename, 'w') as fh:
         fh.write(line)
 # now push files to hdfs
 for filename in [problem_filename, h5_filename, parameters_filename]:
-    hadoop_fs_cmd_1, hadoop_fs_cmd_2 = si.get_hadoop_fs_cmd(
-        filename, dest_dir_suffix=run_dir)
-    os.system(hadoop_fs_cmd_1)
-    os.system(hadoop_fs_cmd_2)
+    si.run_hadoop_fs_cmd(filename, dest_dir_suffix=run_dir)
+
 # do I need to push to s3 so that crp init can read?
 
 # gibbs init to be used by all subsequent inference
