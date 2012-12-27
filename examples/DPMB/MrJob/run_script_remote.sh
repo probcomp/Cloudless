@@ -1,7 +1,7 @@
 # most changed settings
 num_c1m=4
 hexdigest=b236abc4b9
-seed=1
+seed=2
 num_iters=200
 
 # calcalate some other things
@@ -12,13 +12,15 @@ task_count=$(expr $num_nodes \* 2)
 code_dir=/usr/local/lib/python2.7/dist-packages/Cloudless/examples/DPMB/MrJob/
 
 # SET BLANK IF NOT RESUME
-resume_cmd="--resume-file summary_numnodes${num_nodes}_seed${seed}_he1_iternum28.pkl.gz"
+resume_cmd="--resume-file summary_numnodes${num_nodes}_seed${seed}_he1_iternum20.pkl.gz"
 
 # start the cluster
 starcluster start -c c1m -s ${num_c1m} $cluster_name
 
 #store keys so automation works
 starcluster listclusters $cluster_name | grep ' ec2-' | awk '{print $NF}' | xargs -I{} ssh -o StrictHostKeyChecking=no -i ~/.ssh/dlovell.pem sgeadmin@{} 'hostname'
+# can have issue if key already exists
+# ssh-keygen -f "/home/dlovell/.ssh/known_hosts" -R ec2-23-22-73-192.compute-1.amazonaws.com
 
 # open up windows to monitor progress.  Use sshnode so window title is nodename
 for idx in $(seq 1 $seq_end); do
