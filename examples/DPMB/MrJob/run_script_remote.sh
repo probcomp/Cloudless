@@ -68,3 +68,9 @@ for seed in ${seed_list[@]:1}; do
     nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py $seed_file -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count --jobconf mapred.task.timeout=60000000 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
     sleep 5
 done
+
+
+# to kill jobs
+# > ls seed_*err | xargs -n 1 bash -c 'tail -n 1000 $1 | grep kill | tail -n 1' --
+# can automate killing with something like
+# for job_id in $(seq 1747 1776); do /usr/lib/hadoop-0.20/bin/../bin/hadoop job  -Dmapred.job.tracker=master:54311 -kill job_201212280012_$job_id; done
