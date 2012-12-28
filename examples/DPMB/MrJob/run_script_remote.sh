@@ -10,6 +10,9 @@ if [[ -z $cluster_name || -z $num_nodes ]]; then
     num_nodes=$(expr 2 \* $num_c1m)
     #
     # start the cluster
+    echo "!!! cluster_name NOT SET !!!"
+    echo "!!! STARTING CLUSTER !!!"
+    sleep 5
     starcluster start -c c1m -s ${num_c1m} $cluster_name
 else
     echo "presuming cluster already started"
@@ -46,6 +49,9 @@ for seed in ${seed_list[*]}; do
     seed_file=seed_${seed}.txt
     starcluster sshmaster $cluster_name -u sgeadmin "echo $seed > $seed_file"
 done
+
+# BE SURE TO REMOVE PREVIOUS PROBLEM
+starcluster sshmaster $cluster_name -u sgeadmin "rm problem.{pkl.gz,h5}"
 
 # kick off first job, give it 120 seconds to download the problem file
 seed=${seed_list[0]}
