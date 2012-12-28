@@ -41,18 +41,20 @@ for nodename in $(starcluster listclusters $cluster_name | grep ec2 \
 done
 xterm -geometry 75x15 -e starcluster sshnode $cluster_name master -u sgeadmin &
 
-# do this for each seed to run
+# set up each seed file to run
 for seed in ${seed_list[*]}; do
     seed_file=seed_${seed}.txt
     starcluster sshmaster $cluster_name -u sgeadmin "echo $seed > $seed_file"
 done
 
+# kick off first job, give it 120 seconds to download the problem file
 seed=${seed_list[0]}
 seed_file=seed_${seed}.txt
 echo "`date`:: initiating seed $seed"
 nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py $seed_file -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count --jobconf mapred.task.timeout=60000000 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
 sleep 120
 
+# start up all the other seeds
 for seed in ${seed_list[@]:1}; do
     seed_file=seed_${seed}.txt
     echo "`date`:: initiating seed $seed"
