@@ -35,6 +35,7 @@ starcluster listclusters $cluster_name | grep ' ec2-' \
     -i ~/.ssh/dlovell.pem sgeadmin@{} 'hostname'
 # can have issue if key already exists
 # ssh-keygen -f "/home/dlovell/.ssh/known_hosts" -R ec2-23-22-73-192.compute-1.amazonaws.com
+# sed -i [offending_line_number]d ~/.ssh/known_hosts
 
 # open up windows to monitor progress.  Use sshnode so window title is nodename
 for nodename in $(starcluster listclusters $cluster_name | grep ec2 \
