@@ -8,8 +8,13 @@ if [[ -z $cluster_name || -z $num_nodes ]]; then
     num_c1m=4
     cluster_name=hadoop_on_${num_c1m}_${hexdigest}
     num_nodes=$(expr 2 \* $num_c1m)
+    #
+    # start the cluster
+    starcluster start -c c1m -s ${num_c1m} $cluster_name
+else
+    echo "presuming cluster already started"
 fi
-#
+# else presume clsuter already started
 echo "using cluster_name: $cluster_name"
 echo "using num_nodes: $num_nodes"
 
@@ -19,9 +24,6 @@ code_dir=/usr/local/lib/python2.7/dist-packages/Cloudless/examples/DPMB/MrJob/
 # SET BLANK IF NOT RESUME
 # resume_cmd="--resume-file summary_numnodes${num_nodes}_seed${seed}_he1_iternum20.pkl.gz"
 resume_cmd=
-
-# start the cluster
-starcluster start -c c1m -s ${num_c1m} $cluster_name
 
 #store keys so automation works
 starcluster listclusters $cluster_name | grep ' ec2-' \
