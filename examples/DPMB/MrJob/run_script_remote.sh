@@ -1,6 +1,6 @@
 # most changed settings
 num_c1m=4
-hexdigest=4708ce2021
+hexdigest=cff90e492c
 seed=10
 num_iters=200
 
@@ -24,7 +24,7 @@ starcluster listclusters $cluster_name | grep ' ec2-' | perl -pe 's/^.*(ec2.*com
 # ssh-keygen -f "/home/dlovell/.ssh/known_hosts" -R ec2-23-22-73-192.compute-1.amazonaws.com
 
 # open up windows to monitor progress.  Use sshnode so window title is nodename
-for nodename in $(starcluster listclusters spot_on_8_0 | grep ec2 | awk '{print $1}'); do
+for nodename in $(starcluster listclusters $cluster_name | grep ec2 | awk '{print $1}'); do
   xterm -geometry 75x15 -e starcluster sshnode $cluster_name $nodename \
       -u sgeadmin &
 done
