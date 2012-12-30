@@ -1,6 +1,6 @@
 # most changed settings
-hexdigest=cff90e492c
-seed_list=($(seq 0 7))
+hexdigest=42e34cfe3a
+seed_list=($(seq 0 3))
 num_iters=200
 
 # calcalate some other things
@@ -58,7 +58,8 @@ starcluster sshmaster $cluster_name -u sgeadmin "rm problem.{pkl.gz,h5}"
 seed=${seed_list[0]}
 seed_file=seed_${seed}.txt
 echo "`date`:: initiating seed $seed"
-nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py $seed_file -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count --jobconf mapred.task.timeout=60000000 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
+nohup starcluster sshmaster $cluster_name -u sgeadmin "nohup python ${code_dir}seed_inferer.py $seed_file -v -r hadoop --num-iters $num_iters --push_to_s3 --run_dir new_programmatic_mrjob_${hexdigest} --file problem.pkl.gz --file problem.h5 $resume_cmd --num-nodes $num_nodes --jobconf mapred.map.tasks=$task_count --jobconf mapred.tasktracker.map.tasks.maximum=$task_count  --jobconf mapred.tasktracker.expiry.interval=60000000 --jobconf mapred.task.timeout=60000000 --jobconf mapred.child.java.opts=-Xmx9G --jobconf mapred.task.limit.maxvmem=-1 >seed_inferer_${hexdigest}_seed${seed}.out 2>seed_inferer_${hexdigest}_seed${seed}.err &" &
+# FIXME: need to ensure that problem has been pulled down rather than fixed time
 sleep 120
 
 # start up all the other seeds
