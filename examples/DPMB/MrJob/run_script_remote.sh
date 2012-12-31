@@ -1,6 +1,6 @@
 # most changed settings
-hexdigest=42e34cfe3a
-seed_list=($(seq 0 7))
+hexdigest=379c31526c
+seed_list=($(seq 0 4))
 num_iters=200
 
 # calcalate some other things
@@ -38,9 +38,13 @@ starcluster listclusters $cluster_name | grep ' ec2-' \
 # sed -i [offending_line_number]d ~/.ssh/known_hosts
 
 # open up windows to monitor progress.  Use sshnode so window title is nodename
-for nodename in $(starcluster listclusters $cluster_name | grep ec2 \
-    | awk '{print $1}'); do
-  xterm -geometry 75x15 -e starcluster sshnode $cluster_name $nodename \
+nodenames=($(starcluster listclusters $cluster_name | grep ec2 | awk '{print $1}'))
+seq_end=$(expr ${#nodenames[*]} - 1)
+for nodeidx in $(seq 0 $seq_end); do
+    nodename=${nodenames[nodeidx]}
+    XYOFF=$(expr 20 \* $nodeidx)
+    echo $XYOFF
+    xterm -geometry 75x15+$XYOFF+$XYOFF -e starcluster sshnode $cluster_name $nodename \
       -u sgeadmin &
 done
 xterm -geometry 75x15 -e starcluster sshnode $cluster_name master -u sgeadmin &
