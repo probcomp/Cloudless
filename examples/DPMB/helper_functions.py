@@ -165,7 +165,8 @@ def calc_alpha_conditional_suffstats(suffstats, alpha_grid):
     lnPdf = lambda alpha: ss.gammaln(alpha) \
         + num_clusters * np.log(alpha) \
         - ss.gammaln(alpha + num_vectors) \
-        + lnProdGammas
+        + lnProdGammas \
+        + np.log(alpha)
     logp_list = []
     for test_alpha in alpha_grid:
         logp = lnPdf(test_alpha)
