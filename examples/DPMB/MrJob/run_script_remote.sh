@@ -44,7 +44,7 @@ for nodeidx in $(seq 0 $seq_end); do
     nodename=${nodenames[nodeidx]}
     XYOFF=$(expr 20 \* $nodeidx)
     echo $XYOFF
-    xterm -geometry 75x15+$XYOFF+$XYOFF -e starcluster sshnode $cluster_name $nodename \
+    xterm -geometry 60x10+$XYOFF+$XYOFF -e starcluster sshnode $cluster_name $nodename \
       -u sgeadmin &
 done
 xterm -geometry 75x15 -e starcluster sshnode $cluster_name master -u sgeadmin &
