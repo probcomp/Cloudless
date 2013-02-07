@@ -225,7 +225,7 @@ def infer(run_spec, problem=None, send_zs=False, init_save_str=None,
                                      init_betas=run_spec["infer_init_betas"],
                                      # init_z=run_spec["infer_init_z"],
                                      init_z=problem['zs'],
-                                     init_x=np.array(problem["xs"],dtype=np.int32),
+                                     init_x=problem["xs"],
                                      transitioner=init_transitioner, # FIXME
                                      data_dir=data_dir,
                                      **state_kwargs
