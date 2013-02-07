@@ -54,9 +54,7 @@ class DataReader:
         #
         sorted_indices = numpy.sort(global_indices_to_get)
         inverse_indices = numpy.argsort(numpy.argsort(global_indices_to_get))
-        # return f['xs'].value[sorted_indices][inverse_indices]
-        # FIXME: REVERT
-        return f['xs'].value[sorted_indices][inverse_indices][:,:6]
+        return f['xs'].value[sorted_indices][inverse_indices]
 
     def cache_global_indices(self, local_indices, global_indices_to_cache):
         xs = self.get_global_indices_from_f(global_indices_to_cache)
