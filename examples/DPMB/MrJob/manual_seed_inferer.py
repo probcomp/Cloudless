@@ -147,13 +147,6 @@ for iter_idx in range(num_iters):
     run_key, consolidated_data = mr_job.consolidate_data(
         run_key, infer_out_list).next()
 
-
-summary = rf.unpickle('/mnt/programmatic_mrjob_288320018d/summary_numnodes4_seed0_he1_iternum20.pkl.gz')
-for cluster_idx, x_indices in enumerate(summary['list_of_x_indices']):
-    cluster_xs = problem['xs'][x_indices]
-    pylab.imshow(cluster_xs)
-    pylab.savefig('cluster_' + str(cluster_idx))
-
 xlabel = 'time (seconds)'
 # summarize the data
 summaries_dict, numnodes1_parent_list = cs.read_summaries([run_full_dir])
