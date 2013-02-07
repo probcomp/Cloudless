@@ -120,6 +120,8 @@ except Exception, e:
     with mr_job.make_runner() as runner:
         runner.run()
 
+os.chdir(run_full_dir)
+#
 num_nodes = num_nodes_list[0]
 print 'starting num_nodes = ' + str(num_nodes)
 infer_args = [] # ['--resume-file', gibbs_init_filename]
