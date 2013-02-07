@@ -167,6 +167,7 @@ if __name__ == '__main__':
     parser.add_argument('--do_create_queue', action='store_true')
     parser.add_argument('--do_clear_queue', action='store_true')
     parser.add_argument('--do_print_all_queues', action='store_true')
+    parser.add_argument('--is_local', action='store_true')
     args = parser.parse_args()
     #
     bucket_dir_suffix = args.bucket_dir_suffix
@@ -175,6 +176,11 @@ if __name__ == '__main__':
     do_create_queue = args.do_create_queue
     do_clear_queue = args.do_clear_queue
     do_print_all_queues = args.do_print_all_queues
+    is_local = args.is_local
+    #
+    if is_local:
+        process_all_local(bucket_dir_suffix)
+        sys.exit()
     #
     if do_print_all_queues:
         print_all_queues()
