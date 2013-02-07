@@ -105,7 +105,8 @@ class DPMB():
         permuted_indices = self.random_state.permutation(len(all_vectors))
         permuted_vectors = [all_vectors[idx] for idx in permuted_indices]
         if permuted_vectors[0].data_reader is not None:
-            permuted_vectors[0].data_reader.set_mask_ordering(permuted_indices)
+            permuted_vectors[0].data_reader.set_local_access_ordering(
+                permuted_indices)
         for vector in permuted_vectors:
             num_clusters = hf.transition_single_z(vector,self.random_state)
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
