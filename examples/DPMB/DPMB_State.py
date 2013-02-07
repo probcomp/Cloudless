@@ -531,7 +531,7 @@ class Vector(object):
 
     def __getattr__(self, attr):
         if attr == 'data' and self.data_reader is not None:
-            return data_reader[local_idx]
+            return self.data_reader[self.local_idx]
         else:
             return getattr(self, attr)
 
