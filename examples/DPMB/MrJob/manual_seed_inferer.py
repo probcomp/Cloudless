@@ -39,7 +39,7 @@ if True:
     parser.add_argument('num_nodes_list', nargs='+', type=int)
     #
     # args = parser.parse_args(['0', '2048', '256', '32', '1.0', '3', '1', '4'])
-    args = parser.parse_args(['0', '2048', '256', '32', '1.0', '10', '4'])
+    args = parser.parse_args(['0', '16384', '256', '32', '1.0', '10', '4'])
     #
     gen_seed = args.gen_seed
     num_rows = args.num_rows
@@ -112,13 +112,13 @@ except Exception, e:
     seed_full_filename = os.path.join(run_full_dir, seed_filename)
     os.system('printf "0\n" > ' + seed_full_filename)
     #
-    # gibbs init
-    gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
-    gibbs_init_args.extend(create_args(0, 1))
-    mr_job = si.MRSeedInferer(args=gibbs_init_args)
-    # mr_job.init(0,0).next()
-    with mr_job.make_runner() as runner:
-        runner.run()
+    # # gibbs init
+    # gibbs_init_args = ['--gibbs-init-file', gibbs_init_filename]
+    # gibbs_init_args.extend(create_args(0, 1))
+    # mr_job = si.MRSeedInferer(args=gibbs_init_args)
+    # # mr_job.init(0,0).next()
+    # with mr_job.make_runner() as runner:
+    #     runner.run()
 
 os.chdir(run_full_dir)
 #
