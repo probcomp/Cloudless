@@ -176,9 +176,11 @@ class DPMB_State():
             if init_x is None:
                 vector = self.generate_vector(cluster = cluster)
             else:
+                data_reader = None
+                local_idx = None
                 if isinstance(init_x, DataReader.DataReader):
-                    data_reader=init_x
-                    local_idx=R
+                    data_reader = init_x
+                    local_idx = R
                 vector = self.generate_vector(data=init_x[R], cluster=cluster,
                                               data_reader=data_reader,
                                               local_idx=local_idx)
