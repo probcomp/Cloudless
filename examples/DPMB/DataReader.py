@@ -27,6 +27,9 @@ class DataReader:
         self.f.close()
         print "__del__"
 
+    def __len__(self):
+        return len(self.global_data_indices)
+
     def set_mask_ordering(self, mask_ordering):
         global_data_indices = self.global_data_indices
         #
