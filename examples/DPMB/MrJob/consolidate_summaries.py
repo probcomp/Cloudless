@@ -63,9 +63,9 @@ def read_tuple(in_tuple):
         alpha=summary['alpha'],
         betas=summary['betas'],
         num_clusters=summary['num_clusters'],
-        ari=summary['ari'],
-        score=summary['score'],
-        test_lls=summary['test_lls'],
+        ari=summary.get('ari', numpy.nan),
+        score=summary.get('score', numpy.nan),
+        test_lls=summary.get('test_lls', numpy.nan),
         timing=summary['timing'],
         )
     return summary, iter_num
