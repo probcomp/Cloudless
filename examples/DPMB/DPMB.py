@@ -101,7 +101,11 @@ class DPMB():
             print 'PRE transition_z score: ',self.state.score
         micro_z_timing = {'z_cumulative_time':[],'cluster_counts':[]}
         start_dt = datetime.datetime.now()
-        permuted_vectors = self.random_state.permutation(list(self.state.get_all_vectors()))
+        all_vectors = list(self.state.get_all_vectors())
+        permuted_indices = self.random_state.permutation(len(all_vectors))
+        permuted_vectors = [all_vectors[idx] for idx in permuted_indices]
+        if permuted_vectors[0].data_reader is not None:
+            permuted_vectors[0].data_reader.set_mask_ordering(permuted_indices)
         for vector in permuted_vectors:
             num_clusters = hf.transition_single_z(vector,self.random_state)
             delta_t = (datetime.datetime.now() - start_dt).total_seconds()
