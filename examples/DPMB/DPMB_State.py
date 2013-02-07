@@ -13,6 +13,7 @@ from collections import OrderedDict as od
 import DPMB as dm
 import helper_functions as hf
 import pyx_functions as pf
+import DataReader
 ##
 import pdb
 
@@ -87,7 +88,14 @@ class DPMB_State():
             
             # dummmy cluster necessary for generation, auto-popped when deassigned
             cluster = self.generate_cluster_assignment(force_new=True)
-            vector = self.generate_vector(data=init_x[R], cluster=cluster)
+            data_reader = None
+            local_idx = None
+            if isinstance(init_x, DataReader.DataReader):
+                data_reader=init_x
+                local_idx=R
+            vector = self.generate_vector(data=init_x[R], cluster=cluster,
+                                          data_reader=data_reader,
+                                          local_idx=local_idx)
             cluster.deassign_vector(vector)
 
             unif = self.random_state.uniform()
@@ -168,7 +176,12 @@ class DPMB_State():
             if init_x is None:
                 vector = self.generate_vector(cluster = cluster)
             else:
-                vector = self.generate_vector(data = init_x[R], cluster = cluster)
+                if isinstance(init_x, DataReader.DataReader):
+                    data_reader=init_x
+                    local_idx=R
+                vector = self.generate_vector(data=init_x[R], cluster=cluster,
+                                              data_reader=data_reader,
+                                              local_idx=local_idx)
 
         if decanon_indices is not None:
             new_cluster_list = []
@@ -227,11 +240,12 @@ class DPMB_State():
     # data=None, cluster=None: sample cluster from CRP, sample data from predictive of that cluster.
     # data=None, cluster=c: sample data from c's predictive and incorporate it into c
     # data=dvec, cluster=c: incorporate dvec into c
-    def generate_vector(self, data=None, cluster=None):
+    def generate_vector(self, data=None, cluster=None,
+                        data_reader=None, local_idx=None):
         if cluster is None:
             cluster = self.generate_cluster_assignment()
 
-        vector = Vector(self.random_state, cluster, data) ## FIXME : does this need to be copied? np.array(data).copy())
+        vector = Vector(self.random_state, cluster, data, data_reader, local_idx)
         self.vector_list[vector] = None
         cluster.assign_vector(vector)
         return vector
@@ -490,26 +504,41 @@ class DPMB_State():
         return fh,fh1,fh2,fh3,fh4
 
 
-class Vector():
-    def __init__(self,random_state,cluster,data=None):
+class Vector(object):
+
+    # idx comes from get_suffstats
+    __slots__ = ['cluster', 'data', 'data_reader', 'local_idx', 'idx']
+
+    def __init__(self, random_state, cluster, data=None,
+                 data_reader=None, local_idx=None):
         if cluster is None:
             raise Exception("creating a vector without a cluster")
-        
-        self.cluster = cluster
         if data is None:
-            # reconstitute theta from the sufficient statistics for the cluster right now
+            # reconstitute coin weights from the sufficient statistics
             N_cluster = len(cluster.vector_list)
             num_heads_vec = cluster.column_sums
             binomial = random_state.binomial
-            betas_vec = self.cluster.state.betas
-            # thetas = (num_heads_vec + betas_vec) / (N_cluster + 2.0 * betas_vec)
-            # self.data = np.array([random_state.binomial(1, theta) for theta in thetas])
-            self.data = pf.create_data_array(
-                N_cluster,num_heads_vec,betas_vec,binomial)
-        else:
+            betas_vec = cluster.state.betas
+            # flip coins
+            data = pf.create_data_array(N_cluster, num_heads_vec, betas_vec,
+                                        binomial)
+        #
+        self.cluster = cluster
+        if data_reader is None:
             self.data = data
+        self.data_reader = data_reader
+        self.local_idx = local_idx
 
-class Cluster():
+    def __getattr__(self, attr):
+        if attr == 'data' and self.data_reader is not None:
+            return data_reader[local_idx]
+        else:
+            return getattr(self, attr)
+
+class Cluster(object):
+
+    __slots__ = ['state', 'column_sums', 'vector_list']
+
     def __init__(self, state):
         self.state = state
         self.column_sums = np.zeros(self.state.num_cols)
