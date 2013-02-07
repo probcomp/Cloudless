@@ -13,7 +13,7 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.settings as settings
 import Cloudless.examples.DPMB.s3_helper as s3h
-
+import Cloudless.examples.DPMB.DataReader as DataReader
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
 problem_bucket_dir = settings.s3.problem_bucket_dir
@@ -285,8 +285,10 @@ class MRSeedInferer(MRJob):
                 zs, master_alpha, betas, child_inf_seed, child_gen_seed,
                 num_iters_per_step, num_nodes)
 
-            sub_problem_xs = rf.get_xs_subset_from_h5(
-                problem_file, x_indices, dir='.')
+            # sub_problem_xs = rf.get_xs_subset_from_h5(
+            #     problem_file, x_indices, dir='.')
+            sub_problem_xs = DataReader.DataReader(problem_file, x_indices,
+                                                   dir='.')
             hf.echo_date('infer(): read problem')
             sub_problem = {'xs':sub_problem_xs, 'zs':zs, 'test_xs':None}
             # actually infer
