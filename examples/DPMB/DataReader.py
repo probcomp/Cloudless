@@ -4,6 +4,7 @@ import h5py
 import numpy
 #
 import Cloudless.examples.DPMB.h5_functions as h5
+import matplotlib.mlab
 
 
 class DataReader:
@@ -19,7 +20,7 @@ class DataReader:
         self.cache_size = cache_size
         self.f = f
         self.global_data_indices = numpy.array(global_data_indices)
-        self.masked_indices = numpy.array(global_data_indices)
+        self.local_access_ordering = numpy.arange(len(global_data_indices))
 
     def __del__(self):
         self.f.close()
@@ -28,22 +29,19 @@ class DataReader:
     def __len__(self):
         return len(self.global_data_indices)
 
-    def set_mask_ordering(self, mask_ordering):
-        global_data_indices = self.global_data_indices
-        #
-        masked_indices = global_data_indices[mask_ordering]
-        print masked_indices
-        #
-        self.masked_indices = masked_indices
+    def set_local_access_ordering(self, local_access_ordering):
+        self.local_access_ordering = local_access_ordering
 
     def get_indices_to_cache(self, local_missed_index):
         cache_size = self.cache_size
-        masked_indices = self.masked_indices
+        local_access_ordering = self.local_access_ordering
+        global_data_indices = self.global_data_indices
         #
-        base = (local_missed_index / cache_size) * cache_size
-        end = base + cache_size
-        local_indices = range(base, end)
-        global_indices = masked_indices[base:end]
+        which_local_missed_index = matplotlib.mlab.find(local_access_ordering==local_missed_index)[0]
+        start = (which_local_missed_index / cache_size) * cache_size
+        end = start + cache_size
+        local_indices = local_access_ordering[start:end]
+        global_indices = global_data_indices[local_indices]
         #
         return local_indices, global_indices
 
@@ -64,6 +62,7 @@ class DataReader:
         cache = self.cache
         #
         if idx not in cache:
+            print 'cache miss'
             local_indices, global_indices = self.get_indices_to_cache(idx)
             self.cache_global_indices(local_indices, global_indices)
             cache = self.cache
@@ -81,13 +80,15 @@ if __name__ == '__main__':
     # filename = 'tiny_image_problem_nImages_320000_nPcaTrain_10000.pkl.gz'
     filename = 'tiny_image_problem_nImages_1000000_nPcaTrain_400000.pkl.gz'
     dir = 'Data'
-    num_values = 10
+    num_values = 100
+    cache_size = num_values/10
     #
     if 'dr' in locals(): del dr
-    dr = DataReader(filename, range(num_values), dir=dir)
-    print '\n'.join(map(str, zip(range(10), dr[numpy.arange(0,10)])))
+    dr = DataReader(filename, range(num_values), dir=dir, cache_size=cache_size)
     numpy.random.seed(0)
-    permutation = numpy.random.permutation(range(10))
-    dr.set_mask_ordering(permutation)
-    for idx in range(10):
-        print (idx, dr[idx])
+    permutation = numpy.random.permutation(num_values)
+    dr.set_local_access_ordering(permutation)
+    print 'dr.local_access_ordering:', dr.local_access_ordering
+    for permutation_idx in range(cache_size-5, cache_size+5):
+        data_idx = permutation[permutation_idx]
+        print permutation_idx, data_idx, dr[data_idx][:6]
