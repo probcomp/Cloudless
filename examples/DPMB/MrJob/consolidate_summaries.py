@@ -279,8 +279,8 @@ def score_summary(summary, problem):
         true_zs=true_zs, test_xs=test_xs)
     return scored_summary
 
-def read_summaries(data_dirs, init_filename=None, problem_filename=None, 
-                   do_print=False):
+def read_summaries(data_dirs, init_filename=default_init_filename,
+                   problem_filename=None, do_print=False):
     # read the summaries
     summaries_dict = {}
     for data_dir in data_dirs:
