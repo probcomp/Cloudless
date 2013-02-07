@@ -4,8 +4,6 @@ import h5py
 import numpy
 #
 import Cloudless.examples.DPMB.h5_functions as h5
-import Cloudless.examples.DPMB.remote_functions as rf
-import Cloudless.examples.DPMB.helper_functions as hf
 
 
 class DataReader:
@@ -72,13 +70,11 @@ class DataReader:
         #
         return cache[idx]
 
-    def __getitem__(self, idx, verbose=False):
+    def __getitem__(self, idx):
         if numpy.isscalar(idx):
-            with hf.Timer('get_from_cache', verbose=verbose):
-                ret = self.get_from_cache(idx)
+            ret = self.get_from_cache(idx)
         else:
-            with hf.Timer('get_global_indices_from_f', verbose=verbose):
-                ret = self.get_global_indices_from_f(idx)
+            ret = self.get_global_indices_from_f(idx)
         return ret
 
 if __name__ == '__main__':
