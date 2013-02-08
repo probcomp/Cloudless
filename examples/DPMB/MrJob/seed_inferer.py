@@ -145,8 +145,10 @@ class MRSeedInferer(MRJob):
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
                 mus = numpy.repeat(1./num_nodes, num_nodes)
-                lolo_x_indices, random_state = hf.crp_init_superclusters(
-                    init_alpha, mus, dummy_state.random_state, n_draws)
+                lolo_x_indices, random_state = \
+                    hf.crp_init_superclusters_experimental(
+                    init_alpha, mus, dummy_state.random_state, n_draws
+                    )
                 flat_lolo_x_indices = hf.flatten(lolo_x_indices)
                 num_clusters = len(flat_lolo_x_indices)
                 cluster_counts = map(len, flat_lolo_x_indices)
