@@ -513,12 +513,12 @@ class _cluster():
         self.weight = len(x_indices) if weight is None else weight
         self.supercluster = supercluster
 class _supercluster():
-    def __init__(self, list_of_x_indices, mu):
+    def __init__(self, list_of_x_indices, mu, cluster_weight=1):
         self.cluster_set = set()
         self.weight = 0
         self.mu = mu
         for x_indices in list_of_x_indices:
-            cluster = _cluster(x_indices)
+            cluster = _cluster(x_indices, weight=cluster_weight)
             self.add(cluster)
     def remove(self, cluster):
         self.cluster_set.remove(cluster)
@@ -599,7 +599,7 @@ def gibbs_on_superclusters(lol_of_x_indices, mus, alpha, seed):
         supercluster_sampler.gibbs_sample_all_clusters(seed)
     return lol_of_x_indices_out, random_state
 
-def reshape_superclusters(lolo_x_indices, num_nodes, alpha, seed):
+def reshape_superclusters(lolo_x_indices, num_nodes, alpha, seed, cluster_weight=None):
     random_state = generate_random_state(seed)
     # presume uniform mu
     mus = [1./num_nodes] * num_nodes
@@ -610,7 +610,7 @@ def reshape_superclusters(lolo_x_indices, num_nodes, alpha, seed):
     supercluster_list = supercluster_sampler.supercluster_list
     flat_list_of_x_indices = flatten(lolo_x_indices)
     for x_indices in flat_list_of_x_indices:
-        cluster = _cluster(x_indices)
+        cluster = _cluster(x_indices, weight=cluster_weight)
         die_weights = supercluster_sampler.get_die_weights()
         rand_draw = random_state.uniform()
         which_supercluster_idx = pf.sample_unnormalized_with_partition(
