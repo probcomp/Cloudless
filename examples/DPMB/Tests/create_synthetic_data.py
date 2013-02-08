@@ -237,6 +237,7 @@ def pkl_mrjob_problem(gen_seed, num_rows, num_cols, num_clusters, beta_d,
         dir=dir,
         )
     #
+    xs = numpy.array(xs, dtype=bool)
     pkl_vals = {
         'gen_seed':gen_seed,
         'num_clusters':num_clusters,
