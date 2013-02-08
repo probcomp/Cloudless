@@ -84,7 +84,7 @@ tiny_image_problem_file = 'tiny_image_problem_nImages_' \
 
 class s3():
     # bucket_str = 'dpmb.mitprobabilisticcomputingproj'
-    bucket_str = 'mitpcp-dpmb'
+    bucket_str = 'mitpcp-pdpm'
     bucket_dir = ''
     problem_bucket_dir = 'tiny_image_problems'
     summary_bucket_dir = 'tiny_image_summaries'
