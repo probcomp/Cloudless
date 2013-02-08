@@ -623,7 +623,7 @@ def crp_init_superclusters(alpha, mus, seed, n_draws):
     random_state = generate_random_state(seed)
     super_seed = random_state.randint(sys.maxint)
     super_draws, super_counts = pf.sample_from_dirichlet_multinomial(
-        alpha, mus, seed, n_draws)
+        alpha, mus, super_seed, n_draws)
     list_of_super_indices = [[] for super_count in super_counts]
     for x_index, super_draw in enumerate(super_draws):
         list_of_super_indices[super_draw].append(x_index)
