@@ -456,7 +456,7 @@ def pickle(in_var, file_str, dir=''):
         in_var['hdf5_vars'] = ['xs']
     if isinstance(in_var, dict) and 'hdf5_vars' in in_var:
         var_to_pkl = in_var.copy()
-        create_hdf5_from_dict(var_to_pkl, file_str, dir=dir)
+        create_hdf5_from_dict(var_to_pkl, file_str)
     with my_open(file_str, 'wb') as fh:
         cPickle.dump(var_to_pkl, fh)
 
