@@ -640,6 +640,29 @@ def crp_init_superclusters(alpha, mus, seed, n_draws):
         list_of_list_of_x_indices.append(list_of_x_indices)
     return list_of_list_of_x_indices, random_state
 
+def crp_init_superclusters_experimental(alpha, mus, seed, n_draws):
+    random_state = generate_random_state(seed)
+    permutation = random_state.permutation(n_draws)
+    num_superclusters = len(mus)
+    num_draws_per_supercluster = n_draws / num_superclusters
+    list_of_list_of_x_indices = []
+    for supercluster_idx in range(num_superclusters):
+        start = supercluster_idx * num_draws_per_supercluster
+        end = start + num_draws_per_supercluster
+        super_indices = permutation[start:end]
+        #
+        child_alpha = alpha
+        child_seed = random_state.randint(sys.maxint)
+        super_count = len(super_indices)
+        child_draws, child_counts = pf.sample_from_crp(
+            child_alpha, child_seed, super_count)
+        #
+        list_of_x_indices = [[] for child_count in child_counts]
+        for x_index, child_draw in zip(super_indices, child_draws):
+            list_of_x_indices[child_draw].append(x_index)
+        list_of_list_of_x_indices.append(list_of_x_indices)
+    return list_of_list_of_x_indices, random_state
+
 def consolidate_suffstats(suffstats_list):
     num_vectors = sum([suffstats.num_vectors for suffstats in suffstats_list])
     num_clusters = sum([suffstats.num_clusters for suffstats in suffstats_list])
