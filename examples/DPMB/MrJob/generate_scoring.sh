@@ -30,8 +30,8 @@ if [ ! -z $single_dir ]; then
     exit
 fi
 
-run_dir_list=($(python generate_scoring.py --do_print_all_queues .))
 while true; do
+    run_dir_list=($(python generate_scoring.py --do_print_all_queues .))
     for run_dir in ${run_dir_list[*]}; do
 	process_single_run_dir $sleep_dur $num_workers $run_dir
     done
