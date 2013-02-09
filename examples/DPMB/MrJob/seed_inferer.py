@@ -13,6 +13,7 @@ import Cloudless.examples.DPMB.DPMB_State as ds
 import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.settings as settings
 import Cloudless.examples.DPMB.s3_helper as s3h
+import Cloudless.examples.DPMB.sqs_helper as sh
 import Cloudless.examples.DPMB.DataReader as DataReader
 
 summary_bucket_dir = settings.s3.summary_bucket_dir
@@ -107,6 +108,7 @@ class MRSeedInferer(MRJob):
         self.run_bucket_dir = os.path.join(summary_bucket_dir, self.run_dir)
 
     def init(self, key, run_key):
+        sh.push_str_to_queue('in init', 'debug')
         start_dt = datetime.datetime.now()
         master_inf_seed = int(run_key)
         num_nodes = self.num_nodes
