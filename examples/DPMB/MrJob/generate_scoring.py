@@ -46,6 +46,7 @@ def create_queue_from_list(in_list, queue_name):
     queue = sqs.get_queue(queue_name)
     if queue is None:
         queue = sqs.create_queue(queue_name)
+        time.sleep(10)
     for list_el in in_list: 
         body = simplejson.dumps(list_el)
         message = queue.new_message(body=body)
