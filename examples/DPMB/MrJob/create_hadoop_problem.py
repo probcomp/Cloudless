@@ -92,9 +92,9 @@ with open(parameters_full_filename, 'w') as fh:
     for key, value in parameters.iteritems():
         line = str(key) + ' = ' + str(value) + '\n'
         fh.write(line)
-# now push files to hdfs
-for filename in [problem_filename, h5_filename, parameters_filename]:
-    si.run_hadoop_fs_cmd(filename, dest_dir_suffix=run_dir)
+# # now push files to hdfs
+# for filename in [problem_filename, h5_filename, parameters_filename]:
+#     si.run_hadoop_fs_cmd(filename, dest_dir_suffix=run_dir)
 
 # do I need to push to s3 so that crp init can read?
 
@@ -108,10 +108,10 @@ for filename in [problem_filename, h5_filename, parameters_filename]:
 # with mr_job.make_runner() as runner:
 #     runner.run()
 
-# for hadoop
-source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
-hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
-os.system(hadoop_fs_cmd)
+# # for hadoop
+# source_full_dir = os.path.join('/user/sgeadmin/', run_dir)
+# hadoop_fs_cmd = ' '.join(['hadoop', 'fs', '-get', source_full_dir, '.'])
+# os.system(hadoop_fs_cmd)
 run_bucket_dir = os.path.join(summary_bucket_dir, run_dir)
 s3 = s3h.S3_helper(bucket_dir=run_bucket_dir, local_dir=run_dir)
 for filename in \
