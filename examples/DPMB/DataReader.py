@@ -4,7 +4,8 @@ import h5py
 import numpy
 #
 import Cloudless.examples.DPMB.h5_functions as h5
-import matplotlib.mlab
+# hadoop chokes on this import
+# import matplotlib.mlab
 
 
 class DataReader:
@@ -37,7 +38,7 @@ class DataReader:
         local_access_ordering = self.local_access_ordering
         global_data_indices = self.global_data_indices
         #
-        which_local_missed_index = matplotlib.mlab.find(local_access_ordering==local_missed_index)[0]
+        which_local_missed_index = numpy.nonzero(local_access_ordering==local_missed_index)[0][0]
         start = (which_local_missed_index / cache_size) * cache_size
         end = start + cache_size
         local_indices = local_access_ordering[start:end]
