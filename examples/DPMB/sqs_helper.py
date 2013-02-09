@@ -1,4 +1,5 @@
 from collections import Counter
+import argparse
 #
 import boto
 import simplejson
@@ -64,3 +65,12 @@ def count_and_delete(queue_or_queuename, do_print=False):
             print el[0]
     [el[1]() for el in q_els]
     return Counter(message_list)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('queuename', type=str)
+    args = parser.parse_args()
+    queuename = args.queuename
+    #
+    count_and_delete(queuename, True)
