@@ -112,7 +112,7 @@ def gen_problem(dataset_spec,permute=False,save_str=None):
         pkl_file = os.path.join(dataset_spec['data_dir'], pkl_file)
         pkl_data = unpickle(pkl_file)
         # set problem variables
-        xs = np.array(pkl_data["xs"],dtype=np.int32)
+        xs = pkl_data["xs"]
         if 'zs' in pkl_data:
             zs,ids = hf.canonicalize_list(pkl_data["zs"])
         else:
