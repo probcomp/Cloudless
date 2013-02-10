@@ -986,7 +986,7 @@ def verify_file_helper(filename, bucket_dir_suffix, local_dir=None,
         local_dir = os.path.join(data_dir, bucket_dir_suffix)
     bucket_dir = os.path.join('tiny_image_summaries', bucket_dir_suffix)
     s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
-    s3.verify_file(filename, write_s3=write_s3)
+    s3.verify_file(filename, write_s3=write_s3, do_print=False)
     pkl_contents = None
     if do_unpickle:
         pkl_contents = unpickle(filename, dir=local_dir)
