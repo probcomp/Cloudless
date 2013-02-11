@@ -212,6 +212,8 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         label = label_func(summaries_name)
         pylab.plot(timing, extract_vals, label=label, color=color,
                    linestyle=style, alpha=alpha)
+        if max_x is not None:
+            pylab.gca().set_xlim(0, max_x)
     if hline is not None:
         pylab.axhline(hline, color='magenta', label='gen')
     if do_legend:
@@ -497,10 +499,12 @@ if __name__ == '__main__':
     parser.add_argument('data_dirs',nargs='+',type=str)
     parser.add_argument('--init_filename',default=default_init_filename,type=str)
     parser.add_argument('--fig_suffix',default=default_fig_suffix,type=str)
+    parser.add_argument('--max_x',default=None,type=float)
     args = parser.parse_args()
     data_dirs = args.data_dirs
     init_filename = args.init_filename
     fig_suffix = args.fig_suffix
+    max_x = args.max_x
     #
     problem_filename = 'problem.pkl.gz'
     parameters_file = 'run_parameters.txt'
