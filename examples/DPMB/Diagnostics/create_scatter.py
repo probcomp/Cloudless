@@ -4,23 +4,20 @@ import re
 from collections import defaultdict
 #
 import numpy
+import pandas
 #
 import Cloudless.examples.DPMB.remote_functions as rf
+import Cloudless.examples.DPMB.optionally_use_agg as oua
+oua.optionally_use_agg()
+# import pylab must come after optionally_use_agg
+import pylab
 
 
-
-default_fig_suffix = 'pdf'
-parser = argparse.ArgumentParser()
-parser.add_argument('--fig_suffix',default=default_fig_suffix,type=str)
-args = parser.parse_args()
-fig_suffix = args.fig_suffix
 
 # settings
-base_dir = '/mnt'
-dir_list = filter(lambda x: x.startswith('new_'), os.listdir(base_dir))
-dir_list = filter(lambda x: not x.endswith('.png'), os.listdir(base_dir))
-dir_list = [os.path.join(base_dir, dir) for dir in dir_list]
-field_of_interst = "NONE"
+default_fig_suffix = 'pdf'
+default_base_dir = '/mnt/'
+default_field_of_interest = 'test_lls'
 
 # helper functions
 get_filename = lambda tuple: tuple[0]
@@ -60,20 +57,6 @@ def get_problem_and_final_summary(seed_summary_filename_tuples, dir=''):
     summary = rf.unpickle(max_iternum_filename, dir=dir)
     return problem, summary
 
-fieldname = 'test_lls'
-# fieldname = 'num_clusters'
-gen_and_final_tuples = []
-for dir in dir_list:
-    summary_filename_tuples = get_summary_filename_tuples(dir)
-    dict_by_seed = get_dict_of_lists(summary_filename_tuples, get_seed)
-    for seed_summary_filename_tuples in dict_by_seed.itervalues():
-        problem, summary = \
-            get_problem_and_final_summary(seed_summary_filename_tuples, dir)
-        gen_and_final_tuple = (
-            numpy.mean(problem[fieldname]), numpy.mean(summary[fieldname])
-            )
-        gen_and_final_tuples.append(gen_and_final_tuple)
-
 # helper functions
 def my_plot(xs, ys, ax=None, do_log_log=True, **kwargs):
     if ax is None:
@@ -107,7 +90,7 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
 def plot_series_dict(series_dict, series_name, do_log_log,
                      jitter_range, jitter_op, do_lines=True,
                      xlabel=None, ylabel=None,
-                     fig_suffix=fig_suffix):
+                     fig_suffix=default_fig_suffix):
     ax = None
     random_state = numpy.random.RandomState(0)
     for numnodes, series in series_dict.iteritems():
@@ -166,6 +149,33 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                   bbox_extra_artists=(lgd,), bbox_inches='tight',
                   )
 
+# parse some args
+parser = argparse.ArgumentParser()
+parser.add_argument('--fig_suffix', default=default_fig_suffix, type=str)
+parser.add_argument('--base_dir', default=default_base_dir, type=str)
+parser.add_argument('--field_of_interest', default=default_field_of_interest, type=str)
+args = parser.parse_args()
+fig_suffix = args.fig_suffix
+base_dir = args.base_dir
+field_of_interest = args.field_of_interest
+
+# proces dir contents
+dir_list = filter(lambda x: x.startswith('new_'), os.listdir(base_dir))
+dir_list = filter(lambda x: not x.endswith('.png'), os.listdir(base_dir))
+dir_list = [os.path.join(base_dir, dir) for dir in dir_list]
+
+gen_and_final_tuples = []
+for dir in dir_list:
+    summary_filename_tuples = get_summary_filename_tuples(dir)
+    dict_by_seed = get_dict_of_lists(summary_filename_tuples, get_seed)
+    for seed_summary_filename_tuples in dict_by_seed.itervalues():
+        problem, summary = \
+            get_problem_and_final_summary(seed_summary_filename_tuples, dir)
+        gen_and_final_tuple = (
+            numpy.mean(problem[field_of_interest]), numpy.mean(summary[field_of_interest])
+            )
+        gen_and_final_tuples.append(gen_and_final_tuple)
+
 testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
 testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
@@ -179,12 +189,8 @@ marker_lookup = dict(zip(num_nodes_list, markers_list))
 h_index_lookup = dict(zip(num_nodes_list, h_index_list))
 
 
-import Cloudless.examples.DPMB.optionally_use_agg as oua
-oua.optionally_use_agg()
-import pylab
-import pandas
 gen_and_final_tuples = numpy.array(gen_and_final_tuples)
 tuples_S = pandas.Series(gen_and_final_tuples[:,1], gen_and_final_tuples[:,0])
 series_dict = {8:tuples_S}
-plot_series_dict(series_dict,'test',do_log_log=False,jitter_range=.01,jitter_op=operator.mul,do_lines=False,
-                 fig_suffix=fig_suffix)
+plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.01, jitter_op=operator.mul, 
+                 do_lines=False, fig_suffix=fig_suffix)
