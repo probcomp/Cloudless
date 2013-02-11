@@ -111,19 +111,16 @@ def process_timing(summaries):
         sum([summary['timing'][field] for field in ['alpha', 'betas', 'zs']])
     delta_ts = []
     if 'iter_start_dt' in summaries[0].get('timing', {}):
-        start_dts = [
-            summary['timing']['iter_start_dt']
-            for summary in summaries
-            ]
+        # start_dts = [
+        #     summary['timing']['iter_start_dt']
+        #     for summary in summaries
+        #     ]
+        start_dt =  summaries[0]['timing']['iter_start_dt']
         end_dts = [
             summary['timing']['iter_end_dt']
             for summary in summaries
             ]
-        delta_ts = [
-            (end - start).total_seconds()
-            for end, start in zip(end_dts, start_dts)
-            ]
-        delta_ts = numpy.cumsum(delta_ts)
+        delta_ts = map(lambda x: x.total_seconds(), numpy.array(end_dts) - start_dt)
     elif 'start_time' in summaries[0].get('timing',{}):
         start_time = summaries[0]['timing']['start_time']
         delta_ts.append(summaries[0]['timing']['run_sum'])
