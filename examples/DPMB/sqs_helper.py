@@ -1,4 +1,5 @@
 from collections import Counter
+import argparse
 #
 import boto
 import simplejson
@@ -24,6 +25,7 @@ def get_queue(queue_or_queuename):
 def get_or_create_queue(queue_or_queue_name):
     queue, queuename = get_queue(queue_or_queue_name)
     if queue is None:
+        sqs = get_sqs()
         queue = sqs.create_queue(queuename)
     return queue, queuename
 
@@ -54,9 +56,21 @@ def push_str_list_to_queue(in_list, queue_name):
     for el in in_list:
         push_str_to_queue(el, queue_name)
 
-def count_and_delete(queue_or_queuename):
+def count_and_delete(queue_or_queuename, do_print=False):
     q_iter = get_queue_iterator(queue_or_queuename)
     q_els = [el for el in q_iter]
     message_list = [el[0] for el in q_els]
+    if do_print:
+        for el in q_els:
+            print el[0]
     [el[1]() for el in q_els]
     return Counter(message_list)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('queuename', type=str)
+    args = parser.parse_args()
+    queuename = args.queuename
+    #
+    count_and_delete(queuename, True)

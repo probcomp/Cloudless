@@ -61,12 +61,12 @@ class S3_helper():
             success = True
         return success
 
-    def verify_file(self,filename,write_s3=False):
+    def verify_file(self,filename,write_s3=False, do_print=True):
         success = None
         if not self.is_local(filename):
-            success = self.get_s3(filename)
+            success = self.get_s3(filename, do_print=do_print)
         elif not self.on_s3(filename) and write_s3:
-            success = self.put_s3(filename)
+            success = self.put_s3(filename, do_print=do_print)
         else:
             success = True # we have it and s3 has it
         return success
