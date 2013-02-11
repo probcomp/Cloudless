@@ -18,6 +18,7 @@ import pylab
 default_fig_suffix = 'pdf'
 default_base_dir = '/mnt/'
 default_field_of_interest = 'test_lls'
+default_min_iternum = 5
 
 # helper functions
 get_filename = lambda tuple: tuple[0]
@@ -55,7 +56,7 @@ def get_problem_and_final_summary(seed_summary_filename_tuples, dir=''):
     max_iternum_filename = get_filename(max_iternum_filename_tuple)
     problem = rf.unpickle('problem.pkl.gz', dir=dir, check_hdf5=False)
     summary = rf.unpickle(max_iternum_filename, dir=dir)
-    return problem, summary
+    return problem, summary, max_iternum
 
 # helper functions
 def my_plot(xs, ys, ax=None, do_log_log=True, **kwargs):
@@ -154,10 +155,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--fig_suffix', default=default_fig_suffix, type=str)
 parser.add_argument('--base_dir', default=default_base_dir, type=str)
 parser.add_argument('--field_of_interest', default=default_field_of_interest, type=str)
+parser.add_argument('--min_iternum', default=default_min_iternum, type=int)
 args = parser.parse_args()
 fig_suffix = args.fig_suffix
 base_dir = args.base_dir
 field_of_interest = args.field_of_interest
+min_iternum = args.min_iternum
 
 # proces dir contents
 dir_list = filter(lambda x: x.startswith('new_'), os.listdir(base_dir))
@@ -169,8 +172,9 @@ for dir in dir_list:
     summary_filename_tuples = get_summary_filename_tuples(dir)
     dict_by_seed = get_dict_of_lists(summary_filename_tuples, get_seed)
     for seed_summary_filename_tuples in dict_by_seed.itervalues():
-        problem, summary = \
+        problem, summary, max_iternum = \
             get_problem_and_final_summary(seed_summary_filename_tuples, dir)
+        if max_iternum < min_iternum: continue
         gen_and_final_tuple = (
             numpy.mean(problem[field_of_interest]), numpy.mean(summary[field_of_interest])
             )
@@ -184,9 +188,12 @@ colors_list = ['red', 'blue', 'green']
 markers_list = ['+', 'x', 'v']
 # h_index_list = [-1, 0, 1]
 h_index_list = [0, 0, 0]
-color_lookup = dict(zip(num_nodes_list, colors_list))
-marker_lookup = dict(zip(num_nodes_list, markers_list))
-h_index_lookup = dict(zip(num_nodes_list, h_index_list))
+color_lookup = defaultdict(lambda: 'orange')
+color_lookup.update(dict(zip(num_nodes_list, colors_list)))
+marker_lookup = defaultdict(lambda: 'o')
+marker_lookup.update(dict(zip(num_nodes_list, markers_list)))
+h_index_lookup = defaultdict(lambda: 0)
+h_index_lookup.update(dict(zip(num_nodes_list, h_index_list)))
 
 
 gen_and_final_tuples = numpy.array(gen_and_final_tuples)
