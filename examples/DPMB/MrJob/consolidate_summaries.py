@@ -170,7 +170,7 @@ def shorten_name(instr):
         shortened_name = 'nodes=' + num_nodes_str + '_' + 'he=' + he_str
     return shortened_name
 
-numnodes_to_color = {'1':'blue', '2':'orange', '4':'green', '8':'red', '16':'brown', '32':'black', 'other':'blue'}
+numnodes_to_color = {'1':'blue', '2':'orange', '4':'green', '8':'red', '16':'brown', '32':'black', '64': 'orange', '128':'green', '256':'red', 'other':'blue'}
 def get_color(summaries_key):
     summaries_re = re.compile('.*numnodes(\d+)_.*')
     summaries_match = summaries_re.match(summaries_key)
