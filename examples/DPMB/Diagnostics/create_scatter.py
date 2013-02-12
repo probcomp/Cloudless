@@ -163,9 +163,10 @@ field_of_interest = args.field_of_interest
 min_iternum = args.min_iternum
 
 # proces dir contents
-dir_list = filter(lambda x: x.startswith('new_'), os.listdir(base_dir))
-dir_list = filter(lambda x: not x.endswith('.png'), os.listdir(base_dir))
+dir_list = os.listdir(base_dir)
+dir_list = filter(lambda x: x.startswith('new_'), dir_list)
 dir_list = [os.path.join(base_dir, dir) for dir in dir_list]
+dir_list = filter(os.path.isdir, dir_list)
 
 gen_and_final_tuples = []
 for dir in dir_list:
@@ -175,6 +176,8 @@ for dir in dir_list:
         problem, summary, max_iternum = \
             get_problem_and_final_summary(seed_summary_filename_tuples, dir)
         if max_iternum < min_iternum: continue
+        if field_of_interest not in summary: continue
+        if field_of_interest not in problem: continue
         gen_and_final_tuple = (
             numpy.mean(problem[field_of_interest]), numpy.mean(summary[field_of_interest])
             )
