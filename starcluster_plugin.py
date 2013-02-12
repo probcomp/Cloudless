@@ -54,7 +54,7 @@ class CloudlessSetup(ClusterSetup):
                #
           for node in nodes:
                log.info("Installing Cloudless (part 2) on %s" % node.alias)
-               node.ssh.execute('easy_install scikits.learn')
+               # node.ssh.execute('easy_install scikits.learn')
                node.ssh.execute('apt-get install -y python-h5py')
                node.ssh.execute(
                     'python -c \'import Cloudless.examples.DPMB.settings\'')
