@@ -151,6 +151,9 @@ else
     cd "${cloudless_dir}/examples/DPMB/"
     cython -a -I "${python_include}" pyx_functions.pyx
     gcc -fPIC -o pyx_functions.so -shared -pthread -I${python_dir} -I${python_include} -I${extra_include} pyx_functions.c
+    cd MrJob/find_init
+    python setup.py build_ext --inplace
+    cd ../..
 fi
 
 sudo chown hadoop /mnt

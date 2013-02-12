@@ -1,0 +1,10 @@
+build
+*.c
+*.cpp
+*.html
+*.so
+profile*
+output.png
+tmp.py
+.idea
+
