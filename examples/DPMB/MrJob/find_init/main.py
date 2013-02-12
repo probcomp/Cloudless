@@ -12,5 +12,5 @@ def run(data_reader):
     data = empty((n, 256), int)
     for i in range(n):
         data[i] = data_reader[i]
-    alpha = bino_dpm.run(data)
-    return alpha
+    sub_n, alpha_set, time = bino_dpm.run(data)
+    return alpha_set[-1]

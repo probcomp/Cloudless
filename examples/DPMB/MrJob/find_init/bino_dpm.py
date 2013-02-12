@@ -1,13 +1,14 @@
 from __future__ import division
 from numpy import *
 import scaffold
+import helpers
 from helpers import discrete_sample
 from scipy import special, stats
 import logging
 import cDpm
 from matplotlib.pyplot import *
 logging.basicConfig(level=logging.DEBUG)
-
+import datetime
 
 class State(scaffold.State):
     __slots__ = ['c', 'alpha', 'beta']
@@ -78,7 +79,7 @@ class Chain(scaffold.Chain):
         return s
 
 chain = Chain(alpha_shape=5, alpha_scale=1, beta_shape=1, beta_scale=1, seed=1, max_iters=100)
-dp = dict(n=50, dim=10)
+dp = dict(n=50, dim=256)
 g_funcs = [lambda state: state.alpha, lambda state: len(unique(state.c))]
 
 def test(mode='geweke'):
@@ -98,26 +99,32 @@ def test(mode='geweke'):
 
 rng = random.RandomState(0)
 
+def k_mean_from_alpha(alpha, n):
+    return helpers.expected_tables(alpha, n)
+
 def run(data):
     rng.shuffle(data)
     alpha = rng.gamma(1,1)
-    sub_n = [10, 100, 1000, 10000]
+    sub_n = [10, 100, 1000]
+    n_iters = [1000, 1000, 100, 5]
     dim = data.shape[1]
-    n_iter = 1000
+
     alpha_set = [alpha]
-    alpha_hist = []
-    for n in sub_n:
+    times = []
+    for n_iter, n in zip(n_iters, sub_n):
+        times.append(datetime.datetime.now())
         logging.info("Running on subset  %d", n)
         params = chain.params.copy()
         params['alpha_start'] = alpha
         s = chain.sample_latent(params, dict(n=n, dim=dim), rng)
         data_sub = data[:n]
-        alpha_hist = []
+        alpha_hist = empty(n_iter)
         for i in range(n_iter):
             if i%100==0:
                 logging.info("Iteration %d", i)
             s = chain.transition(s, chain.params, data_sub, rng)
-            alpha_hist.append(s.alpha)
-        alpha = mean(alpha_hist)
+            alpha_hist[i] = s.alpha
+        alpha = mean(alpha_hist[-100:])
         alpha_set.append(alpha)
-    return sub_n, alpha_set
+    times.append(datetime.datetime.now())
+    return sub_n, alpha_set, times
