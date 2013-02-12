@@ -1,12 +1,10 @@
 from __future__ import division
 from numpy import *
 import scaffold
-import helpers
 from helpers import discrete_sample
 from scipy import special, stats
 import logging
 import cDpm
-import pdb
 from matplotlib.pyplot import *
 logging.basicConfig(level=logging.DEBUG)
 
@@ -22,7 +20,7 @@ def sample_latent_dp(params, data_params, rng):
     if 'alpha_start' in params:
         alpha = params['alpha_start']
     s.alpha = alpha
-    s.beta = rng.gamma(params['beta_shape'], params['beta_scale']) #todo this coupling is wrong
+    s.beta = rng.gamma(params['beta_shape'], params['beta_scale'])
     s.c = zeros(n, int)
     for i in range(1, n):
         p = append(bincount(s.c[:i]), alpha)
@@ -51,10 +49,10 @@ def calc_alpha_llh(alpha, shape, scale, n_clusters, n):
 
 
 def sample_alpha(n_clusters, n, shape, scale, rng):
-    grid = linspace(.01, 15, 100)
+    grid = linspace(.01, 50, 500)
     llh = cDpm.calc_alpha_llh(grid, shape, scale, n_clusters, n)
     #idx = cDpm.discrete_sample(llh, True, rng_g)
-    idx = cDpm.discrete_sample(exp(llh-amax(llh)))
+    idx = cDpm.discrete_sample(exp(llh-amax(llh))) #todo risk of overflow
     return grid[idx]
 
 
@@ -79,8 +77,8 @@ class Chain(scaffold.Chain):
         s.beta = sample_beta(params['beta_shape'], params['beta_scale'], rng)
         return s
 
-chain = Chain(alpha_shape=2, alpha_scale=2, beta_shape=1, beta_scale=1, seed=1, max_iters=100)
-dp = dict(n=500, dim=200)
+chain = Chain(alpha_shape=5, alpha_scale=1, beta_shape=1, beta_scale=1, seed=1, max_iters=100)
+dp = dict(n=50, dim=10)
 g_funcs = [lambda state: state.alpha, lambda state: len(unique(state.c))]
 
 def test(mode='geweke'):
@@ -103,14 +101,23 @@ rng = random.RandomState(0)
 def run(data):
     rng.shuffle(data)
     alpha = rng.gamma(1,1)
-    sub_n = [100, 1000]
+    sub_n = [10, 100, 1000, 10000]
     dim = data.shape[1]
-    n_iter = 100
+    n_iter = 1000
+    alpha_set = [alpha]
+    alpha_hist = []
     for n in sub_n:
+        logging.info("Running on subset  %d", n)
         params = chain.params.copy()
         params['alpha_start'] = alpha
         s = chain.sample_latent(params, dict(n=n, dim=dim), rng)
         data_sub = data[:n]
+        alpha_hist = []
         for i in range(n_iter):
+            if i%100==0:
+                logging.info("Iteration %d", i)
             s = chain.transition(s, chain.params, data_sub, rng)
-        alpha = s.alpha
+            alpha_hist.append(s.alpha)
+        alpha = mean(alpha_hist)
+        alpha_set.append(alpha)
+    return sub_n, alpha_set

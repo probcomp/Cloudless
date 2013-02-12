@@ -55,6 +55,3 @@ def test():
     data = fm.load(dict(clusters=[c1, c2], weights=[.5, .5], n_points=20), rng)
     cl = cluster(data, 2)
     show_clustering(cl)
-
-
-

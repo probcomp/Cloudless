@@ -1,13 +1,5 @@
 import sys
-sys.path.append('/Users/malmaud/scaffold')
 
 % aimport scaffold
 % aimport helpers
-% aimport datasources
-% aimport test_suite
-% aimport demo_coin
-% aimport demo_dpm
-% aimport demo_tmix
-% aimport storage
-% aimport runner
 % aimport bino_dpm

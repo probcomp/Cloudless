@@ -7,16 +7,10 @@ import numpy as np
 cimport numpy as np
 from libc.math cimport log, exp
 from libcpp.vector cimport vector
-from scipy import stats, special
-#import helpers
 cimport gsl
 
 ctypedef unsigned int uint
 
-
-cpdef int test(int x):
-    y = x + 1
-    return y
 
 cdef class GSLState:
     cdef gsl.gsl_rng* rng

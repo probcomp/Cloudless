@@ -6,4 +6,5 @@ build
 profile*
 output.png
 tmp.py
+.idea
 
