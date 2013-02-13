@@ -187,9 +187,11 @@ for dir in dir_list:
         if 'num_clusters' not in problem: continue
         ground_truth_num_clusters = problem['num_clusters']
         num_vectors = len(problem['true_zs'])
+        ground_truth_value = numpy.mean(problem[field_of_interest])
+        last_sample_value = numpy.mean(summary[field_of_interest])
+        if field_of_interest == 'test_lls' and abs(last_sample_value - ground_truth_value) > 3: continue
         gen_and_final_tuple = (
-            numpy.mean(problem[field_of_interest]),
-            numpy.mean(summary[field_of_interest]), 
+            ground_truth_value, last_sample_value,
             ground_truth_num_clusters, num_vectors,
             )
         gen_and_final_tuples.append(gen_and_final_tuple)
