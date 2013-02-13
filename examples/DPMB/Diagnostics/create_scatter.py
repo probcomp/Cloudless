@@ -135,7 +135,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     pylab.ylabel(ylabel)
     title_list = [
         'Scatter diagram demonstrating correctness',
-        'Horizontal jitter added (%s datapoints present)' % num_datapoints,
+        'Jitter added (%s datapoints present)' % num_datapoints,
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
