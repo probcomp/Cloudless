@@ -92,7 +92,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                      jitter_range, jitter_op, do_lines=True,
                      xlabel=None, ylabel=None,
                      fig_suffix=default_fig_suffix):
-    num_row_key = {1000000:'1MM', 200000:'200K', 500000:'500K'}
+    num_row_key = {1000000:'1MM', 200000:'200K', 500000:'500K', 100000:'100K'}
     ax = None
     random_state = numpy.random.RandomState(0)
     for (num_clusters, num_rows), series in series_dict.iteritems():
@@ -103,7 +103,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         xs, ys = jitterify(xs, ys, jitter_range, h_index, random_state,
                            jitter_op)
         # label = 'numnodes=' + str(numnodes)
-        num_row_str = num_row_key.get(num_rows, num_rows)
+        num_row_str = num_row_key.get(int(num_rows), num_rows)
         label = '%s rows x %s clusters' % (num_row_str, int(num_clusters))
         ax = my_plot(xs, ys, ax=ax, color=color, marker=marker, label=label,
                      do_log_log=do_log_log, alpha=0.5)
@@ -223,5 +223,5 @@ for unique_configuration in unique_configurations.tolist():
                              gen_and_final_tuples[is_current_configuration, 0])
     series_dict[tuple(unique_configuration)] = tuples_S
 
-plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.01, jitter_op=operator.mul, 
+plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.005, jitter_op=operator.mul, 
                  do_lines=False, fig_suffix=fig_suffix)
