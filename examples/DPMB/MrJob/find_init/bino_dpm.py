@@ -59,7 +59,7 @@ def sample_beta(shape, scale, rng):
 class Chain(scaffold.Chain):
     def __init__(self, **kwargs):
         scaffold.Chain.__init__(self, **kwargs)
-        self.alpha_grid = linspace(.01, 400, 2000) #todo: make adapative
+        self.alpha_grid = linspace(.01, 600, 4000) #todo: make adapative
 
     def start_state(self, params, dp, rng):
         return self.sample_latent(params, dp, rng)
@@ -102,20 +102,21 @@ rng = random.RandomState(0)
 def k_mean_from_alpha(alpha, n):
     return helpers.expected_tables(alpha, n)
 
-def run(data, alpha_shape=5, alpha_scale=5, seed=0):
+def run(data, alpha_shape=5, alpha_scale=5, seed=0, sub_n=None, n_iters=None):
     run_params = dict(alpha_shape=alpha_shape, alpha_scale=alpha_scale, beta_shape=1, beta_scale=1, seed=seed)
     rng = random.RandomState(seed)
     cDpm.set_seed(seed)
     rng.shuffle(data)
     alpha = rng.gamma(alpha_shape, alpha_scale)
     n_data = len(data)
-    sub_n = [100, 1000, 10000, 100000]
-    n_iters = [500, 50, 10, 5]
+    if sub_n is None:
+        sub_n = [100, 1000, 10000, 100000]
+        n_iters = [100, 10, 5, 2]
     dim = data.shape[1]
 
     alpha_set = [alpha]
     times = []
-    for n_iter, n in zip(n_iters, sub_n):
+    for j, (n_iter, n) in enumerate(zip(n_iters, sub_n)):
         times.append(datetime.datetime.now())
         logging.info("Running on subset  %d", n)
         params = run_params.copy()
@@ -123,14 +124,20 @@ def run(data, alpha_shape=5, alpha_scale=5, seed=0):
         s = chain.sample_latent(params, dict(n=n, dim=dim), rng)
         data_sub = data[:n]
         alpha_hist = empty(n_iter)
+        n_iters_actual=zeros(len(n_iters), int)
         for i in range(n_iter):
-            if i%100==0:
+            if i%1==0:
                 logging.info("Iteration %d", i)
-            s = chain.transition(s, chain.params, data_sub, rng)
+            try:
+                s = chain.transition(s, chain.params, data_sub, rng)
+            except KeyboardInterrupt:
+                logging.info('breaking')
+                break
             alpha_hist[i] = s.alpha
-        alpha = mean(alpha_hist[-100:])
+            n_iters_actual[j] += 1
+        alpha = mean(alpha_hist[-1])
         alpha_set.append(alpha)
         if n > n_data:
             break
     times.append(datetime.datetime.now())
-    return sub_n, n_iters, alpha_set, times
+    return sub_n, n_iters_actual, alpha_set, times
