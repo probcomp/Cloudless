@@ -76,7 +76,7 @@ cdef double neg_inf = -np.inf
 cdef vector[double] p
 p.reserve(10000)
 
-cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[int, ndim=2] data,
+cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[np.int8_t, ndim=2] data,
                        vector[vector[int]] &n_succ, vector[vector[int]] &n_fail, double alpha,
                        double beta, uint i):
     cdef uint j, count, new_c_i, dim, d
@@ -104,7 +104,7 @@ cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[int, nd
     new_c_i = discrete_sample(p)
     return new_c_i
 
-cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] data, double alpha, double beta,
+cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[np.int8_t, ndim=2] data, double alpha, double beta,
               vector[int] &counts, vector[vector[int]] &n_succ, vector[vector[int]] &n_fail):
     cdef uint n_clusters, new_c_i, j, count, d, dim
     cdef double prior, llh
@@ -128,7 +128,7 @@ cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] d
 
     return new_c_i
 
-cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] data,
+cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[np.int8_t, ndim=2] data,
                            double alpha, double beta):
     cdef uint n_clusters, dim, i, n
     cdef np.ndarray[int, ndim=1] cluster_list, new_c
@@ -169,3 +169,39 @@ cpdef sample_crp(uint n, double alpha):
             counts.pop_back()
     return c
 
+cpdef double hamming_distance(np.ndarray[np.int8_t, ndim=2] x1, np.ndarray[np.double_t, ndim=2] x2, uint j, uint k):
+    cdef uint i, n
+    cdef double d
+    n = x1.shape[1]
+    d = 0
+    for i in range(n):
+        d += (x1[j, i]-x2[k, i])**2
+    return d
+
+cpdef find_closest_arg(np.ndarray[np.int8_t, ndim=2] data, np.ndarray[np.double_t, ndim=2] clusters, np.ndarray[int, ndim=1] c):
+    cdef uint i, j, n_data, n_clusters,  min_idx
+    cdef double d, min_d
+    n_data = data.shape[0]
+    n_clusters = clusters.shape[0]
+    for i in range(n_data):
+        min_d = 1000000
+        for j in range(n_clusters):
+            d = hamming_distance(data, clusters, i, j)
+            if d<min_d:
+                min_d = d
+                min_idx = j
+        c[i] = min_idx
+
+cpdef find_closest_a(np.ndarray[np.int8_t, ndim=2] data, np.ndarray[np.double_t, ndim=2] clusters, np.ndarray[double, ndim=1] c):
+    cdef uint i, j, n_data, n_clusters,  min_idx
+    cdef double d, min_d
+    n_data = data.shape[0]
+    n_clusters = clusters.shape[0]
+    for i in range(n_data):
+        min_d = 1000000
+        for j in range(n_clusters):
+            d = hamming_distance(data, clusters, i, j)
+            if d<min_d:
+                min_d = d
+                min_idx = j
+        c[i] = min_d

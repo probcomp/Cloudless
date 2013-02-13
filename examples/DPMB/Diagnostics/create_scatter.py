@@ -84,7 +84,7 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
     #
     xs = jitter_op(xs, h_jitter_fixed)
     xs = jitter_op(xs, h_jitter_rand)
-    yx = jitter_op(ys, v_jitter_rand)
+    ys = jitter_op(ys, v_jitter_rand)
     #
     return xs, ys
 #
@@ -135,8 +135,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     pylab.ylabel(ylabel)
     title_list = [
         'Scatter diagram demonstrating correctness',
-        'Horizontal jitter added',
-        '%s datapoints' % num_datapoints,
+        'Jitter added (%s datapoints present)' % num_datapoints,
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
@@ -199,18 +198,19 @@ for dir in dir_list:
 testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
 testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
+# color_lookup_helper = {200000:'red', 500000:'blue', 1000000:'green'}
 color_lookup_helper = {128:'red', 512:'blue', 2048:'green'}
-marker_lookup_helper = {200000:'+', 500000:'x', 1000000:'v'}
-h_index_lookup_helper = {200000:0, 500000:0, 1000000:0}
-#
 color_lookup = defaultdict(lambda: 'orange')
 color_lookup.update(color_lookup_helper)
 #
+# marker_lookup_helper = {128:'+', 512:'x', 2048:'v'}
+marker_lookup_helper = {200000:'+', 500000:'x', 1000000:'v'}
 marker_lookup = defaultdict(lambda: 'o')
 marker_lookup.update(marker_lookup_helper)
 #
 h_index_lookup = defaultdict(lambda: 0)
-h_index_lookup.update(h_index_lookup_helper)
+# h_index_lookup_helper = {200000:0, 500000:0, 1000000:0}
+# h_index_lookup.update(h_index_lookup_helper)
 
 
 gen_and_final_tuples = numpy.array(gen_and_final_tuples)
@@ -223,5 +223,5 @@ for unique_configuration in unique_configurations.tolist():
                              gen_and_final_tuples[is_current_configuration, 0])
     series_dict[tuple(unique_configuration)] = tuples_S
 
-plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.005, jitter_op=operator.mul, 
+plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.001, jitter_op=operator.mul,
                  do_lines=False, fig_suffix=fig_suffix)
