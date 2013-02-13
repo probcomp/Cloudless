@@ -92,16 +92,19 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                      jitter_range, jitter_op, do_lines=True,
                      xlabel=None, ylabel=None,
                      fig_suffix=default_fig_suffix):
+    num_row_key = {1000000:'1MM', 200000:'200K', 500000:'500K'}
     ax = None
     random_state = numpy.random.RandomState(0)
-    for numnodes, series in series_dict.iteritems():
-        color = color_lookup[numnodes]
-        marker = marker_lookup[numnodes]
-        h_index = h_index_lookup[numnodes]
+    for (num_clusters, num_rows), series in series_dict.iteritems():
+        color = color_lookup[num_clusters]
+        marker = marker_lookup[num_rows]
+        h_index = h_index_lookup[num_rows]
         xs, ys = series.index, series.values
         xs, ys = jitterify(xs, ys, jitter_range, h_index, random_state,
                            jitter_op)
-        label = 'numnodes=' + str(numnodes)
+        # label = 'numnodes=' + str(numnodes)
+        num_row_str = num_row_key.get(num_rows, num_rows)
+        label = '%s rows x %s clusters' % (num_row_str, int(num_clusters))
         ax = my_plot(xs, ys, ax=ax, color=color, marker=marker, label=label,
                      do_log_log=do_log_log, alpha=0.5)
 
@@ -127,10 +130,13 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     if ylabel is None:
         ylabel = 'last sample ' + series_name
 
+    num_datapoints = sum(map(len, series_dict.values()))
     pylab.xlabel(xlabel)
     pylab.ylabel(ylabel)
     title_list = [
-        # 'Vertical and horizontal jitter added to datapoints',
+        'Scatter diagram demonstrating correctness',
+        'Horizontal jitter added',
+        '%s datapoints' % num_datapoints,
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
@@ -163,9 +169,10 @@ field_of_interest = args.field_of_interest
 min_iternum = args.min_iternum
 
 # proces dir contents
-dir_list = filter(lambda x: x.startswith('new_'), os.listdir(base_dir))
-dir_list = filter(lambda x: not x.endswith('.png'), os.listdir(base_dir))
+dir_list = os.listdir(base_dir)
+dir_list = filter(lambda x: x.startswith('new_'), dir_list)
 dir_list = [os.path.join(base_dir, dir) for dir in dir_list]
+dir_list = filter(os.path.isdir, dir_list)
 
 gen_and_final_tuples = []
 for dir in dir_list:
@@ -175,29 +182,44 @@ for dir in dir_list:
         problem, summary, max_iternum = \
             get_problem_and_final_summary(seed_summary_filename_tuples, dir)
         if max_iternum < min_iternum: continue
+        if field_of_interest not in summary: continue
+        if field_of_interest not in problem: continue
+        if 'num_clusters' not in problem: continue
+        ground_truth_num_clusters = problem['num_clusters']
+        num_vectors = len(problem['true_zs'])
         gen_and_final_tuple = (
-            numpy.mean(problem[field_of_interest]), numpy.mean(summary[field_of_interest])
+            numpy.mean(problem[field_of_interest]),
+            numpy.mean(summary[field_of_interest]), 
+            ground_truth_num_clusters, num_vectors,
             )
         gen_and_final_tuples.append(gen_and_final_tuple)
 
 testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
 testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
-num_nodes_list = [4,8,16]
-colors_list = ['red', 'blue', 'green']
-markers_list = ['+', 'x', 'v']
-# h_index_list = [-1, 0, 1]
-h_index_list = [0, 0, 0]
+color_lookup_helper = {128:'red', 512:'blue', 2048:'green'}
+marker_lookup_helper = {200000:'+', 500000:'x', 1000000:'v'}
+h_index_lookup_helper = {200000:0, 500000:0, 1000000:0}
+#
 color_lookup = defaultdict(lambda: 'orange')
-color_lookup.update(dict(zip(num_nodes_list, colors_list)))
+color_lookup.update(color_lookup_helper)
+#
 marker_lookup = defaultdict(lambda: 'o')
-marker_lookup.update(dict(zip(num_nodes_list, markers_list)))
+marker_lookup.update(marker_lookup_helper)
+#
 h_index_lookup = defaultdict(lambda: 0)
-h_index_lookup.update(dict(zip(num_nodes_list, h_index_list)))
+h_index_lookup.update(h_index_lookup_helper)
 
 
 gen_and_final_tuples = numpy.array(gen_and_final_tuples)
-tuples_S = pandas.Series(gen_and_final_tuples[:,1], gen_and_final_tuples[:,0])
-series_dict = {8:tuples_S}
+unique_configurations = numpy.unique([(el[0], el[1]) for el in gen_and_final_tuples[:, 2:].tolist()])
+series_dict = dict()
+for unique_configuration in unique_configurations.tolist():
+    is_current_configuration = (gen_and_final_tuples[:, 2] == unique_configuration[0]) \
+        & (gen_and_final_tuples[:, 3] == unique_configuration[1])
+    tuples_S = pandas.Series(gen_and_final_tuples[is_current_configuration, 1],
+                             gen_and_final_tuples[is_current_configuration, 0])
+    series_dict[tuple(unique_configuration)] = tuples_S
+
 plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.01, jitter_op=operator.mul, 
                  do_lines=False, fig_suffix=fig_suffix)

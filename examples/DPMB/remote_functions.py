@@ -499,7 +499,12 @@ def fill_dict_from_hdf5(in_dict, pkl_file_str, dir=''):
     import h5py
     f = h5py.File(hdf5_full_filename, 'r')
     for varname in varnames:
-        in_dict[varname] = h5.unh5ify(varname, f)
+        if varname == 'xs':
+            import Cloudless.examples.DPMB.DataReader as DataReader
+            num_xs = len(f['xs'])
+            in_dict[varname] = DataReader.DataReader(pkl_file_str, range(num_xs), dir=dir)
+        else:
+            in_dict[varname] = h5.unh5ify(varname, f)
     f.close()
     return in_dict
 

@@ -5,23 +5,20 @@ import argparse
 import Cloudless.examples.DPMB.s3_helper as s3h
 import Cloudless.examples.DPMB.settings as S
 
-# settings
-bucket_dir_base = 'tiny_image_summaries'
-local_dir_base = S.path.data_dir
 
 # parse args
 parser = argparse.ArgumentParser()
-parser.add_argument('--bucket_dir_suffix', default='', type=str)
+parser.add_argument('--bucket_str',default=None,type=str)
+parser.add_argument('--bucket_dir',default=None,type=str)
+parser.add_argument('--local_dir',default=None,type=str)
 parser.add_argument('--filename_prefix', default='', type=str)
 parser.add_argument('--filename_suffix', default='', type=str)
 args = parser.parse_args()
-bucket_dir_suffix = args.bucket_dir_suffix
+bucket_str = args.bucket_str
+bucket_dir = args.bucket_dir
+local_dir = args.local_dir
 filename_prefix = args.filename_prefix
 filename_suffix = args.filename_suffix
-
-# set up path variables
-bucket_dir = os.path.join(bucket_dir_base, bucket_dir_suffix)
-local_dir = os.path.join(local_dir_base, bucket_dir_suffix)
 
 # set up puller
 s3 = s3h.S3_helper(bucket_dir=bucket_dir, local_dir=local_dir)
