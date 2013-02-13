@@ -76,7 +76,7 @@ cdef double neg_inf = -np.inf
 cdef vector[double] p
 p.reserve(10000)
 
-cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[int, ndim=2] data,
+cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[np.int8_t, ndim=2] data,
                        vector[vector[int]] &n_succ, vector[vector[int]] &n_fail, double alpha,
                        double beta, uint i):
     cdef uint j, count, new_c_i, dim, d
@@ -104,7 +104,7 @@ cdef  uint sample_c_idx(uint n_clusters, vector[int] &counts, np.ndarray[int, nd
     new_c_i = discrete_sample(p)
     return new_c_i
 
-cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] data, double alpha, double beta,
+cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[np.int8_t, ndim=2] data, double alpha, double beta,
               vector[int] &counts, vector[vector[int]] &n_succ, vector[vector[int]] &n_fail):
     cdef uint n_clusters, new_c_i, j, count, d, dim
     cdef double prior, llh
@@ -128,7 +128,7 @@ cdef  uint sample_c(uint i, np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] d
 
     return new_c_i
 
-cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] data,
+cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[np.int8_t, ndim=2] data,
                            double alpha, double beta):
     cdef uint n_clusters, dim, i, n
     cdef np.ndarray[int, ndim=1] cluster_list, new_c
