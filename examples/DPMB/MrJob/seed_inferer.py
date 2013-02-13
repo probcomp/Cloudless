@@ -140,12 +140,15 @@ class MRSeedInferer(MRJob):
                 dummy_state = ds.DPMB_State(
                     gen_seed=run_spec['dataset_spec']['gen_seed'],
                     num_cols=run_spec['dataset_spec']['num_cols'], num_rows=10)
-                num_vectors = len(problem['xs'])
-                fallback_num_clusters = num_vectors / 1000
-                true_num_clusters = rf.unpickle(problem_file, check_hdf5=False).get('num_clusters', fallback_num_clusters)
-                init_alpha, alpha_ps, alphas = hf.calc_mle_alpha(
-                    true_num_clusters, num_vectors,
-                    alphas=dummy_state.get_alpha_grid())
+                pkl_no_hdf5 = rf.unpickle(problem_file, check_hdf5=False)
+                if 'num_clusters' in pkl_no_hdf5:
+                    true_num_clusters = pkl_no_hdf5['num_clusters']
+                    num_vectors = len(problem['xs'])
+                    init_alpha, alpha_ps, alphas = hf.calc_mle_alpha(
+                        true_num_clusters, num_vectors,
+                        alphas=dummy_state.get_alpha_grid())
+                else:
+                    init_alpha = 17
                 #
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
