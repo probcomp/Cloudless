@@ -47,10 +47,12 @@ cpdef np.ndarray calc_alpha_llh(np.ndarray[double, ndim=1] alpha, double shape, 
     return out
 
 
-cpdef inline uint discrete_sample(vector[double] w):
+cpdef inline uint discrete_sample(vector[double] &w):
     cdef uint n=w.size()
-    cdef np.ndarray[double, ndim=1] c = np.empty(n)
+    #cdef np.ndarray[double, ndim=1] c = np.empty(n)
     cdef uint i
+    cdef vector[double] c
+    c.resize(n)
     c[0] = w[0]
     cdef double m
     for i in range(1, n):
@@ -139,8 +141,6 @@ cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] da
     n_clusters = len(cluster_list)
     dim = data.shape[1]
     counts = np.bincount(new_c)
-    #n_succ = np.empty((n_clusters, dim), int)
-    #n_fail = np.empty((n_clusters, dim), int)
     for i in range(n_clusters):
         n_succ.push_back(np.sum(data[new_c==i]==1, 0))
         n_fail.push_back(np.sum(data[new_c==i]==0, 0))
@@ -150,3 +150,22 @@ cpdef np.ndarray sample_cs(np.ndarray[int, ndim=1] c, np.ndarray[int, ndim=2] da
 
 def set_seed(seed):
     rng_g.set_seed(seed)
+
+cpdef sample_crp(uint n, double alpha):
+    cdef vector[double] counts
+    cdef uint i, idx
+    cdef np.ndarray[int, ndim=1] c = np.empty(n, int)
+    counts.reserve(10000)
+    c[0] = 0
+    counts.push_back(1.0)
+    for i in range(1, n):
+        counts.push_back(alpha)
+        idx = discrete_sample(counts)
+        c[i] = idx
+        if idx==(counts.size()-1):
+            counts[idx] = 1.0
+        else:
+            counts[idx] = counts[idx]+1.0
+            counts.pop_back()
+    return c
+

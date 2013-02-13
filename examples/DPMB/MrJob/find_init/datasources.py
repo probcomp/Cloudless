@@ -77,7 +77,7 @@ class FiniteMixture(ProceduralDataSource):
             raise ParameterException("Required finite mixture parameter not passed in: %r" % error)
         dim = clusters[0].dim
         self.c = helpers.discrete_sample(weights, n_points, rng)
-        data = empty((n_points, dim))
+        data = empty((n_points, dim), np.int8)
         for i, cluster in enumerate(clusters):
             idx = self.c == i
             n_in_cluster = int(sum(idx))
