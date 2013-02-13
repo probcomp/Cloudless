@@ -84,7 +84,7 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
     #
     xs = jitter_op(xs, h_jitter_fixed)
     xs = jitter_op(xs, h_jitter_rand)
-    yx = jitter_op(ys, v_jitter_rand)
+    ys = jitter_op(ys, v_jitter_rand)
     #
     return xs, ys
 #
