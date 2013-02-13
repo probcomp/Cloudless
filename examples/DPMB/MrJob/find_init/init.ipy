@@ -4,3 +4,4 @@ import sys
 % aimport helpers
 % aimport bino_dpm
 % aimport test
+% aimport kmeans

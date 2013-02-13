@@ -2,6 +2,7 @@ from __future__ import division
 from numpy import *
 import bino_dpm
 import numpy as np
+import kmeans
 
 def run(data_reader, **kwargs):
     seed = kwargs.get('seed', 0)
@@ -15,3 +16,6 @@ def run(data_reader, **kwargs):
         data[i] = data_reader[i]
     sub_n, n_iters, alpha_set, time = bino_dpm.run(data, **kwargs)
     return alpha_set[-1]
+
+def kmeans(data, k):
+    return kmeans.cluster(data, k)

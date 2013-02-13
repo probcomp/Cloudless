@@ -116,6 +116,8 @@ def run(data, alpha_shape=5, alpha_scale=5, seed=0, sub_n=None, n_iters=None):
 
     alpha_set = [alpha]
     times = []
+    n_iters_actual=zeros(len(n_iters), int)
+
     for j, (n_iter, n) in enumerate(zip(n_iters, sub_n)):
         times.append(datetime.datetime.now())
         logging.info("Running on subset  %d", n)
@@ -124,7 +126,6 @@ def run(data, alpha_shape=5, alpha_scale=5, seed=0, sub_n=None, n_iters=None):
         s = chain.sample_latent(params, dict(n=n, dim=dim), rng)
         data_sub = data[:n]
         alpha_hist = empty(n_iter)
-        n_iters_actual=zeros(len(n_iters), int)
         for i in range(n_iter):
             if i%1==0:
                 logging.info("Iteration %d", i)
