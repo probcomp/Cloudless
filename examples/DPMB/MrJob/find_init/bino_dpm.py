@@ -22,10 +22,7 @@ def sample_latent_dp(params, data_params, rng):
         alpha = params['alpha_start']
     s.alpha = alpha
     s.beta = rng.gamma(params['beta_shape'], params['beta_scale'])
-    s.c = zeros(n, int)
-    for i in range(1, n):
-        p = append(bincount(s.c[:i]), alpha)
-        s.c[i] = discrete_sample(p)
+    s.c = cDpm.sample_crp(n, alpha)
     return s
 
 
@@ -36,10 +33,9 @@ def sample_data_dp(state, params, dp, rng):
     n_clusters = len(cluster_list)
     beta = state.beta
     clusters = rng.beta(beta, beta, size=(n_clusters, dim))
-
-    for i in range(n):
-        p = clusters[cluster_ids[i]]
-        x[i] = (rng.rand(dim) < p).astype(int)
+    for j in range(n_clusters):
+        in_j = cluster_ids==j
+        x[in_j] = (rng.rand(sum(in_j), dim) < clusters[j]).astype(int)
     return x
 
 
@@ -49,8 +45,7 @@ def calc_alpha_llh(alpha, shape, scale, n_clusters, n):
     return prior + lh
 
 
-def sample_alpha(n_clusters, n, shape, scale, rng):
-    grid = linspace(.01, 50, 500)
+def sample_alpha(n_clusters, n, shape, scale, grid):
     llh = cDpm.calc_alpha_llh(grid, shape, scale, n_clusters, n)
     #idx = cDpm.discrete_sample(llh, True, rng_g)
     idx = cDpm.discrete_sample(exp(llh-amax(llh))) #todo risk of overflow
@@ -62,6 +57,10 @@ def sample_beta(shape, scale, rng):
 
 
 class Chain(scaffold.Chain):
+    def __init__(self, **kwargs):
+        scaffold.Chain.__init__(self, **kwargs)
+        self.alpha_grid = linspace(.01, 400, 2000) #todo: make adapative
+
     def start_state(self, params, dp, rng):
         return self.sample_latent(params, dp, rng)
 
@@ -74,12 +73,13 @@ class Chain(scaffold.Chain):
     def transition(self, state, params, data, rng):
         s = State()
         s.c = cDpm.sample_cs(state.c, data, state.alpha, state.beta)
-        s.alpha = sample_alpha(len(unique(s.c)), len(s.c), params['alpha_shape'], params['alpha_scale'], rng)
+        s.alpha = sample_alpha(len(unique(s.c)), len(s.c), params['alpha_shape'],
+                               params['alpha_scale'], self.alpha_grid)
         s.beta = sample_beta(params['beta_shape'], params['beta_scale'], rng)
         return s
 
 chain = Chain(alpha_shape=5, alpha_scale=1, beta_shape=1, beta_scale=1, seed=1, max_iters=100)
-dp = dict(n=50, dim=256)
+dp = dict(n=50, dim=10)
 g_funcs = [lambda state: state.alpha, lambda state: len(unique(state.c))]
 
 def test(mode='geweke'):
@@ -102,11 +102,15 @@ rng = random.RandomState(0)
 def k_mean_from_alpha(alpha, n):
     return helpers.expected_tables(alpha, n)
 
-def run(data):
+def run(data, alpha_shape=5, alpha_scale=5, seed=0):
+    run_params = dict(alpha_shape=alpha_shape, alpha_scale=alpha_scale, beta_shape=1, beta_scale=1, seed=seed)
+    rng = random.RandomState(seed)
+    cDpm.set_seed(seed)
     rng.shuffle(data)
-    alpha = rng.gamma(1,1)
-    sub_n = [10, 100, 1000]
-    n_iters = [1000, 1000, 100, 5]
+    alpha = rng.gamma(alpha_shape, alpha_scale)
+    n_data = len(data)
+    sub_n = [100, 1000, 10000, 100000]
+    n_iters = [500, 50, 10, 5]
     dim = data.shape[1]
 
     alpha_set = [alpha]
@@ -114,7 +118,7 @@ def run(data):
     for n_iter, n in zip(n_iters, sub_n):
         times.append(datetime.datetime.now())
         logging.info("Running on subset  %d", n)
-        params = chain.params.copy()
+        params = run_params.copy()
         params['alpha_start'] = alpha
         s = chain.sample_latent(params, dict(n=n, dim=dim), rng)
         data_sub = data[:n]
@@ -126,5 +130,7 @@ def run(data):
             alpha_hist[i] = s.alpha
         alpha = mean(alpha_hist[-100:])
         alpha_set.append(alpha)
+        if n > n_data:
+            break
     times.append(datetime.datetime.now())
-    return sub_n, alpha_set, times
+    return sub_n, n_iters, alpha_set, times
