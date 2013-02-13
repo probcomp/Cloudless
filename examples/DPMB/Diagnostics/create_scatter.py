@@ -96,8 +96,8 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     ax = None
     random_state = numpy.random.RandomState(0)
     for (num_clusters, num_rows), series in series_dict.iteritems():
-        color = color_lookup[num_clusters]
-        marker = marker_lookup[num_rows]
+        color = color_lookup[num_rows]
+        marker = marker_lookup[num_clusters]
         h_index = h_index_lookup[num_rows]
         xs, ys = series.index, series.values
         xs, ys = jitterify(xs, ys, jitter_range, h_index, random_state,
@@ -135,8 +135,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     pylab.ylabel(ylabel)
     title_list = [
         'Scatter diagram demonstrating correctness',
-        'Horizontal jitter added',
-        '%s datapoints' % num_datapoints,
+        'Horizontal jitter added (%s datapoints present)' % num_datapoints,
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
@@ -199,8 +198,8 @@ for dir in dir_list:
 testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
 testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
 
-color_lookup_helper = {128:'red', 512:'blue', 2048:'green'}
-marker_lookup_helper = {200000:'+', 500000:'x', 1000000:'v'}
+color_lookup_helper = {200000:'red', 500000:'blue', 1000000:'green'}
+marker_lookup_helper = {128:'+', 512:'x', 2048:'v'}
 h_index_lookup_helper = {200000:0, 500000:0, 1000000:0}
 #
 color_lookup = defaultdict(lambda: 'orange')
