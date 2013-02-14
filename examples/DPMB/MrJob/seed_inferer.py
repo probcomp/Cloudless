@@ -148,7 +148,7 @@ class MRSeedInferer(MRJob):
                         true_num_clusters, num_vectors,
                         alphas=dummy_state.get_alpha_grid())
                 else:
-                    init_alpha = 17
+                    init_alpha = 17.0
                 #
                 init_betas = dummy_state.betas
                 n_draws = len(problem['xs'])
