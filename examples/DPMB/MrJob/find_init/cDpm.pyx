@@ -169,3 +169,39 @@ cpdef sample_crp(uint n, double alpha):
             counts.pop_back()
     return c
 
+cpdef double hamming_distance(np.ndarray[np.int8_t, ndim=2] x1, np.ndarray[np.double_t, ndim=2] x2, uint j, uint k):
+    cdef uint i, n
+    cdef double d
+    n = x1.shape[1]
+    d = 0
+    for i in range(n):
+        d += (x1[j, i]-x2[k, i])**2
+    return d
+
+cpdef find_closest_arg(np.ndarray[np.int8_t, ndim=2] data, np.ndarray[np.double_t, ndim=2] clusters, np.ndarray[int, ndim=1] c):
+    cdef uint i, j, n_data, n_clusters,  min_idx
+    cdef double d, min_d
+    n_data = data.shape[0]
+    n_clusters = clusters.shape[0]
+    for i in range(n_data):
+        min_d = 1000000
+        for j in range(n_clusters):
+            d = hamming_distance(data, clusters, i, j)
+            if d<min_d:
+                min_d = d
+                min_idx = j
+        c[i] = min_idx
+
+cpdef find_closest_a(np.ndarray[np.int8_t, ndim=2] data, np.ndarray[np.double_t, ndim=2] clusters, np.ndarray[double, ndim=1] c):
+    cdef uint i, j, n_data, n_clusters,  min_idx
+    cdef double d, min_d
+    n_data = data.shape[0]
+    n_clusters = clusters.shape[0]
+    for i in range(n_data):
+        min_d = 1000000
+        for j in range(n_clusters):
+            d = hamming_distance(data, clusters, i, j)
+            if d<min_d:
+                min_d = d
+                min_idx = j
+        c[i] = min_d
