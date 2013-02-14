@@ -207,7 +207,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         color = get_color(summaries_name)
         style = get_style(summaries_name)
         label = label_func(summaries_name)
-        pylab.plot(timing, extract_vals, label=label, color=color,
+        pylab.plot(timing, extract_vals, label=label, color=color, marker='x',
                    linestyle=style, alpha=alpha)
         if max_x is not None:
             pylab.gca().set_xlim(0, max_x)
@@ -523,7 +523,10 @@ if __name__ == '__main__':
             init_filename=init_filename,
             # problem_filename=problem_filename, # uncomment to rescore
             )
-        plot_summaries(summaries_dict, problem=problem, title=title, fig_suffix=fig_suffix)
+        try:
+            plot_summaries(summaries_dict, problem=problem, title=title, fig_suffix=fig_suffix)
+        except Exception, e:
+            print "plot failed: %s" % str(e)
 
     # reduced_summaries_name = S.files.reduced_summaries_name
     # reduced_summaries_dict = extract_reduced_summaries(
