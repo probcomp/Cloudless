@@ -167,7 +167,7 @@ def shorten_name(instr):
     if match is not None:
         num_nodes_str = match.groups()[0]
         he_str = match.groups()[1]
-        shortened_name = 'nodes=' + num_nodes_str + '_' + 'he=' + he_str
+        shortened_name = '#workers=' + num_nodes_str
     return shortened_name
 
 numnodes_to_color = {'1':'blue', '2':'orange', '4':'green', '8':'red', '16':'brown', '32':'black', '64': 'cyan', '128':'magenta', '256':'red', 'other':'blue'}

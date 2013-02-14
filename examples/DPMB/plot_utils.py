@@ -53,7 +53,7 @@ def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
         pylab.savefig(namestr)
 
 def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
-              subplots_hspace=.25):
+              subplots_hspace=.25, sort=True):
     num_tuples = len(plot_tuples)
     gs = get_gridspec(num_tuples)
     fh = pylab.figure()
@@ -65,7 +65,7 @@ def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
         pylab.ylabel(ylabel)
         last_axes.set_xlim((0, last_axes.get_xlim()[-1]))
     pylab.subplots_adjust(hspace=subplots_hspace)
-    legend_outside(last_axes)
+    legend_outside(last_axes, sort=sort)
     first_axes = fh.get_axes()[0]
     first_axes.set_title(title)
     last_axes.set_xlabel(xlabel)
