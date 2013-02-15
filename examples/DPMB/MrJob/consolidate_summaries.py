@@ -447,6 +447,19 @@ def plot_summaries(summaries_dict, problem=None,
                    save_str=fig_full_filename)
     fh_list.append(fh)
 
+    figname = 'test_lls_num_clusters' + '.' + fig_suffix
+    plot_tuples = [
+        (get_time_plotter(extract_test_lls, hline=gen_test_lls),
+         'TEST SET\nMEAN LOG LIKELIHOOD'),
+        (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
+         'NUM CLUSTERS'),
+        ]
+    fig_full_filename = os.path.join(plot_dir, figname)
+    fh = pu.multiplot(summaries_dict, plot_tuples,
+                   title=title, xlabel=xlabel,
+                   save_str=fig_full_filename)
+    fh_list.append(fh)
+
     if subset_betas:
         def get_subset(betas, num_betas=4, seed=0):
             rs = numpy.random.RandomState(seed)
