@@ -39,7 +39,8 @@ possible_cluster_tuples = filter(cluster_filter, cluster_len_tuples)
 possible_cluster_indices = map(lambda x: x[1], possible_cluster_tuples)
 #
 numpy.random.seed(0)
-how_many_images = square_len ** 2
+how_many_images = image_square_len ** 2
+montage_shape = (image_square_len, image_square_len)
 which_clusters = numpy.random.randint(len(possible_cluster_indices), size=3)
 which_clusters = [possible_cluster_indices[which_cluster] for which_cluster in which_clusters]
 for which_cluster in which_clusters:
@@ -48,7 +49,8 @@ for which_cluster in which_clusters:
     image_list, image_indices, image_for_rendering_list = \
         ri.render_problem_image_indices(list_of_x_indices[which_cluster], problem)
     montage = ri.make_contact_sheet(
-        image_for_rendering_list[:how_many_images], (square_len,square_len), dir=dest_dir)
+        image_for_rendering_list[:how_many_images], montage_shape,
+        dir=dest_dir)
     montage.save(os.path.join(dest_dir, basename + '_images.png'), 'PNG')
     #
     pylab.imshow(problem['xs'][list_of_x_indices[which_cluster]][:how_many_bitvectors])
@@ -62,7 +64,8 @@ for random_idx, random_indices in enumerate(random_indices_list):
     image_list, image_indices, image_for_rendering_list = \
         ri.render_problem_image_indices(random_indices, problem)
     montage = ri.make_contact_sheet(
-        image_for_rendering_list[:how_many_images], (square_len,square_len), dir=dest_dir)
+        image_for_rendering_list[:how_many_images], montage_shape,
+        dir=dest_dir)
     montage.save(os.path.join(dest_dir, basename + '_images.png'), 'PNG')
     pylab.imshow(problem['xs'][random_indices][:how_many_bitvectors])
     full_figname = os.path.join(dest_dir, basename + '_binary.png')
