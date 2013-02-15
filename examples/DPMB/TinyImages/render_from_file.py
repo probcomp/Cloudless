@@ -24,6 +24,8 @@ how_many_bitvectors = args.how_many_bitvectors
 image_square_len = args.image_square_len
 
 
+numpy.random.seed(0)
+
 ri.makedirs(dest_dir)
 problem = rf.unpickle(problem_filename)
 summary = rf.unpickle(summary_filename)
@@ -38,7 +40,6 @@ cluster_filter = lambda x: x[0] >= how_many_bitvectors
 possible_cluster_tuples = filter(cluster_filter, cluster_len_tuples)
 possible_cluster_indices = map(lambda x: x[1], possible_cluster_tuples)
 #
-numpy.random.seed(0)
 how_many_images = image_square_len ** 2
 montage_shape = (image_square_len, image_square_len)
 which_clusters = numpy.random.randint(len(possible_cluster_indices), size=3)
