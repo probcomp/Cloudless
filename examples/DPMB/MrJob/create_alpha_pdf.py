@@ -6,10 +6,10 @@ import Cloudless.examples.DPMB.helper_functions as hf
 import Cloudless.examples.DPMB.plot_utils as pu
 
 
-fig_suffix = 'png'
-num_clusters_list = [256, 512, 1024]
-num_rows_per_cluster_list = [4, 64, 256]
-log10_alphas = pylab.arange(.5, 3.1, .001)
+fig_suffix = 'pdf'
+num_clusters_list = [128, 512, 2048]
+num_rows_per_cluster_list = [1024, 2048, 4096]
+log10_alphas = pylab.arange(.5, 2.5, .001)
 alphas = 10 ** log10_alphas
 
 colors = ['red', 'green', 'blue', 'black', 'orange']
@@ -37,16 +37,16 @@ for num_clusters, num_rows_per_cluster in \
     label = config_to_str(num_clusters, num_rows_per_cluster)
     color = num_clusters_to_color[num_clusters]
     linestyle = num_rows_per_cluster_to_linestyle[num_rows_per_cluster]
-    pylab.plot(pylab.log10(alphas), norm_alpha_ps, label=label, color=color, linestyle=linestyle)
-    # pylab.plot(alphas, norm_alpha_ps, label=label)
+    # pylab.plot(pylab.log10(alphas), norm_alpha_ps, label=label, color=color, linestyle=linestyle)
+    pylab.plot(alphas, norm_alpha_ps, label=label, color=color, linestyle=linestyle)
 
 pylab.title(
     'ALPHA PDF FOR VARIOUS BALANCED CLUSTER CONFIGURATIONS\n'
     'legend is num_clusters x num_rows_per_cluster')
-pylab.xlabel('LOG10 ALPHA')
-# pylab.xlabel('ALPHA')
-pylab.ylabel('WITHIN GRAPH NORMALIZED PROBABILITY')
-pu.legend_outside(ncol=len(num_clusters_list), sort=True)
+pylab.xlabel('ALPHA', size=20)
+pylab.ylabel('WITHIN GRAPH NORMALIZED PROBABILITY', size=20)
+# pu.legend_outside(ncol=len(num_clusters_list), cmp_func=cmp)
+pylab.legend()
 pylab.ion()
 pylab.show()
 pu.savefig_legend_outside('alpha_pdf_over_configs.' + fig_suffix)
