@@ -1,5 +1,5 @@
 import os
-os.chdir('/tmp')
+#
 import Cloudless.examples.DPMB.remote_functions as rf
 import Cloudless.examples.DPMB.TinyImages.loadTinyImages as lti
 
