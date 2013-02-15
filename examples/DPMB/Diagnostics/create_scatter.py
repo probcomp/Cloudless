@@ -67,6 +67,7 @@ def my_plot(xs, ys, ax=None, do_log_log=True, **kwargs):
             ax.set_xscale('log')
             ax.set_yscale('log')
     ax.scatter(xs, ys, **kwargs)
+    pylab.grid(axis='both')
     return ax
 #
 import operator
@@ -93,7 +94,12 @@ def plot_series_dict(series_dict, series_name, do_log_log,
                      jitter_range, jitter_op, do_lines=True,
                      xlabel=None, ylabel=None,
                      fig_suffix=default_fig_suffix):
-    num_row_key = {1000000:'1MM', 200000:'200K', 500000:'500K', 100000:'100K'}
+    num_row_key = {
+        1000000:'1MM',
+        200000:'200K',
+        500000:'500K',
+        100000:'100K',
+        }
     ax = None
     random_state = numpy.random.RandomState(0)
     for (num_clusters, num_rows), series in series_dict.iteritems():
@@ -135,10 +141,9 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         ylabel = 'last sample ' + series_name
 
     num_datapoints = sum(map(len, series_dict.values()))
-    pylab.xlabel(xlabel, size=25)
-    pylab.ylabel(ylabel, size=25)
+    pylab.xlabel(xlabel, size=14)
+    pylab.ylabel(ylabel, size=14)
     title_list = [
-        'Scatter diagram demonstrating correctness',
         'Jitter added (%s datapoints present)' % num_datapoints,
         ]
     if do_lines:
@@ -149,7 +154,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         min_extent = min(xlim[0], ylim[0])
         max_extent = max(xlim[1], ylim[1])
         new_lim = (min_extent, max_extent)
-        ax.plot(new_lim, new_lim)
+        ax.plot(new_lim, new_lim, '--', color='grey')
         ax.set_xlim(*new_lim)
         ax.set_ylim(*new_lim)
 
@@ -161,10 +166,13 @@ def plot_series_dict(series_dict, series_name, do_log_log,
 
 # parse some args
 parser = argparse.ArgumentParser()
-parser.add_argument('--fig_suffix', default=default_fig_suffix, type=str)
+parser.add_argument('--fig_suffix',
+                     default=default_fig_suffix, type=str)
 parser.add_argument('--base_dir', default=default_base_dir, type=str)
-parser.add_argument('--field_of_interest', default=default_field_of_interest, type=str)
-parser.add_argument('--min_iternum', default=default_min_iternum, type=int)
+parser.add_argument('--field_of_interest',
+                    default=default_field_of_interest, type=str)
+parser.add_argument('--min_iternum',
+                    default=default_min_iternum, type=int)
 args = parser.parse_args()
 fig_suffix = args.fig_suffix
 base_dir = args.base_dir
@@ -177,30 +185,35 @@ dir_list = filter(lambda x: x.startswith('new_'), dir_list)
 dir_list = [os.path.join(base_dir, dir) for dir in dir_list]
 dir_list = filter(os.path.isdir, dir_list)
 
-gen_and_final_tuples = []
-for dir in dir_list:
-    summary_filename_tuples = get_summary_filename_tuples(dir)
-    dict_by_seed = get_dict_of_lists(summary_filename_tuples, get_seed)
-    for seed_summary_filename_tuples in dict_by_seed.itervalues():
-        problem, summary, max_iternum = \
-            get_problem_and_final_summary(seed_summary_filename_tuples, dir)
-        if max_iternum < min_iternum: continue
-        if field_of_interest not in summary: continue
-        if field_of_interest not in problem: continue
-        if 'num_clusters' not in problem: continue
-        ground_truth_num_clusters = problem['num_clusters']
-        num_vectors = len(problem['true_zs'])
-        ground_truth_value = numpy.mean(problem[field_of_interest])
-        last_sample_value = numpy.mean(summary[field_of_interest])
-        if field_of_interest == 'test_lls' and abs(last_sample_value - ground_truth_value) > 3: continue
-        gen_and_final_tuple = (
-            ground_truth_value, last_sample_value,
-            ground_truth_num_clusters, num_vectors,
-            )
-        gen_and_final_tuples.append(gen_and_final_tuple)
+if 'gen_and_final_tuples' not in locals():
+    gen_and_final_tuples = []
+    for dir in dir_list:
+        summary_filename_tuples = get_summary_filename_tuples(dir)
+        dict_by_seed = get_dict_of_lists(summary_filename_tuples,
+                                         get_seed)
+        for seed_summary_filename_tuples in dict_by_seed.itervalues():
+            problem, summary, max_iternum = \
+                get_problem_and_final_summary(
+                seed_summary_filename_tuples, dir)
+            if max_iternum < min_iternum: continue
+            if field_of_interest not in summary: continue
+            if field_of_interest not in problem: continue
+            if 'num_clusters' not in problem: continue
+            ground_truth_num_clusters = problem['num_clusters']
+            num_vectors = len(problem['true_zs'])
+            ground_truth_value = numpy.mean(problem[field_of_interest])
+            last_sample_value = numpy.mean(summary[field_of_interest])
+            not_converged = abs(last_sample_value - ground_truth_value) > 3
+            if (field_of_interest == 'test_lls') and not_converged:
+                continue
+            gen_and_final_tuple = (
+                ground_truth_value, last_sample_value,
+                ground_truth_num_clusters, num_vectors,
+                )
+            gen_and_final_tuples.append(gen_and_final_tuple)
 
-testlls_xlabel = 'GROUND TRUTH TEST LOG-LIKELIHOODS ASSIGNED FROM HARD-WIRED MODELS'
-testlls_ylabel = 'AVERAGE PREDICTIVE LOG-LIKELIHOODS OF LEARNED MODELS'
+testlls_xlabel = 'AVG TEST SET LOG LIKELIHOOD (GROUND TRUTH MODEL)'
+testlls_ylabel = 'AVG TEST SET LOG LIKELIHOOD (LEARNED MODEL)'
 
 # color_lookup_helper = {200000:'red', 500000:'blue', 1000000:'green'}
 color_lookup_helper = {128:'red', 512:'blue', 2048:'green'}
@@ -227,5 +240,8 @@ for unique_configuration in unique_configurations.tolist():
                              gen_and_final_tuples[is_current_configuration, 0])
     series_dict[tuple(unique_configuration)] = tuples_S
 
-plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.002, jitter_op=operator.mul,
-                 do_lines=False, fig_suffix=fig_suffix)
+plot_series_dict(series_dict, field_of_interest, do_log_log=False,
+                 jitter_range=.0013, jitter_op=operator.mul,
+                 do_lines=False, fig_suffix=fig_suffix,
+                 xlabel=testlls_xlabel, ylabel=testlls_ylabel,
+                 )
