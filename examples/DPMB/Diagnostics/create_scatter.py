@@ -144,7 +144,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     pylab.xlabel(xlabel, size=14)
     pylab.ylabel(ylabel, size=14)
     title_list = [
-        'Jitter added (%s datapoints present)' % num_datapoints,
+        'ACCURACY OF %s SYNTHETIC EXPERIMENTS' % num_datapoints,
         ]
     if do_lines:
         title_list.append('True values denoted by proximate vertical line')
