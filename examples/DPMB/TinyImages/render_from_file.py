@@ -54,7 +54,7 @@ for which_cluster in which_clusters:
         dir=dest_dir)
     montage.save(os.path.join(dest_dir, basename + '_images.png'), 'PNG')
     #
-    pylab.imshow(problem['xs'][list_of_x_indices[which_cluster]][:how_many_bitvectors])
+    pylab.imshow(problem['xs'][list_of_x_indices[which_cluster]][:how_many_bitvectors], cmap=pylab.cm.Greys)
     full_figname = os.path.join(dest_dir, basename + '_binary.png')
     pylab.savefig(full_figname)
 
@@ -68,6 +68,13 @@ for random_idx, random_indices in enumerate(random_indices_list):
         image_for_rendering_list[:how_many_images], montage_shape,
         dir=dest_dir)
     montage.save(os.path.join(dest_dir, basename + '_images.png'), 'PNG')
-    pylab.imshow(problem['xs'][random_indices][:how_many_bitvectors])
+    pylab.imshow(problem['xs'][random_indices][:how_many_bitvectors], cmap=pylab.cm.Greys)
     full_figname = os.path.join(dest_dir, basename + '_binary.png')
     pylab.savefig(full_figname)
+
+# montage = ri.make_contact_sheet(image_for_rendering_list[:how_many_images], montage_shape, dir=dest_dir)
+# pylab.figure()
+# pylab.subplot(211)
+# pylab.imshow(montage)
+# pylab.subplot(221)
+# pylab.plot(range(3))
