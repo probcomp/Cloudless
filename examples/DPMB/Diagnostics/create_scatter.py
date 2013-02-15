@@ -88,6 +88,7 @@ def jitterify(xs, ys, jitter_range, h_index, random_state,
     #
     return xs, ys
 #
+marker_size = 60
 def plot_series_dict(series_dict, series_name, do_log_log,
                      jitter_range, jitter_op, do_lines=True,
                      xlabel=None, ylabel=None,
@@ -96,6 +97,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     ax = None
     random_state = numpy.random.RandomState(0)
     for (num_clusters, num_rows), series in series_dict.iteritems():
+        if num_clusters == 1024: continue
         color = color_lookup[num_clusters]
         marker = marker_lookup[num_rows]
         h_index = h_index_lookup[num_rows]
@@ -105,8 +107,9 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         # label = 'numnodes=' + str(numnodes)
         num_row_str = num_row_key.get(int(num_rows), num_rows)
         label = '%s rows x %s clusters' % (num_row_str, int(num_clusters))
-        ax = my_plot(xs, ys, ax=ax, color=color, marker=marker, label=label,
-                     do_log_log=do_log_log, alpha=0.5)
+        ax = my_plot(xs, ys, ax=ax, color=color,
+                     marker=marker, s=marker_size,
+                     label=label, do_log_log=do_log_log, alpha=0.5)
 
     if do_lines:
         # show the actual number of clusters
@@ -122,6 +125,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
     # add notations
     handles, labels = ax.get_legend_handles_labels()
     lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
+                    # prop={'size':20},
                     bbox_to_anchor=(0.5,-0.1))
 
     if xlabel is None:
@@ -131,8 +135,8 @@ def plot_series_dict(series_dict, series_name, do_log_log,
         ylabel = 'last sample ' + series_name
 
     num_datapoints = sum(map(len, series_dict.values()))
-    pylab.xlabel(xlabel)
-    pylab.ylabel(ylabel)
+    pylab.xlabel(xlabel, size=25)
+    pylab.ylabel(ylabel, size=25)
     title_list = [
         'Scatter diagram demonstrating correctness',
         'Jitter added (%s datapoints present)' % num_datapoints,
@@ -223,5 +227,5 @@ for unique_configuration in unique_configurations.tolist():
                              gen_and_final_tuples[is_current_configuration, 0])
     series_dict[tuple(unique_configuration)] = tuples_S
 
-plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.001, jitter_op=operator.mul,
+plot_series_dict(series_dict, field_of_interest, do_log_log=False, jitter_range=.002, jitter_op=operator.mul,
                  do_lines=False, fig_suffix=fig_suffix)
