@@ -39,9 +39,9 @@ def legend_outside(ax=None, bbox_to_anchor=(0.5, -.25), loc='upper center',
     handles = pylab.array(handles)
     labels = pylab.array(labels)
     if ncol is None:
-        ncol = min(len(labels), 4)
+        ncol = min(len(labels), 3)
     lgd = ax.legend(handles, labels, loc=loc, ncol=ncol,
-    	            bbox_to_anchor=bbox_to_anchor)
+    	            bbox_to_anchor=bbox_to_anchor, prop={"size":20})
 
 def savefig_legend_outside(namestr, ax=None, bbox_inches='tight'):
     if ax is None:
@@ -74,12 +74,13 @@ def multiplot(data, plot_tuples, title='', xlabel='', save_str=None,
         plot_func, ylabel = extract_tuple
         last_axes = pylab.subplot(gs[gs_i])
         plot_func(data)
-        pylab.ylabel(ylabel)
+        pylab.ylabel(ylabel, size=14)
+        pylab.grid(axis='y')
         last_axes.set_xlim((0, last_axes.get_xlim()[-1]))
     pylab.subplots_adjust(hspace=subplots_hspace)
     legend_outside(last_axes, cmp_func=cmp_func)
     first_axes = fh.get_axes()[0]
-    first_axes.set_title(title)
+    first_axes.set_title(title, fontsize=20)
     last_axes.set_xlabel(xlabel)
     if save_str is not None:
         savefig_legend_outside(save_str, last_axes)

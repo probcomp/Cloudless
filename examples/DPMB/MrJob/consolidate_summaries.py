@@ -207,7 +207,9 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         color = get_color(summaries_name)
         style = get_style(summaries_name)
         label = label_func(summaries_name)
-        pylab.plot(timing, extract_vals, label=label, color=color, marker='x',
+        marker = 'None'
+        pylab.plot(timing, extract_vals, label=label,
+                   color=color, marker=marker,
                    linestyle=style, alpha=alpha)
         if max_x is not None:
             pylab.gca().set_xlim(0, max_x)
@@ -215,7 +217,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         pylab.axhline(hline, color='magenta', label='gen')
     if do_legend:
         legend_list = map(label_func, summaries_dict.keys())
-        pylab.legend(legend_list, prop={"size":"medium"}) # ,loc='lower right')
+        pylab.legend(legend_list, prop={"size":"x-large"}) # ,loc='lower right')
     
 
 def plot_cluster_counts(summary, new_fig=True, log_x=False):
@@ -317,7 +319,7 @@ def read_run_parameters(data_dir, parameters_filename=parameters_filename):
     parameters.pop('__builtins__')
     return parameters
 
-parameters_of_interest = ['beta_d', 'num_clusters', 'num_rows']
+parameters_of_interest = ['num_clusters', 'num_rows']
 def title_from_parameters(parameters,
                           parameters_of_interest=parameters_of_interest):
     title_els = []
