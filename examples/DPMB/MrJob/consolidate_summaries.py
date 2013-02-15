@@ -24,6 +24,7 @@ is_summary = lambda x : x.startswith('summary_')
 is_score = lambda x : x.startswith('score_')
 split_summary_re = re.compile('^(.*iternum)([-\d]*).pkl')
 split_summary = lambda x : split_summary_re.match(x).groups()
+get_seed_as_str = lambda x: re.compile('.*seed(\d+)_.*').match(x).groups()[0]
 
 default_fig_suffix = 'pdf'
 default_init_filename = S.files.gibbs_init_filename
@@ -39,6 +40,8 @@ def get_summary_tuples(data_dir, init_filename=default_init_filename, filter_fun
     for summary_file in sorted(summary_files):
         summary_name, iter_num_str = split_summary(summary_file)
         iter_num = int(iter_num_str)
+        seed = int(get_seed_as_str(summary_name))
+        if seed >= 10: continue
         if iter_num < 0: continue
         full_filename = os.path.join(data_dir, summary_file)
         summary_tuple = (full_filename, iter_num)
@@ -214,7 +217,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         if max_x is not None:
             pylab.gca().set_xlim(0, max_x)
     if hline is not None:
-        pylab.axhline(hline, color='magenta', label='gen')
+        pylab.axhline(hline, color='magenta', label='ground truth')
     if do_legend:
         legend_list = map(label_func, summaries_dict.keys())
         pylab.legend(legend_list, prop={"size":"x-large"}) # ,loc='lower right')
@@ -352,6 +355,7 @@ def plot_summaries(summaries_dict, problem=None,
     figname = 'test_lls' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_test_lls, hline=gen_test_lls),
+        # (get_time_plotter(extract_test_lls,),
          'TEST SET\nMEAN LOG LIKELIHOOD'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
