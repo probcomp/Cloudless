@@ -124,7 +124,7 @@ def plot_series_dict(series_dict, series_name, do_log_log,
 
     # add notations
     handles, labels = ax.get_legend_handles_labels()
-    lgd = ax.legend(handles, labels, loc='upper center', ncol=3,
+    lgd = ax.legend(handles, labels, loc='upper center', ncol=2,
                     # prop={'size':20},
                     bbox_to_anchor=(0.5,-0.1))
 
