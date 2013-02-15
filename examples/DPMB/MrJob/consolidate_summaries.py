@@ -207,7 +207,7 @@ def plot_vs_time(summaries_dict, extract_func, new_fig=False, label_func=None,
         color = get_color(summaries_name)
         style = get_style(summaries_name)
         label = label_func(summaries_name)
-        marker = 'None'
+        marker = None
         pylab.plot(timing, extract_vals, label=label,
                    color=color, marker=marker,
                    linestyle=style, alpha=alpha)
@@ -325,8 +325,11 @@ def title_from_parameters(parameters,
     title_els = []
     for parameter_name in parameters_of_interest:
         parameter_value = str(parameters[parameter_name])
+        if parameter_name=='num_clusters': parameter_name='#CLUSTERS'
+        if parameter_name=='num_rows': parameter_name='#DATA'
         title_el = parameter_name + '=' + str(parameter_value)
         title_els.append(title_el)
+    title_els.append('#DIMENSIONS=%s' % parameters['num_cols'])
     title = '; '.join(title_els)
     return title
 
@@ -393,7 +396,7 @@ def plot_summaries(summaries_dict, problem=None,
     figname = 'num_clusters' + '.' + fig_suffix
     plot_tuples = [
         (get_time_plotter(extract_num_clusters, hline=true_num_clusters),
-         'NUM CLUSTERS'),
+         '#CLUSTERS'),
         ]
     fig_full_filename = os.path.join(plot_dir, figname)
     fh = pu.multiplot(summaries_dict, plot_tuples,
